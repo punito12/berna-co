@@ -1,0 +1,83 @@
+// Berna&co data model. See docs/ROADMAP "Modelo de datos".
+// SQLite has no native enums, so enum-like fields are stored as String and
+// validated in application code (lib/). Allowed values are documented inline.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  name        String
+  description String
+  slug        String  @unique
+  weightGrams Int
+  category    String // CARNE | POLLO | CERDO | VEGANO
+  price       Int // price in ARS cents-free pesos; admin loads it. Placeholder 0.
+  imageUrl    String
+  available   Boolean @default(true)
+  isNew       Boolean @default(false)
+
+  // JSON array of allowed breadcrumb types, e.g. ["TRADITIONAL","INTEGRAL","KETO"]
+  availableBreadcrumbs String
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status String @default("PENDING") // PENDING | CONFIRMED | READY | DELIVERED | CANCELLED
+
+  customerName  String
+  customerPhone String
+  customerEmail String? // optional
+
+  deliveryType String // DELIVERY | PICKUP
+  address      String? // only for DELIVERY
+
+  scheduledDate DateTime
+  scheduledSlot String // e.g. "10:00–12:00"
+
+  paymentMethod String // MERCADOPAGO | CASH
+  total         Int
+  mpPaymentId   String? // null when paying cash
+  notes         String?
+
+  items OrderItem[]
+}
+
+model OrderItem {
+  id          String @id @default(cuid())
+  orderId     String
+  productId   String
+  quantity    Int
+  priceAtTime Int
+
+  breadcrumbType String // TRADITIONAL | INTEGRAL | KETO
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model DeliverySlot {
+  id        String  @id @default(cuid())
+  label     String // e.g. "10:00–12:00"
+  available Boolean @default(true)
+}
+
+model AvailableDeliveryDay {
+  id        String  @id @default(cuid())
+  dayOfWeek Int // 0=Sun ... 6=Sat
+  available Boolean @default(true)
+}

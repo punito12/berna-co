@@ -1,0 +1,20 @@
+Fotos de productos
+==================
+
+Dejá acá las fotos de cada producto con EXACTAMENTE estos nombres
+(formato .jpg, idealmente cuadradas, ~1000x1000px):
+
+  peceto-pastura.jpg
+  peceto.jpg
+  pechuga-pastoril.jpg
+  bife-chorizo.jpg
+  cerdo.jpg
+  long-chicken-fingers.jpg
+  berenjena.jpg
+  girgolas.jpg
+
+Para el fondo del hero (la foto de las milanesas apiladas en la tabla),
+dejala en:  public/images/hero.jpg
+
+Mientras una foto no exista, la tarjeta muestra un bloque crema con el
+nombre del producto — no se rompe nada.
