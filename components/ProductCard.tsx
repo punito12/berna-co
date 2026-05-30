@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useCart } from "@/components/CartProvider";
 import {
   BREADCRUMB_LABELS,
@@ -26,9 +27,14 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-lg border border-line bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-ink/20 hover:shadow-xl">
-      {/* Photo. Missing files simply show the cream block underneath — no
-          broken-image icon. Drop the .jpg into /public/images/productos/. */}
-      <div className="relative aspect-square w-full overflow-hidden bg-cream">
+      {/* Photo → product detail. Missing files simply show the cream block
+          underneath — no broken-image icon. Drop the .jpg into
+          /public/images/productos/. */}
+      <Link
+        href={`/producto/${product.slug}`}
+        className="relative block aspect-square w-full overflow-hidden bg-cream"
+        aria-label={`Ver ${product.name}`}
+      >
         <div
           className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
           style={{ backgroundImage: `url('${product.imageUrl}')` }}
@@ -46,18 +52,27 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
         <span className="absolute right-3 top-3 bg-white/90 px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-ink backdrop-blur-sm">
           {product.category}
         </span>
-      </div>
+      </Link>
 
       <div className="flex flex-1 flex-col p-5">
-        <h3 className="font-bold uppercase tracking-tight text-lg text-ink">
-          {product.name}
-        </h3>
+        <Link href={`/producto/${product.slug}`}>
+          <h3 className="font-bold uppercase tracking-tight text-lg text-ink transition-colors hover:text-muted">
+            {product.name}
+          </h3>
+        </Link>
         <p className="mt-0.5 font-bold uppercase tracking-wide text-xs text-muted">
           {formatWeight(product.weightGrams)}
         </p>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           {product.description}
         </p>
+
+        <Link
+          href={`/producto/${product.slug}`}
+          className="mt-2 inline-block font-bold uppercase tracking-widest text-[11px] text-ink underline-offset-4 hover:underline"
+        >
+          Ver detalle y fotos →
+        </Link>
 
         {/* Empanado selector (pills) */}
         <div className="mt-4">

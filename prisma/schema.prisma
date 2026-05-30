@@ -19,9 +19,13 @@ model Product {
   weightGrams Int
   category    String // CARNE | POLLO | CERDO | VEGANO
   price       Int // price in ARS cents-free pesos; admin loads it. Placeholder 0.
-  imageUrl    String
+  imageUrl    String // cover photo, shown on the catalog cards
   available   Boolean @default(true)
   isNew       Boolean @default(false)
+
+  // JSON array of photo paths for the product detail gallery, e.g.
+  // ["/images/productos/peceto-pastura.jpg","/images/productos/peceto-pastura-2.jpg"]
+  images String @default("[]")
 
   // JSON array of allowed breadcrumb types, e.g. ["TRADITIONAL","INTEGRAL","KETO"]
   availableBreadcrumbs String

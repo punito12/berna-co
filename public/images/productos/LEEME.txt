@@ -1,20 +1,26 @@
 Fotos de productos
 ==================
 
-Dejá acá las fotos de cada producto con EXACTAMENTE estos nombres
-(formato .jpg, idealmente cuadradas, ~1000x1000px):
+Cada producto puede tener HASTA 3 fotos: una de portada (la que se ve en la
+grilla del catálogo) y dos más que aparecen en la página de detalle del
+producto.
 
-  peceto-pastura.jpg
-  peceto.jpg
-  pechuga-pastoril.jpg
-  bife-chorizo.jpg
-  cerdo.jpg
-  long-chicken-fingers.jpg
-  berenjena.jpg
-  girgolas.jpg
+Dejá los archivos acá con EXACTAMENTE estos nombres (formato .jpg, idealmente
+cuadradas, ~1000x1000px):
+
+  PORTADA                       FOTO 2                 FOTO 3
+  peceto-pastura.jpg            peceto-pastura-2.jpg   peceto-pastura-3.jpg
+  peceto.jpg                    peceto-2.jpg           peceto-3.jpg
+  pechuga-pastoril.jpg          pechuga-pastoril-2.jpg pechuga-pastoril-3.jpg
+  bife-chorizo.jpg              bife-chorizo-2.jpg     bife-chorizo-3.jpg
+  cerdo.jpg                     cerdo-2.jpg            cerdo-3.jpg
+  long-chicken-fingers.jpg      long-chicken-fingers-2.jpg  long-chicken-fingers-3.jpg
+  berenjena.jpg                 berenjena-2.jpg        berenjena-3.jpg
+  girgolas.jpg                  girgolas-2.jpg         girgolas-3.jpg
+
+La PORTADA (sin número) es obligatoria para que se vea linda la grilla.
+Las fotos -2 y -3 son opcionales; si no las ponés, en el detalle se muestran
+bloques crema con el nombre, no se rompe nada.
 
 Para el fondo del hero (la foto de las milanesas apiladas en la tabla),
 dejala en:  public/images/hero.jpg
-
-Mientras una foto no exista, la tarjeta muestra un bloque crema con el
-nombre del producto — no se rompe nada.

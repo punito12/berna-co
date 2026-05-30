@@ -120,8 +120,19 @@ const deliverySlots = [
   { label: "18:00–20:00", available: true },
 ];
 
+// Detail gallery paths, by convention: the cover plus "-2" and "-3" variants.
+// Missing files just render as cream placeholders, so listing them is safe.
+function galleryFor(slug: string): string[] {
+  return [
+    `/images/productos/${slug}.jpg`,
+    `/images/productos/${slug}-2.jpg`,
+    `/images/productos/${slug}-3.jpg`,
+  ];
+}
+
 async function main() {
   for (const p of products) {
+    const images = JSON.stringify(galleryFor(p.slug));
     await prisma.product.upsert({
       where: { slug: p.slug },
       update: {
@@ -130,6 +141,7 @@ async function main() {
         weightGrams: p.weightGrams,
         category: p.category,
         imageUrl: p.imageUrl,
+        images,
         isNew: p.isNew,
         availableBreadcrumbs: JSON.stringify(p.availableBreadcrumbs),
       },
@@ -141,6 +153,7 @@ async function main() {
         category: p.category,
         price: 0, // placeholder — admin loads real price
         imageUrl: p.imageUrl,
+        images,
         isNew: p.isNew,
         availableBreadcrumbs: JSON.stringify(p.availableBreadcrumbs),
       },
