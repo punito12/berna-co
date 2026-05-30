@@ -1,26 +1,34 @@
-Fotos de productos
-==================
+Fotos de productos — por EMPANADO
+=================================
 
-Cada producto puede tener HASTA 3 fotos: una de portada (la que se ve en la
-grilla del catálogo) y dos más que aparecen en la página de detalle del
-producto.
+Cada empanado de un producto puede tener su propio set de fotos (porque viene
+en otro paquete). El sistema muestra las fotos del empanado que el cliente
+elige. Cada empanado admite hasta 3 fotos (portada + 2 extra opcionales).
 
-Dejá los archivos acá con EXACTAMENTE estos nombres (formato .jpg, idealmente
-cuadradas, ~1000x1000px):
+REGLA DE NOMBRES (carpeta: public/images/productos/)
+  Tradicional → slug.jpg            slug-2.jpg            slug-3.jpg
+  Integral    → slug-integral.jpg   slug-integral-2.jpg  slug-integral-3.jpg
+  Keto        → slug-keto.jpg       slug-keto-2.jpg       slug-keto-3.jpg
 
-  PORTADA                       FOTO 2                 FOTO 3
-  peceto-pastura.jpg            peceto-pastura-2.jpg   peceto-pastura-3.jpg
-  peceto.jpg                    peceto-2.jpg           peceto-3.jpg
-  pechuga-pastoril.jpg          pechuga-pastoril-2.jpg pechuga-pastoril-3.jpg
-  bife-chorizo.jpg              bife-chorizo-2.jpg     bife-chorizo-3.jpg
-  cerdo.jpg                     cerdo-2.jpg            cerdo-3.jpg
-  long-chicken-fingers.jpg      long-chicken-fingers-2.jpg  long-chicken-fingers-3.jpg
-  berenjena.jpg                 berenjena-2.jpg        berenjena-3.jpg
-  girgolas.jpg                  girgolas-2.jpg         girgolas-3.jpg
+La PORTADA (la primera, sin número) es la que se ve en la grilla del catálogo.
+Las -2 y -3 son opcionales (aparecen como miniaturas en el detalle).
+Si falta un archivo, se ve un bloque crema con el nombre — no se rompe nada.
 
-La PORTADA (sin número) es obligatoria para que se vea linda la grilla.
-Las fotos -2 y -3 son opcionales; si no las ponés, en el detalle se muestran
-bloques crema con el nombre, no se rompe nada.
+QUÉ EMPANADOS TIENE CADA PRODUCTO
+  peceto                → Tradicional
+  cerdo                 → Tradicional
+  bife-chorizo          → Tradicional
+  peceto-pastura        → Tradicional, Keto
+  long-chicken-fingers  → Tradicional, Integral
+  pechuga-pastoril      → Tradicional, Integral, Keto
+  berenjena             → Tradicional, Integral, Keto
+  girgolas              → Tradicional, Integral, Keto
 
-Para el fondo del hero (la foto de las milanesas apiladas en la tabla),
-dejala en:  public/images/hero.jpg
+EJEMPLO COMPLETO (pechuga-pastoril)
+  pechuga-pastoril.jpg              (Tradicional, portada)
+  pechuga-pastoril-2.jpg            (Tradicional, extra)
+  pechuga-pastoril-integral.jpg     (Integral, portada)
+  pechuga-pastoril-keto.jpg         (Keto, portada)
+
+HERO (portada del sitio)
+  public/images/hero.jpg   — foto horizontal de las milanesas en la tabla
