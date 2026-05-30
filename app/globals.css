@@ -16,3 +16,64 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* Text selection in the brand palette (black on cream). */
+::selection {
+  background-color: #0a0a0a;
+  color: #f5f0eb;
+}
+
+/* --- Motion ---------------------------------------------------------------
+   One shared "fade up" used for the hero load and for scroll reveals. Kept
+   subtle and editorial: a soft ease, no bounce. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Plays immediately on mount (hero). Use inline animationDelay to stagger. */
+.animate-fade-up {
+  animation: fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Scroll reveal: hidden until <Reveal> adds .is-visible (IntersectionObserver). */
+[data-reveal] {
+  opacity: 0;
+}
+[data-reveal].is-visible {
+  animation: fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* A slow, faint drift for the hero background photo — adds life without noise. */
+@keyframes slow-zoom {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.animate-slow-zoom {
+  animation: slow-zoom 18s ease-out both;
+}
+
+/* Respect users who prefer less motion. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-fade-up,
+  .animate-slow-zoom,
+  [data-reveal].is-visible {
+    animation: none;
+  }
+  [data-reveal] {
+    opacity: 1;
+  }
+}

@@ -1,30 +1,78 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ProductCard from "@/components/ProductCard";
+import Reveal from "@/components/Reveal";
 import { useCart } from "@/components/CartProvider";
 import { BREADCRUMB_LABELS, formatPrice, type ProductForUI } from "@/lib/products";
+
+// Human labels for the category filter chips.
+const CATEGORY_LABELS: Record<string, string> = {
+  CARNE: "Carne",
+  POLLO: "Pollo",
+  CERDO: "Cerdo",
+  VEGANO: "Vegano",
+};
 
 export default function Catalog({ products }: { products: ProductForUI[] }) {
   const { lines, totalItems, totalPrice, changeQuantity } = useCart();
   const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState<string>("ALL");
+
+  // Categories present in the catalog, kept in a stable, sensible order.
+  const categories = useMemo(() => {
+    const present = new Set(products.map((p) => p.category));
+    return ["CARNE", "POLLO", "CERDO", "VEGANO"].filter((c) => present.has(c));
+  }, [products]);
+
+  const visible = useMemo(
+    () =>
+      category === "ALL"
+        ? products
+        : products.filter((p) => p.category === category),
+    [products, category]
+  );
 
   return (
     <section id="productos" className="bg-cream">
-      <div className="mx-auto max-w-6xl px-4 py-16">
-        <header className="mb-10 text-center">
-          <p className="font-bold uppercase tracking-wide text-sm text-muted">
+      <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
+        <Reveal as="header" className="mb-12 text-center">
+          <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
             Congelados Caseros
           </p>
-          <h2 className="mt-2 font-black uppercase tracking-tight text-4xl sm:text-5xl text-ink">
+          <h2 className="mt-3 font-black uppercase tracking-tight text-4xl sm:text-6xl text-ink">
             Nuestros productos
           </h2>
-        </header>
+          <p className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted">
+            Elegí tu corte y tu empanado. Listas para el horno.
+          </p>
+        </Reveal>
+
+        {/* Category filter */}
+        <Reveal className="mb-10 flex flex-wrap justify-center gap-2" delay={80}>
+          <FilterChip
+            active={category === "ALL"}
+            onClick={() => setCategory("ALL")}
+          >
+            Todos
+          </FilterChip>
+          {categories.map((c) => (
+            <FilterChip
+              key={c}
+              active={category === c}
+              onClick={() => setCategory(c)}
+            >
+              {CATEGORY_LABELS[c] ?? c}
+            </FilterChip>
+          ))}
+        </Reveal>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {visible.map((product, i) => (
+            <Reveal key={product.id} delay={(i % 3) * 90}>
+              <ProductCard product={product} />
+            </Reveal>
           ))}
         </div>
       </div>
@@ -72,7 +120,7 @@ export default function Catalog({ products }: { products: ProductForUI[] }) {
                           type="button"
                           onClick={() => changeQuantity(line.key, -1)}
                           aria-label="Quitar uno"
-                          className="h-7 w-7 border border-black font-bold text-ink"
+                          className="h-7 w-7 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
                         >
                           −
                         </button>
@@ -83,7 +131,7 @@ export default function Catalog({ products }: { products: ProductForUI[] }) {
                           type="button"
                           onClick={() => changeQuantity(line.key, 1)}
                           aria-label="Agregar uno"
-                          className="h-7 w-7 border border-black font-bold text-ink"
+                          className="h-7 w-7 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
                         >
                           +
                         </button>
@@ -109,5 +157,30 @@ export default function Catalog({ products }: { products: ProductForUI[] }) {
         </div>
       )}
     </section>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-full border px-4 py-1.5 font-bold uppercase tracking-wide text-xs transition-colors ${
+        active
+          ? "border-black bg-black text-white"
+          : "border-line bg-white text-ink hover:border-black"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

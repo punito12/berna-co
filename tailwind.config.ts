@@ -14,6 +14,11 @@ const config: Config = {
         line: "#E8E3DC", // borders, separators
         muted: "#6B6560", // secondary text, weights, descriptions
       },
+      fontFamily: {
+        // Grotesque workhorse (headlines + UI) and the serif accent.
+        sans: ["var(--font-archivo)", "system-ui", "sans-serif"],
+        serif: ["var(--font-fraunces)", "Georgia", "serif"],
+      },
     },
   },
   plugins: [],
