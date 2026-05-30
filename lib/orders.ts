@@ -101,11 +101,13 @@ export async function createOrder(
         `El empanado elegido no está disponible para ${product.name}.`
       );
     }
-    total += product.price * qty;
+    // Price of the chosen empanado, falling back to the product default.
+    const unitPrice = priceForBreadcrumb(product, item.breadcrumbType);
+    total += unitPrice * qty;
     return {
       productId: product.id,
       quantity: qty,
-      priceAtTime: product.price,
+      priceAtTime: unitPrice,
       breadcrumbType: item.breadcrumbType,
     };
   });
@@ -140,4 +142,20 @@ function safeParse(raw: string): string[] {
   } catch {
     return [];
   }
+}
+
+// Server-side price for an empanado: the specific price (> 0) from the product's
+// `prices` JSON, otherwise the product's default `price`.
+function priceForBreadcrumb(
+  product: { price: number; prices: string },
+  breadcrumb: string
+): number {
+  try {
+    const map = JSON.parse(product.prices);
+    const specific = map?.[breadcrumb];
+    if (typeof specific === "number" && specific > 0) return specific;
+  } catch {
+    // fall through to default
+  }
+  return product.price ?? 0;
 }

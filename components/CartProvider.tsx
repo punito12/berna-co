@@ -11,7 +11,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { ProductForUI } from "@/lib/products";
+import { priceFor, type ProductForUI } from "@/lib/products";
 
 // One line in the cart. Same product with a different empanado = separate line.
 export type CartLine = {
@@ -86,7 +86,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             productId: product.id,
             name: product.name,
             breadcrumbType,
-            price: product.price,
+            price: priceFor(product, breadcrumbType),
             quantity: 1,
           },
         ];

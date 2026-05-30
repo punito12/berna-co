@@ -18,8 +18,12 @@ model Product {
   slug        String  @unique
   weightGrams Int
   category    String // CARNE | POLLO | CERDO | VEGANO
-  price       Int // price in ARS cents-free pesos; admin loads it. Placeholder 0.
+  price       Int // default/fallback price (in pesos). Admin loads it. Placeholder 0.
   imageUrl    String // cover photo, shown on the catalog cards
+
+  // JSON map of price per empanado, e.g. {"TRADITIONAL":8500,"KETO":9000}.
+  // Falls back to `price` when a breadcrumb has no specific entry.
+  prices String @default("{}")
   available   Boolean @default(true)
   isNew       Boolean @default(false)
 

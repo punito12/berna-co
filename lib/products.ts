@@ -18,7 +18,8 @@ export type ProductForUI = {
   slug: string;
   weightGrams: number;
   category: string;
-  price: number;
+  price: number; // default/fallback price
+  pricesByBreadcrumb: Record<string, number>; // price per empanado
   imageUrl: string; // default cover (the traditional first photo)
   imagesByBreadcrumb: Record<string, string[]>; // gallery per empanado
   available: boolean;
@@ -35,6 +36,7 @@ type ProductRow = {
   weightGrams: number;
   category: string;
   price: number;
+  prices: string;
   imageUrl: string;
   images: string;
   available: boolean;
@@ -52,12 +54,38 @@ function toProductForUI(p: ProductRow): ProductForUI {
     weightGrams: p.weightGrams,
     category: p.category,
     price: p.price,
+    pricesByBreadcrumb: safeParsePrices(p.prices),
     imageUrl: p.imageUrl,
     imagesByBreadcrumb: safeParseImages(p.images),
     available: p.available,
     isNew: p.isNew,
     breadcrumbs: safeParseArray(p.availableBreadcrumbs),
   };
+}
+
+// The price for a given empanado: the specific price if set (> 0), otherwise
+// the product's default price (so legacy/0 still shows "Precio a confirmar").
+export function priceFor(product: ProductForUI, breadcrumb: string): number {
+  const specific = product.pricesByBreadcrumb[breadcrumb];
+  if (typeof specific === "number" && specific > 0) return specific;
+  return product.price ?? 0;
+}
+
+// Parses the prices column into a { breadcrumb: price } map.
+function safeParsePrices(raw: string): Record<string, number> {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const out: Record<string, number> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (typeof v === "number") out[k] = v;
+      }
+      return out;
+    }
+    return {};
+  } catch {
+    return {};
+  }
 }
 
 // Parses the images column into a { breadcrumb: paths[] } map. Accepts the

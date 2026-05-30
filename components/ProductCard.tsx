@@ -7,6 +7,7 @@ import {
   BREADCRUMB_LABELS,
   formatPrice,
   formatWeight,
+  priceFor,
   type ProductForUI,
 } from "@/lib/products";
 
@@ -111,7 +112,7 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
         {/* Price + add button pinned to the bottom of the card */}
         <div className="mt-auto pt-5">
           <p className="font-black text-2xl text-black">
-            {formatPrice(product.price)}
+            {formatPrice(priceFor(product, selected))}
           </p>
           <button
             type="button"

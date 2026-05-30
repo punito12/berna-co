@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { useCart } from "@/components/CartProvider";
-import { BREADCRUMB_LABELS, formatPrice, type ProductForUI } from "@/lib/products";
+import {
+  BREADCRUMB_LABELS,
+  formatPrice,
+  priceFor,
+  type ProductForUI,
+} from "@/lib/products";
 
 // The interactive buying controls on the product detail page: empanado picker,
 // quantity, price and add-to-cart. The selected empanado is controlled by the
@@ -82,10 +87,10 @@ export default function AddToCartPanel({
         </div>
       </div>
 
-      {/* Price + add */}
+      {/* Price + add — follows the chosen empanado */}
       <div className="mt-8 border-t border-line pt-6">
         <p className="font-black text-3xl text-black">
-          {formatPrice(product.price)}
+          {formatPrice(priceFor(product, selected))}
         </p>
         <button
           type="button"

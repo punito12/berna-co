@@ -70,18 +70,47 @@ export async function listProductsForAdmin() {
   return prisma.product.findMany({ orderBy: { name: "asc" } });
 }
 
-// Updates price (in whole pesos) and availability for one product.
+// Updates availability and the price of each empanado for one product.
+// `prices` is a map { breadcrumb: pesos }. We also store a sensible default
+// `price` (the first/traditional one) so anything without a specific price
+// still has a fallback.
 export async function updateProduct(
   id: string,
-  data: { price: number; available: boolean }
+  data: { prices: Record<string, number>; available: boolean }
 ) {
-  const price = Math.round(data.price);
-  if (!Number.isFinite(price) || price < 0) {
-    throw new Error("Precio inválido.");
+  const cleaned: Record<string, number> = {};
+  for (const [breadcrumb, raw] of Object.entries(data.prices ?? {})) {
+    const value = Math.round(Number(raw));
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error("Precio inválido.");
+    }
+    cleaned[breadcrumb] = value;
   }
+
+  // Default price = the product's own breadcrumbs order, first available > 0,
+  // else the traditional, else 0.
+  const product = await prisma.product.findUnique({ where: { id } });
+  if (!product) throw new Error("Producto no encontrado.");
+  const order: string[] = (() => {
+    try {
+      const b = JSON.parse(product.availableBreadcrumbs);
+      return Array.isArray(b) ? b : [];
+    } catch {
+      return [];
+    }
+  })();
+  const defaultPrice =
+    order.map((b) => cleaned[b]).find((v) => typeof v === "number" && v > 0) ??
+    cleaned[order[0]] ??
+    0;
+
   await prisma.product.update({
     where: { id },
-    data: { price, available: Boolean(data.available) },
+    data: {
+      price: defaultPrice,
+      prices: JSON.stringify(cleaned),
+      available: Boolean(data.available),
+    },
   });
 }
 

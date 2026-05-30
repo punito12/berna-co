@@ -11,16 +11,19 @@ export async function PATCH(
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
-  let body: { price?: number; available?: boolean };
+  let body: { prices?: Record<string, number>; available?: boolean };
   try {
-    body = (await request.json()) as { price?: number; available?: boolean };
+    body = (await request.json()) as {
+      prices?: Record<string, number>;
+      available?: boolean;
+    };
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
   try {
     await updateProduct(params.id, {
-      price: Number(body.price),
+      prices: body.prices ?? {},
       available: Boolean(body.available),
     });
     return NextResponse.json({ ok: true });

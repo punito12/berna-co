@@ -1,7 +1,25 @@
 import { listProductsForAdmin } from "@/lib/admin";
 import ProductEditor from "@/components/ProductEditor";
 
-// Edit price and availability for each product (no create/delete in v1).
+// Helpers to parse the JSON columns coming from the database row.
+function safeArray(raw: string): string[] {
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+function safePrices(raw: string): Record<string, number> {
+  try {
+    const v = JSON.parse(raw);
+    return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+// Edit price (per empanado) and availability for each product (no create/delete in v1).
 export default async function AdminProductsPage() {
   const products = await listProductsForAdmin();
 
@@ -11,8 +29,8 @@ export default async function AdminProductsPage() {
         Productos
       </h1>
       <p className="mb-6 text-sm text-muted">
-        Cargá el precio (en pesos) y marcá si está disponible. Los productos
-        con precio 0 aparecen como “Precio a confirmar” en el sitio.
+        Cargá el precio de cada empanado (en pesos) y marcá si está disponible.
+        Un empanado con precio 0 aparece como “Precio a confirmar” en el sitio.
       </p>
 
       <div className="space-y-3">
@@ -22,8 +40,9 @@ export default async function AdminProductsPage() {
             product={{
               id: p.id,
               name: p.name,
-              price: p.price,
               available: p.available,
+              breadcrumbs: safeArray(p.availableBreadcrumbs),
+              prices: safePrices(p.prices),
             }}
           />
         ))}
