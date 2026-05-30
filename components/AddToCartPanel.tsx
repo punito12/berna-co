@@ -5,12 +5,18 @@ import { useCart } from "@/components/CartProvider";
 import { BREADCRUMB_LABELS, formatPrice, type ProductForUI } from "@/lib/products";
 
 // The interactive buying controls on the product detail page: empanado picker,
-// quantity, price and add-to-cart.
-export default function AddToCartPanel({ product }: { product: ProductForUI }) {
+// quantity, price and add-to-cart. The selected empanado is controlled by the
+// parent (ProductDetail) so the photo gallery can react to it.
+export default function AddToCartPanel({
+  product,
+  selected,
+  onSelect,
+}: {
+  product: ProductForUI;
+  selected: string;
+  onSelect: (breadcrumb: string) => void;
+}) {
   const { addToCart } = useCart();
-  const [selected, setSelected] = useState<string>(
-    product.breadcrumbs[0] ?? "TRADITIONAL"
-  );
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
@@ -35,7 +41,7 @@ export default function AddToCartPanel({ product }: { product: ProductForUI }) {
               <button
                 key={code}
                 type="button"
-                onClick={() => setSelected(code)}
+                onClick={() => onSelect(code)}
                 aria-pressed={active}
                 className={`rounded-full border border-black px-4 py-1.5 font-bold uppercase tracking-wide text-xs transition-colors ${
                   active ? "bg-black text-white" : "bg-white text-black hover:bg-cream"

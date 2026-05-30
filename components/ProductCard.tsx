@@ -19,6 +19,10 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
   );
   const [justAdded, setJustAdded] = useState(false);
 
+  // Cover photo follows the chosen empanado (each variant has its own photos).
+  // Falls back to the product's default cover if that variant has none.
+  const cover = product.imagesByBreadcrumb[selected]?.[0] ?? product.imageUrl;
+
   function handleAdd() {
     addToCart(product, selected);
     setJustAdded(true);
@@ -41,8 +45,9 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
           {product.name}
         </span>
         <div
+          key={cover}
           className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
-          style={{ backgroundImage: `url('${product.imageUrl}')` }}
+          style={{ backgroundImage: `url('${cover}')` }}
         />
 
         {product.isNew && (

@@ -19,8 +19,8 @@ export type ProductForUI = {
   weightGrams: number;
   category: string;
   price: number;
-  imageUrl: string;
-  images: string[]; // detail gallery
+  imageUrl: string; // default cover (the traditional first photo)
+  imagesByBreadcrumb: Record<string, string[]>; // gallery per empanado
   available: boolean;
   isNew: boolean;
   breadcrumbs: string[];
@@ -53,11 +53,24 @@ function toProductForUI(p: ProductRow): ProductForUI {
     category: p.category,
     price: p.price,
     imageUrl: p.imageUrl,
-    images: safeParseArray(p.images),
+    imagesByBreadcrumb: safeParseImages(p.images),
     available: p.available,
     isNew: p.isNew,
     breadcrumbs: safeParseArray(p.availableBreadcrumbs),
   };
+}
+
+// Parses the images column into a { breadcrumb: paths[] } map. Accepts the
+// old array format too (treated as the traditional set) for safety.
+function safeParseImages(raw: string): Record<string, string[]> {
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return { TRADITIONAL: parsed };
+    if (parsed && typeof parsed === "object") return parsed;
+    return {};
+  } catch {
+    return {};
+  }
 }
 
 // Loads all available products, ordered so NEW items show first.

@@ -28,7 +28,7 @@ const products: SeedProduct[] = [
     category: "CARNE",
     imageUrl: "/images/productos/peceto-pastura.jpg",
     isNew: true,
-    availableBreadcrumbs: ["TRADITIONAL", "INTEGRAL", "KETO"],
+    availableBreadcrumbs: ["TRADITIONAL", "KETO"],
   },
   {
     name: "Peceto",
@@ -38,7 +38,7 @@ const products: SeedProduct[] = [
     category: "CARNE",
     imageUrl: "/images/productos/peceto.jpg",
     isNew: false,
-    availableBreadcrumbs: ["TRADITIONAL", "INTEGRAL"],
+    availableBreadcrumbs: ["TRADITIONAL"],
   },
   {
     name: "Pechuga Pastoril",
@@ -59,7 +59,7 @@ const products: SeedProduct[] = [
     category: "CARNE",
     imageUrl: "/images/productos/bife-chorizo.jpg",
     isNew: false,
-    availableBreadcrumbs: ["TRADITIONAL", "INTEGRAL"],
+    availableBreadcrumbs: ["TRADITIONAL"],
   },
   {
     name: "Cerdo",
@@ -69,7 +69,7 @@ const products: SeedProduct[] = [
     category: "CERDO",
     imageUrl: "/images/productos/cerdo.jpg",
     isNew: false,
-    availableBreadcrumbs: ["TRADITIONAL", "INTEGRAL"],
+    availableBreadcrumbs: ["TRADITIONAL"],
   },
   // --- Long Chicken Fingers (750 g) ---
   {
@@ -81,7 +81,7 @@ const products: SeedProduct[] = [
     category: "POLLO",
     imageUrl: "/images/productos/long-chicken-fingers.jpg",
     isNew: false,
-    availableBreadcrumbs: ["TRADITIONAL"],
+    availableBreadcrumbs: ["TRADITIONAL", "INTEGRAL"],
   },
   // --- Veganas (500 g) ---
   {
@@ -92,7 +92,7 @@ const products: SeedProduct[] = [
     category: "VEGANO",
     imageUrl: "/images/productos/berenjena.jpg",
     isNew: false,
-    availableBreadcrumbs: ["TRADITIONAL"],
+    availableBreadcrumbs: ["TRADITIONAL", "INTEGRAL", "KETO"],
   },
   {
     name: "Gírgolas",
@@ -102,7 +102,7 @@ const products: SeedProduct[] = [
     category: "VEGANO",
     imageUrl: "/images/productos/girgolas.jpg",
     isNew: false,
-    availableBreadcrumbs: ["TRADITIONAL"],
+    availableBreadcrumbs: ["TRADITIONAL", "INTEGRAL", "KETO"],
   },
 ];
 
@@ -120,19 +120,37 @@ const deliverySlots = [
   { label: "18:00–20:00", available: true },
 ];
 
-// Detail gallery paths, by convention: the cover plus "-2" and "-3" variants.
-// Missing files just render as cream placeholders, so listing them is safe.
-function galleryFor(slug: string): string[] {
-  return [
-    `/images/productos/${slug}.jpg`,
-    `/images/productos/${slug}-2.jpg`,
-    `/images/productos/${slug}-3.jpg`,
-  ];
+// Photo paths PER empanado. Each breadcrumb variant comes in different
+// packaging, so it gets its own set of up to 3 photos, by naming convention:
+//   TRADITIONAL: slug.jpg, slug-2.jpg, slug-3.jpg
+//   INTEGRAL:    slug-integral.jpg, slug-integral-2.jpg, slug-integral-3.jpg
+//   KETO:        slug-keto.jpg, slug-keto-2.jpg, slug-keto-3.jpg
+// Missing files render as cream placeholders, so listing them is always safe.
+const BREADCRUMB_SUFFIX: Record<string, string> = {
+  TRADITIONAL: "",
+  INTEGRAL: "-integral",
+  KETO: "-keto",
+};
+
+function galleryFor(
+  slug: string,
+  breadcrumbs: string[]
+): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const b of breadcrumbs) {
+    const s = BREADCRUMB_SUFFIX[b] ?? "";
+    out[b] = [
+      `/images/productos/${slug}${s}.jpg`,
+      `/images/productos/${slug}${s}-2.jpg`,
+      `/images/productos/${slug}${s}-3.jpg`,
+    ];
+  }
+  return out;
 }
 
 async function main() {
   for (const p of products) {
-    const images = JSON.stringify(galleryFor(p.slug));
+    const images = JSON.stringify(galleryFor(p.slug, p.availableBreadcrumbs));
     await prisma.product.upsert({
       where: { slug: p.slug },
       update: {
