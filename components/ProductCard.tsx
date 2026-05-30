@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCart } from "@/components/CartProvider";
 import {
   BREADCRUMB_LABELS,
   formatPrice,
@@ -8,12 +9,9 @@ import {
   type ProductForUI,
 } from "@/lib/products";
 
-type ProductCardProps = {
-  product: ProductForUI;
-  onAdd: (product: ProductForUI, breadcrumbType: string) => void;
-};
+export default function ProductCard({ product }: { product: ProductForUI }) {
+  const { addToCart } = useCart();
 
-export default function ProductCard({ product, onAdd }: ProductCardProps) {
   // Local UI state only: which empanado the customer picked. Defaults to first.
   const [selected, setSelected] = useState<string>(
     product.breadcrumbs[0] ?? "TRADITIONAL"
@@ -21,7 +19,7 @@ export default function ProductCard({ product, onAdd }: ProductCardProps) {
   const [justAdded, setJustAdded] = useState(false);
 
   function handleAdd() {
-    onAdd(product, selected);
+    addToCart(product, selected);
     setJustAdded(true);
     window.setTimeout(() => setJustAdded(false), 1200);
   }

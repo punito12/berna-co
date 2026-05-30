@@ -1,70 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import ProductCard from "@/components/ProductCard";
-import {
-  BREADCRUMB_LABELS,
-  formatPrice,
-  type ProductForUI,
-} from "@/lib/products";
-
-// One line in the cart. Same product with a different empanado is a separate line.
-type CartLine = {
-  key: string; // productId + breadcrumbType
-  productId: string;
-  name: string;
-  breadcrumbType: string;
-  price: number;
-  quantity: number;
-};
+import { useCart } from "@/components/CartProvider";
+import { BREADCRUMB_LABELS, formatPrice, type ProductForUI } from "@/lib/products";
 
 export default function Catalog({ products }: { products: ProductForUI[] }) {
-  const [cart, setCart] = useState<CartLine[]>([]);
+  const { lines, totalItems, totalPrice, changeQuantity } = useCart();
   const [open, setOpen] = useState(false);
-
-  function addToCart(product: ProductForUI, breadcrumbType: string) {
-    const key = `${product.id}__${breadcrumbType}`;
-    setCart((prev) => {
-      const existing = prev.find((line) => line.key === key);
-      if (existing) {
-        return prev.map((line) =>
-          line.key === key ? { ...line, quantity: line.quantity + 1 } : line
-        );
-      }
-      return [
-        ...prev,
-        {
-          key,
-          productId: product.id,
-          name: product.name,
-          breadcrumbType,
-          price: product.price,
-          quantity: 1,
-        },
-      ];
-    });
-  }
-
-  function changeQuantity(key: string, delta: number) {
-    setCart((prev) =>
-      prev
-        .map((line) =>
-          line.key === key
-            ? { ...line, quantity: line.quantity + delta }
-            : line
-        )
-        .filter((line) => line.quantity > 0)
-    );
-  }
-
-  const totalItems = useMemo(
-    () => cart.reduce((sum, line) => sum + line.quantity, 0),
-    [cart]
-  );
-  const totalPrice = useMemo(
-    () => cart.reduce((sum, line) => sum + line.price * line.quantity, 0),
-    [cart]
-  );
 
   return (
     <section id="productos" className="bg-cream">
@@ -80,11 +24,7 @@ export default function Catalog({ products }: { products: ProductForUI[] }) {
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onAdd={addToCart}
-            />
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
       </div>
@@ -111,7 +51,7 @@ export default function Catalog({ products }: { products: ProductForUI[] }) {
           {open && (
             <div className="border-t border-line bg-white">
               <ul className="mx-auto max-w-6xl divide-y divide-line px-4">
-                {cart.map((line) => (
+                {lines.map((line) => (
                   <li
                     key={line.key}
                     className="flex items-center justify-between gap-4 py-3"
@@ -157,17 +97,12 @@ export default function Catalog({ products }: { products: ProductForUI[] }) {
               </ul>
 
               <div className="mx-auto max-w-6xl px-4 py-4">
-                <button
-                  type="button"
-                  disabled
-                  className="w-full cursor-not-allowed bg-black px-4 py-4 font-bold uppercase tracking-widest text-sm text-white opacity-60"
-                  title="El checkout llega en el Paso 2"
+                <Link
+                  href="/checkout"
+                  className="block w-full bg-black px-4 py-4 text-center font-bold uppercase tracking-widest text-sm text-white transition-colors hover:bg-ink/80"
                 >
-                  Continuar — próximamente
-                </button>
-                <p className="mt-2 text-center text-xs text-muted">
-                  El checkout y la entrega se construyen en el próximo paso.
-                </p>
+                  Continuar
+                </Link>
               </div>
             </div>
           )}

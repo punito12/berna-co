@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
 import "./globals.css";
+import { CartProvider } from "@/components/CartProvider";
 
 // Archivo: a strong grotesque with a true black weight — fits the bold,
 // catalog-like, uppercase personality of the brand without feeling generic.
@@ -23,7 +24,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es-AR">
-      <body className={archivo.className}>{children}</body>
+      <body className={archivo.className}>
+        <CartProvider>{children}</CartProvider>
+      </body>
     </html>
   );
 }
