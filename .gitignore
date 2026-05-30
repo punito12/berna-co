@@ -27,3 +27,6 @@ npm-debug.log*
 # typescript
 next-env.d.ts
 *.tsbuildinfo
+
+# image backups (originals before optimization)
+/_originales

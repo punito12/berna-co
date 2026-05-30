@@ -24,14 +24,15 @@ export default function ProductGallery({
     <div>
       {/* Main image */}
       <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-line bg-cream">
+        {/* Placeholder name sits BEHIND the photo; only shows if a file is missing. */}
+        <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-8 text-center font-black uppercase tracking-tight text-2xl text-line">
+          {name}
+        </span>
         <div
           key={active}
           className="absolute inset-0 animate-fade-up bg-cover bg-center"
           style={{ backgroundImage: `url('${photos[active]}')` }}
         />
-        <span className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center font-black uppercase tracking-tight text-2xl text-line">
-          {name}
-        </span>
 
         {isNew && (
           <span className="absolute left-4 top-4 bg-ink px-3 py-1 font-bold uppercase tracking-widest text-xs text-white">

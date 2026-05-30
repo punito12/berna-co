@@ -35,13 +35,15 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
         className="relative block aspect-square w-full overflow-hidden bg-cream"
         aria-label={`Ver ${product.name}`}
       >
+        {/* Placeholder name sits BEHIND the photo (-z-10). Only visible when
+            the image file is missing (the photo layer is then transparent). */}
+        <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line">
+          {product.name}
+        </span>
         <div
           className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
           style={{ backgroundImage: `url('${product.imageUrl}')` }}
         />
-        <span className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line">
-          {product.name}
-        </span>
 
         {product.isNew && (
           <span className="absolute left-3 top-3 bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
