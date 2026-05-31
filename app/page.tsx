@@ -2,6 +2,7 @@ import Hero from "@/components/Hero";
 import QualityBadges from "@/components/QualityBadges";
 import Catalog from "@/components/Catalog";
 import Footer from "@/components/Footer";
+import WhatsappFloat from "@/components/WhatsappFloat";
 import { getAvailableProducts } from "@/lib/products";
 
 // Home page: dark hero + quality strip + product grid (with local cart).
@@ -28,6 +29,7 @@ export default async function HomePage() {
       )}
 
       <Footer />
+      <WhatsappFloat />
     </main>
   );
 }

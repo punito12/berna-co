@@ -5,6 +5,7 @@ import { getProductBySlug } from "@/lib/products";
 import ProductDetail from "@/components/ProductDetail";
 import SiteHeader from "@/components/SiteHeader";
 import Footer from "@/components/Footer";
+import WhatsappFloat from "@/components/WhatsappFloat";
 
 // Per-product page title for nicer browser tabs / sharing.
 export async function generateMetadata({
@@ -44,6 +45,7 @@ export default async function ProductPage({
       </div>
 
       <Footer />
+      <WhatsappFloat />
     </main>
   );
 }
