@@ -1,34 +1,42 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { findZoneByPostalCode, normalizePostalCode } from "@/lib/zones";
+import { geocodeAddress, findZoneByPoint } from "@/lib/zones";
 
-// Checks whether a postal code is within a delivery zone, and if so returns
-// that zone's enabled weekdays + active time slots. This is the coverage
-// "barrier": the customer enters their postal code first; only when it's
-// covered does the checkout ask for the full address.
+// Resolves a delivery address to coordinates (Nominatim) and checks which zone
+// polygon they fall in. Returns that zone's weekdays + slots, or "not covered".
 //
-// POST /api/delivery-zone { postalCode }
-//   -> { covered: true, zoneName, postalCode, enabledWeekdays, slots }
-//    | { covered: false }
-//    | { invalid: true }   (couldn't read a 4-digit code)
+// POST /api/delivery-zone { address }
+//   -> { covered: true, zoneName, lat, lng, enabledWeekdays, slots }
+//    | { covered: false, located: bool }   (located=false → couldn't geocode)
 
 export async function POST(request: Request) {
-  let body: { postalCode?: string };
+  let body: { address?: string };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
-  const code = normalizePostalCode(body.postalCode ?? "");
-  if (!code) {
-    return NextResponse.json({ invalid: true });
+  const address = body.address?.trim();
+  if (!address) {
+    return NextResponse.json({ error: "Falta la dirección." }, { status: 400 });
   }
 
   try {
-    const zone = await findZoneByPostalCode(code);
+    const geo = await geocodeAddress(address);
+    if (!geo) {
+      // Couldn't turn the address into coordinates at all.
+      return NextResponse.json({ covered: false, located: false });
+    }
+
+    const zone = await findZoneByPoint(geo.lat, geo.lng);
     if (!zone) {
-      return NextResponse.json({ covered: false });
+      return NextResponse.json({
+        covered: false,
+        located: true,
+        lat: geo.lat,
+        lng: geo.lng,
+      });
     }
 
     const slots = await prisma.deliverySlot.findMany({
@@ -38,14 +46,16 @@ export async function POST(request: Request) {
     return NextResponse.json({
       covered: true,
       zoneName: zone.name,
-      postalCode: code,
+      lat: geo.lat,
+      lng: geo.lng,
+      displayName: geo.displayName,
       enabledWeekdays: zone.daysOfWeek,
       slots: slots.map((s) => ({ id: s.id, label: s.label })),
     });
   } catch (error) {
     console.error("delivery-zone error:", error);
     return NextResponse.json(
-      { error: "No pudimos verificar tu zona. Probá de nuevo." },
+      { error: "No pudimos verificar tu dirección. Probá de nuevo." },
       { status: 500 }
     );
   }

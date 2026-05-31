@@ -114,14 +114,7 @@ export default async function ConfirmadoPage({
             <Row label="Teléfono" value={order.customerPhone} />
             <Row label="Entrega" value={deliveryTypeLabel(order.deliveryType)} />
             {order.deliveryType === "DELIVERY" && order.address && (
-              <Row
-                label="Dirección"
-                value={
-                  order.postalCode
-                    ? `${order.address} (CP ${order.postalCode})`
-                    : order.address
-                }
-              />
+              <Row label="Dirección" value={order.address} />
             )}
             <Row
               label="Cuándo"

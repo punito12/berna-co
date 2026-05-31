@@ -17,7 +17,6 @@ export type OrderForMessage = {
   customerName: string;
   deliveryType: string;
   address: string | null;
-  postalCode: string | null;
   scheduledDate: Date;
   scheduledSlot: string;
   paymentMethod: string;
@@ -54,8 +53,7 @@ function buildMessage(order: OrderForMessage): string {
   lines.push("");
   lines.push(`Entrega: ${deliveryTypeLabel(order.deliveryType)}`);
   if (order.deliveryType === "DELIVERY" && order.address) {
-    const cp = order.postalCode ? ` (CP ${order.postalCode})` : "";
-    lines.push(`Dirección: ${order.address}${cp}`);
+    lines.push(`Dirección: ${order.address}`);
   }
   lines.push(`Cuándo: ${formatLongDate(order.scheduledDate)}, ${order.scheduledSlot}`);
   lines.push(`Pago: ${paymentMethodLabel(order.paymentMethod)}`);

@@ -1,37 +1,22 @@
-// Delivery zones: localities + weekdays, plus geocoding of an address into a
-// locality and matching it to a zone. All locality matching is done on a
-// normalized (lowercased, accent-stripped) form so "Martínez" == "martinez".
+// Delivery zones as map polygons. Coverage is point-in-polygon on the
+// customer's coordinates, which we obtain from their address via OpenStreetMap
+// Nominatim (free, no API key). All geometry is stored as GeoJSON.
 
 import { prisma } from "@/lib/db";
+
+// A GeoJSON Polygon: coordinates are [lng, lat] rings (GeoJSON order).
+export type GeoPolygon = {
+  type: "Polygon";
+  coordinates: number[][][];
+};
 
 export type ZoneForUI = {
   id: string;
   name: string;
-  postalCodes: string[];
-  localities: string[];
+  polygon: GeoPolygon | null;
   daysOfWeek: number[];
   active: boolean;
 };
-
-// Normalizes a locality/string for matching: lowercase, no accents, trimmed.
-export function normalizeLocality(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // strip accents
-    .toLowerCase()
-    .trim();
-}
-
-// Extracts the 4-digit postal code from either format the customer might type:
-//   "1642"      -> "1642"
-//   "B1642DHG"  -> "1642"  (CPA: letter + 4 digits + 3 letters)
-//   "C1002"     -> "1002"
-// Returns null when no 4-digit run is found.
-export function normalizePostalCode(input: string): string | null {
-  if (!input) return null;
-  const match = input.trim().match(/\d{4}/);
-  return match ? match[0] : null;
-}
 
 function parseArray<T>(raw: string): T[] {
   try {
@@ -42,19 +27,30 @@ function parseArray<T>(raw: string): T[] {
   }
 }
 
+function parsePolygon(raw: string | null): GeoPolygon | null {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw);
+    if (v && v.type === "Polygon" && Array.isArray(v.coordinates)) {
+      return v as GeoPolygon;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function toZoneForUI(z: {
   id: string;
   name: string;
-  postalCodes: string;
-  localities: string;
+  polygon: string | null;
   daysOfWeek: string;
   active: boolean;
 }): ZoneForUI {
   return {
     id: z.id,
     name: z.name,
-    postalCodes: parseArray<string>(z.postalCodes),
-    localities: parseArray<string>(z.localities),
+    polygon: parsePolygon(z.polygon),
     daysOfWeek: parseArray<number>(z.daysOfWeek),
     active: z.active,
   };
@@ -65,133 +61,88 @@ export async function listZones(): Promise<ZoneForUI[]> {
   return rows.map(toZoneForUI);
 }
 
-// Finds the active zone that covers the given postal code (matched by its
-// 4-digit number, so "1642" and "B1642DHG" both work).
-export async function findZoneByPostalCode(
-  postalCode: string
+// Ray-casting point-in-polygon test. `point` and the ring are in [lng, lat].
+// Works on a single linear ring; we test the polygon's outer ring (index 0).
+function pointInRing(point: [number, number], ring: number[][]): boolean {
+  const [x, y] = point;
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+    const intersect =
+      yi > y !== yj > y &&
+      x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// True when (lat,lng) falls inside the polygon's outer ring.
+export function isPointInPolygon(
+  lat: number,
+  lng: number,
+  polygon: GeoPolygon
+): boolean {
+  const ring = polygon.coordinates?.[0];
+  if (!ring || ring.length < 3) return false;
+  return pointInRing([lng, lat], ring);
+}
+
+// Finds the first active zone whose polygon contains the given coordinates.
+export async function findZoneByPoint(
+  lat: number,
+  lng: number
 ): Promise<ZoneForUI | null> {
-  const target = normalizePostalCode(postalCode);
-  if (!target) return null;
   const zones = await listZones();
   for (const zone of zones) {
-    if (!zone.active) continue;
-    if (zone.postalCodes.some((c) => normalizePostalCode(c) === target)) {
-      return zone;
-    }
+    if (!zone.active || !zone.polygon) continue;
+    if (isPointInPolygon(lat, lng, zone.polygon)) return zone;
   }
   return null;
-}
-
-// Finds the active zone that lists the given locality (normalized match).
-export async function findZoneByLocality(
-  locality: string
-): Promise<ZoneForUI | null> {
-  return findZoneByLocalities([locality]);
-}
-
-// Finds the active zone that lists ANY of the given candidate localities.
-// Used with geocoding, which yields several place names per address (locality,
-// partido, barrio) — a match on any of them means we deliver there.
-export async function findZoneByLocalities(
-  candidates: string[]
-): Promise<ZoneForUI | null> {
-  const targets = candidates
-    .map(normalizeLocality)
-    .filter((t) => t.length > 0);
-  if (targets.length === 0) return null;
-
-  const zones = await listZones();
-  for (const zone of zones) {
-    if (!zone.active) continue;
-    const zoneLocalities = zone.localities.map(normalizeLocality);
-    if (zoneLocalities.some((l) => targets.includes(l))) {
-      return zone;
-    }
-  }
-  return null;
-}
-
-// Whether automatic geocoding is configured.
-export function isGeocodingConfigured(): boolean {
-  return Boolean(process.env.GOOGLE_MAPS_API_KEY);
 }
 
 export type GeocodeResult = {
-  // The single best-guess locality (for display/logging).
-  locality: string | null;
-  // All candidate place names from the address (locality, partido, barrio…),
-  // used to match against zones — in Greater Buenos Aires the partido we care
-  // about (e.g. "San Isidro") often comes as administrative_area_level_2 while
-  // `locality` is just "Buenos Aires".
-  candidates: string[];
-  formattedAddress: string | null;
+  lat: number;
+  lng: number;
+  displayName: string;
 };
 
-// Address-component types that can name a place we'd put in a zone, in the
-// order we prefer them for the single `locality` field.
-const LOCALITY_TYPES = [
-  "locality",
-  "administrative_area_level_2", // partido (key for GBA)
-  "sublocality",
-  "sublocality_level_1",
-  "neighborhood",
-  "administrative_area_level_3",
-];
-
-// Calls Google Geocoding API to resolve an address into candidate localities.
-// Returns empty results when the key is missing or nothing usable is found.
-export async function geocodeLocality(
+// Geocodes an address to coordinates via OpenStreetMap Nominatim (no API key).
+// Biased to Argentina. Returns null when nothing is found. Nominatim asks for a
+// descriptive User-Agent and rate-limits to ~1 req/s — fine for checkout use.
+export async function geocodeAddress(
   address: string
-): Promise<GeocodeResult> {
-  const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) return { locality: null, candidates: [], formattedAddress: null };
-
-  // Bias results toward the delivery area (northern Greater Buenos Aires) so
-  // Google prefers a local match for ambiguous street names instead of, say,
-  // the famous Av. 9 de Julio in CABA. `bounds` is a soft hint, not a filter.
-  // SW corner .. NE corner roughly covering San Isidro / Vicente López / Tigre.
-  const bounds = "-34.60,-58.65|-34.40,-58.45";
+): Promise<GeocodeResult | null> {
+  const query = address.trim();
+  if (!query) return null;
 
   const url =
-    "https://maps.googleapis.com/maps/api/geocode/json" +
-    `?address=${encodeURIComponent(address)}` +
-    "&components=country:AR&region=ar&language=es" +
-    `&bounds=${encodeURIComponent(bounds)}` +
-    `&key=${key}`;
+    "https://nominatim.openstreetmap.org/search" +
+    `?q=${encodeURIComponent(query)}` +
+    "&countrycodes=ar&format=jsonv2&addressdetails=0&limit=1";
 
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Geocoding HTTP ${res.status}`);
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": "berna-and-co-delivery/1.0 (pedidos web)",
+      "Accept-Language": "es",
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Nominatim HTTP ${res.status}`);
+
   const data = (await res.json()) as {
-    status: string;
-    results: {
-      formatted_address: string;
-      address_components: {
-        long_name: string;
-        types: string[];
-      }[];
-    }[];
-  };
+    lat: string;
+    lon: string;
+    display_name: string;
+  }[];
+  if (!Array.isArray(data) || data.length === 0) return null;
 
-  if (data.status !== "OK" || data.results.length === 0) {
-    return { locality: null, candidates: [], formattedAddress: null };
-  }
+  const first = data[0];
+  const lat = Number(first.lat);
+  const lng = Number(first.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
 
-  const result = data.results[0];
-  const components = result.address_components;
-
-  // Collect every candidate place name, in preference order, de-duplicated.
-  const candidates: string[] = [];
-  for (const type of LOCALITY_TYPES) {
-    for (const c of components) {
-      if (c.types.includes(type) && !candidates.includes(c.long_name)) {
-        candidates.push(c.long_name);
-      }
-    }
-  }
-
-  return {
-    locality: candidates[0] ?? null,
-    candidates,
-    formattedAddress: result.formatted_address,
-  };
+  return { lat, lng, displayName: first.display_name };
 }

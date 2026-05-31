@@ -4,7 +4,7 @@
 
 import { prisma } from "@/lib/db";
 import { BREADCRUMB_LABELS } from "@/lib/products";
-import { findZoneByPostalCode, normalizePostalCode } from "@/lib/zones";
+import { geocodeAddress, findZoneByPoint } from "@/lib/zones";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -16,7 +16,6 @@ export type CreateOrderInput = {
   notes?: string;
   deliveryType: string; // DELIVERY | PICKUP
   address?: string;
-  postalCode?: string; // 4-digit (or CPA) code; coverage is checked from this
   scheduledDate: string; // ISO date string
   scheduledSlot: string;
   paymentMethod: string; // CASH (MERCADOPAGO arrives in Paso 4)
@@ -75,16 +74,25 @@ export async function createOrder(
   // The chosen weekday must be enabled for the delivery zone of this address.
   // We re-derive the zone server-side (don't trust the client): geocode the
   // address → find the zone → check the zone delivers on that weekday.
+  // deliveryCoords is filled for DELIVERY and saved on the order.
+  let deliveryCoords: { lat: number; lng: number } | null = null;
+
   if (input.deliveryType === "DELIVERY") {
-    // Coverage is determined by the postal code (the checkout "barrier").
-    const code = normalizePostalCode(input.postalCode ?? "");
-    if (!code) {
-      throw new OrderValidationError("Falta el código postal.");
+    // Coverage is decided by geocoding the address and testing the zone
+    // polygons. We re-geocode server-side (don't trust client coordinates).
+    if (!address) {
+      throw new OrderValidationError("Falta la dirección de entrega.");
     }
-    const zone = await findZoneByPostalCode(code);
+    const geo = await geocodeAddress(address);
+    if (!geo) {
+      throw new OrderValidationError(
+        "No pudimos ubicar tu dirección. Revisá que esté completa."
+      );
+    }
+    const zone = await findZoneByPoint(geo.lat, geo.lng);
     if (!zone) {
       throw new OrderValidationError(
-        "Lo sentimos, por ahora no llegamos a tu zona."
+        "Lo sentimos, por ahora no llegamos a tu dirección."
       );
     }
     if (!zone.daysOfWeek.includes(scheduledDate.getDay())) {
@@ -92,6 +100,7 @@ export async function createOrder(
         "Ese día no hacemos entregas en tu zona."
       );
     }
+    deliveryCoords = { lat: geo.lat, lng: geo.lng };
   } else {
     // PICKUP (not enabled yet) still uses the global delivery days.
     const enabledDay = await prisma.availableDeliveryDay.findFirst({
@@ -174,10 +183,8 @@ export async function createOrder(
         notes: input.notes?.trim() || null,
         deliveryType: input.deliveryType,
         address: input.deliveryType === "DELIVERY" ? address : null,
-        postalCode:
-          input.deliveryType === "DELIVERY"
-            ? normalizePostalCode(input.postalCode ?? "")
-            : null,
+        lat: deliveryCoords?.lat ?? null,
+        lng: deliveryCoords?.lng ?? null,
         scheduledDate,
         scheduledSlot: input.scheduledSlot,
         paymentMethod: input.paymentMethod,

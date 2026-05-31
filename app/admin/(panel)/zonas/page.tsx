@@ -2,7 +2,7 @@ import { listZones } from "@/lib/zones";
 import ZoneEditor from "@/components/ZoneEditor";
 import NewZoneButton from "@/components/NewZoneButton";
 
-// Manage delivery zones: create, add localities, set weekdays.
+// Manage delivery zones: create, draw a coverage polygon, set weekdays.
 export default async function AdminZonesPage() {
   const zones = await listZones();
 
@@ -12,9 +12,9 @@ export default async function AdminZonesPage() {
         Zonas de entrega
       </h1>
       <p className="mb-6 text-sm text-muted">
-        Creá zonas, agregales las localidades que las componen y elegí qué días
-        entregás en cada una. En el checkout, la dirección del cliente se asocia
-        a una zona y solo se muestran esos días.
+        Creá zonas, dibujá en el mapa el área de cobertura de cada una y elegí
+        qué días entregás. En el checkout, la dirección del cliente se ubica en
+        el mapa y, si cae dentro de una zona, se muestran solo esos días.
       </p>
 
       <div className="mb-6">

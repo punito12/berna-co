@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { updateZone, deleteZone } from "@/lib/admin";
 
-// Updates a zone (name, localities, weekdays, active). Admin-only.
+// Updates a zone (name, polygon, weekdays, active). Admin-only.
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
@@ -13,8 +13,7 @@ export async function PATCH(
 
   let body: {
     name?: string;
-    postalCodes?: string[];
-    localities?: string[];
+    polygon?: unknown;
     daysOfWeek?: number[];
     active?: boolean;
   };
@@ -27,8 +26,7 @@ export async function PATCH(
   try {
     await updateZone(params.id, {
       name: body.name ?? "",
-      postalCodes: body.postalCodes ?? [],
-      localities: body.localities ?? [],
+      polygon: body.polygon ?? null,
       daysOfWeek: body.daysOfWeek ?? [],
       active: Boolean(body.active),
     });

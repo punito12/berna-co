@@ -159,27 +159,41 @@ export async function setSlotAvailability(id: string, available: boolean) {
 
 // ---- Zones ----
 
-// Creates a zone with just a name; codes/localities/days are added afterwards.
+// Creates a zone with just a name; the polygon and days are added afterwards.
 export async function createZone(name: string) {
   const trimmed = name.trim();
   if (!trimmed) throw new Error("La zona necesita un nombre.");
   await prisma.zone.create({
-    data: {
-      name: trimmed,
-      postalCodes: "[]",
-      localities: "[]",
-      daysOfWeek: "[]",
-    },
+    data: { name: trimmed, polygon: null, daysOfWeek: "[]" },
   });
 }
 
-// Updates a zone's name, postal codes, localities, weekdays and active flag.
+// Validates a value looks like a GeoJSON Polygon with at least one ring of 3+
+// points. Returns the normalized object or throws.
+function validatePolygon(polygon: unknown): {
+  type: "Polygon";
+  coordinates: number[][][];
+} | null {
+  if (polygon == null) return null;
+  if (
+    typeof polygon !== "object" ||
+    (polygon as { type?: string }).type !== "Polygon"
+  ) {
+    throw new Error("El área dibujada es inválida.");
+  }
+  const coords = (polygon as { coordinates?: unknown }).coordinates;
+  if (!Array.isArray(coords) || !Array.isArray(coords[0]) || coords[0].length < 3) {
+    throw new Error("El área necesita al menos 3 puntos.");
+  }
+  return polygon as { type: "Polygon"; coordinates: number[][][] };
+}
+
+// Updates a zone's name, polygon (GeoJSON), weekdays and active flag.
 export async function updateZone(
   id: string,
   data: {
     name: string;
-    postalCodes: string[];
-    localities: string[];
+    polygon: unknown; // GeoJSON Polygon or null
     daysOfWeek: number[];
     active: boolean;
   }
@@ -187,28 +201,7 @@ export async function updateZone(
   const name = data.name.trim();
   if (!name) throw new Error("La zona necesita un nombre.");
 
-  // Clean postal codes: keep the 4-digit number, unique. Reject non-numeric.
-  const codeSet = new Set<string>();
-  for (const raw of data.postalCodes ?? []) {
-    const m = String(raw).trim().match(/\d{4}/);
-    if (!m) {
-      throw new Error(`Código postal inválido: "${raw}". Usá 4 dígitos.`);
-    }
-    codeSet.add(m[0]);
-  }
-  const postalCodes = Array.from(codeSet).sort();
-
-  // Clean localities: trim, drop empties, de-duplicate (case-insensitive).
-  const seen = new Set<string>();
-  const localities: string[] = [];
-  for (const raw of data.localities ?? []) {
-    const value = raw.trim();
-    if (!value) continue;
-    const key = value.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    localities.push(value);
-  }
+  const polygon = validatePolygon(data.polygon);
 
   // Clean weekdays: keep 0..6, unique, sorted.
   const days = Array.from(
@@ -219,8 +212,7 @@ export async function updateZone(
     where: { id },
     data: {
       name,
-      postalCodes: JSON.stringify(postalCodes),
-      localities: JSON.stringify(localities),
+      polygon: polygon ? JSON.stringify(polygon) : null,
       daysOfWeek: JSON.stringify(days),
       active: Boolean(data.active),
     },

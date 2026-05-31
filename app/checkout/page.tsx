@@ -21,43 +21,41 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("DELIVERY");
-  const [postalCode, setPostalCode] = useState("");
   const [address, setAddress] = useState("");
   const [dateIso, setDateIso] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
 
-  // --- zone (postal code) state ---
+  // --- zone (address → coordinates → polygon) state ---
   // options holds the enabled weekdays + slots for the covered zone.
   const [options, setOptions] = useState<DeliveryOptions | null>(null);
   const [zoneName, setZoneName] = useState<string | null>(null);
   const [checkingZone, setCheckingZone] = useState(false);
   const [zoneError, setZoneError] = useState<string | null>(null);
   const [notCovered, setNotCovered] = useState(false);
-  // The postal code that was confirmed as covered (sent to the server).
-  const [confirmedCode, setConfirmedCode] = useState<string | null>(null);
+  const [notLocated, setNotLocated] = useState(false);
 
   // --- submission state ---
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const covered = Boolean(options) && confirmedCode !== null;
+  const covered = Boolean(options);
 
-  // Resets everything tied to a confirmed postal code / zone.
+  // Resets everything tied to a verified address / zone.
   function resetZone() {
     setOptions(null);
     setZoneName(null);
     setNotCovered(false);
+    setNotLocated(false);
     setZoneError(null);
-    setConfirmedCode(null);
     setDateIso(null);
     setSlot(null);
   }
 
-  // Checks coverage for the entered postal code. If covered, loads the zone's
-  // days + slots; if not, shows the "no llegamos" message.
+  // Geocodes the address and checks which zone polygon it lands in. If covered,
+  // loads that zone's days + slots; otherwise shows the right message.
   async function checkZone() {
-    if (!postalCode.trim()) {
-      return setZoneError("Ingresá tu código postal.");
+    if (!address.trim()) {
+      return setZoneError("Ingresá tu dirección.");
     }
     setCheckingZone(true);
     resetZone();
@@ -65,23 +63,20 @@ export default function CheckoutPage() {
       const res = await fetch("/api/delivery-zone", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postalCode: postalCode.trim() }),
+        body: JSON.stringify({ address: address.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setZoneError(data?.error ?? "No pudimos verificar tu zona.");
-        return;
-      }
-      if (data.invalid) {
-        setZoneError("El código postal debe tener 4 dígitos (ej: 1642).");
+        setZoneError(data?.error ?? "No pudimos verificar tu dirección.");
         return;
       }
       if (!data.covered) {
-        setNotCovered(true);
+        // located=false → Nominatim couldn't find the address at all.
+        if (data.located === false) setNotLocated(true);
+        else setNotCovered(true);
         return;
       }
       setZoneName(data.zoneName);
-      setConfirmedCode(data.postalCode);
       setOptions({
         enabledWeekdays: data.enabledWeekdays,
         slots: data.slots,
@@ -100,11 +95,11 @@ export default function CheckoutPage() {
     if (!name.trim()) return setError("Ingresá tu nombre.");
     if (!phone.trim()) return setError("Ingresá tu teléfono.");
     if (deliveryType === "DELIVERY") {
-      if (notCovered)
-        return setError("Lo sentimos, por ahora no llegamos a tu zona.");
-      if (!covered)
-        return setError("Verificá tu código postal (paso 2) antes de seguir.");
       if (!address.trim()) return setError("Ingresá la dirección de entrega.");
+      if (notCovered || notLocated)
+        return setError("Lo sentimos, por ahora no llegamos a tu dirección.");
+      if (!covered)
+        return setError("Verificá tu dirección (paso 2) antes de seguir.");
     }
     if (!dateIso) return setError("Elegí un día de entrega.");
     if (!slot) return setError("Elegí un horario.");
@@ -121,10 +116,6 @@ export default function CheckoutPage() {
           notes: notes || undefined,
           deliveryType,
           address: deliveryType === "DELIVERY" ? address : undefined,
-          postalCode:
-            deliveryType === "DELIVERY"
-              ? confirmedCode ?? undefined
-              : undefined,
           scheduledDate: `${dateIso}T12:00:00`,
           scheduledSlot: slot,
           paymentMethod: "CASH",
@@ -255,62 +246,55 @@ export default function CheckoutPage() {
           </div>
           {deliveryType === "DELIVERY" && (
             <div className="mt-4 space-y-3">
-              {/* Step A: postal code as the coverage barrier */}
-              <Field label="Código postal" required>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={postalCode}
-                    onChange={(e) => {
-                      setPostalCode(e.target.value);
-                      // Changing the code invalidates a previous check.
-                      if (covered || notCovered || zoneError) resetZone();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        checkZone();
-                      }
-                    }}
-                    className={inputClass}
-                    placeholder="Ej: 1642"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => checkZone()}
-                    disabled={checkingZone || !postalCode.trim()}
-                    className="shrink-0 border border-black px-4 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:bg-black hover:text-white disabled:opacity-40"
-                  >
-                    {checkingZone ? "…" : "Verificar"}
-                  </button>
-                </div>
+              <Field label="Dirección de entrega" required>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => {
+                    setAddress(e.target.value);
+                    // Editing the address invalidates a previous check.
+                    if (covered || notCovered || notLocated || zoneError)
+                      resetZone();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      checkZone();
+                    }
+                  }}
+                  className={inputClass}
+                  placeholder="Calle, número, localidad (ej: Av. Centenario 123, San Isidro)"
+                />
               </Field>
+
+              <button
+                type="button"
+                onClick={() => checkZone()}
+                disabled={checkingZone || !address.trim()}
+                className="w-full border border-black px-4 py-3 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:bg-black hover:text-white disabled:opacity-40"
+              >
+                {checkingZone ? "Verificando…" : "Verificar dirección"}
+              </button>
 
               {zoneError && <ErrorNote>{zoneError}</ErrorNote>}
 
-              {notCovered && (
-                <p className="rounded-lg border border-black bg-ink px-4 py-3 text-sm font-bold text-white">
-                  Lo sentimos, por ahora no llegamos a tu zona.
+              {notLocated && (
+                <p className="rounded-lg border border-black bg-white px-4 py-3 text-sm font-bold text-ink">
+                  No pudimos ubicar esa dirección. Revisá que esté completa
+                  (calle, número y localidad).
                 </p>
               )}
 
-              {/* Step B: once covered, show confirmation + the address field */}
+              {notCovered && (
+                <p className="rounded-lg border border-black bg-ink px-4 py-3 text-sm font-bold text-white">
+                  Lo sentimos, por ahora no llegamos a tu dirección.
+                </p>
+              )}
+
               {covered && (
-                <>
-                  <p className="rounded-lg border border-line bg-cream/60 px-4 py-3 text-sm font-bold text-ink">
-                    ✓ Entregamos en tu zona{zoneName ? `: ${zoneName}` : ""}
-                  </p>
-                  <Field label="Dirección de entrega" required>
-                    <input
-                      type="text"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className={inputClass}
-                      placeholder="Calle, número, piso/depto"
-                    />
-                  </Field>
-                </>
+                <p className="rounded-lg border border-line bg-cream/60 px-4 py-3 text-sm font-bold text-ink">
+                  ✓ Entregamos en tu dirección{zoneName ? `: zona ${zoneName}` : ""}
+                </p>
               )}
             </div>
           )}

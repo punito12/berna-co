@@ -2,73 +2,48 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import type { GeoPolygon } from "@/lib/zones";
+
+// Leaflet touches `window`, so load the map only on the client.
+const ZonePolygonMap = dynamic(() => import("@/components/ZonePolygonMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-80 w-full items-center justify-center rounded-lg border border-line bg-cream text-sm text-muted">
+      Cargando mapa…
+    </div>
+  ),
+});
 
 const WEEKDAYS = [
-  { n: 0, label: "Dom" },
   { n: 1, label: "Lun" },
   { n: 2, label: "Mar" },
   { n: 3, label: "Mié" },
   { n: 4, label: "Jue" },
   { n: 5, label: "Vie" },
   { n: 6, label: "Sáb" },
+  { n: 0, label: "Dom" },
 ];
 
 type Zone = {
   id: string;
   name: string;
-  postalCodes: string[];
-  localities: string[];
+  polygon: GeoPolygon | null;
   daysOfWeek: number[];
   active: boolean;
 };
 
-// Editable card for one zone: name, postal codes, localities, weekdays, active.
+// Editable card for one zone: name, a drawing map for the coverage polygon,
+// weekday toggles and active flag.
 export default function ZoneEditor({ zone }: { zone: Zone }) {
   const router = useRouter();
   const [name, setName] = useState(zone.name);
-  const [postalCodes, setPostalCodes] = useState<string[]>(zone.postalCodes);
-  const [newCode, setNewCode] = useState("");
-  const [localities, setLocalities] = useState<string[]>(zone.localities);
-  const [newLocality, setNewLocality] = useState("");
+  const [polygon, setPolygon] = useState<GeoPolygon | null>(zone.polygon);
   const [days, setDays] = useState<number[]>(zone.daysOfWeek);
   const [active, setActive] = useState(zone.active);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
-
-  function addCode() {
-    const m = newCode.trim().match(/\d{4}/);
-    if (!m) {
-      setError("El código postal debe tener 4 dígitos (ej: 1642).");
-      return;
-    }
-    const code = m[0];
-    if (!postalCodes.includes(code)) setPostalCodes((p) => [...p, code]);
-    setNewCode("");
-    setError(null);
-    setStatus("idle");
-  }
-  function removeCode(code: string) {
-    setPostalCodes((p) => p.filter((c) => c !== code));
-    setStatus("idle");
-  }
-
-  function addLocality() {
-    const value = newLocality.trim();
-    if (!value) return;
-    if (localities.some((l) => l.toLowerCase() === value.toLowerCase())) {
-      setNewLocality("");
-      return;
-    }
-    setLocalities((prev) => [...prev, value]);
-    setNewLocality("");
-    setStatus("idle");
-  }
-
-  function removeLocality(value: string) {
-    setLocalities((prev) => prev.filter((l) => l !== value));
-    setStatus("idle");
-  }
 
   function toggleDay(n: number) {
     setDays((prev) =>
@@ -78,26 +53,25 @@ export default function ZoneEditor({ zone }: { zone: Zone }) {
   }
 
   async function save() {
+    if (!polygon) {
+      setError("Dibujá el área de cobertura en el mapa antes de guardar.");
+      setStatus("error");
+      return;
+    }
     setSaving(true);
     setStatus("idle");
+    setError(null);
     try {
       const res = await fetch(`/api/admin/zones/${zone.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          postalCodes,
-          localities,
-          daysOfWeek: days,
-          active,
-        }),
+        body: JSON.stringify({ name, polygon, daysOfWeek: days, active }),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data?.error ?? "No se pudo guardar.");
       }
       setStatus("saved");
-      setError(null);
       router.refresh();
     } catch (e) {
       setStatus("error");
@@ -151,110 +125,23 @@ export default function ZoneEditor({ zone }: { zone: Zone }) {
         </label>
       </div>
 
-      {/* Postal codes — the coverage barrier */}
+      {/* Coverage polygon map */}
       <div className="mt-5">
         <p className="mb-1 font-bold uppercase tracking-wide text-[11px] text-muted">
-          Códigos postales
+          Área de cobertura
         </p>
         <p className="mb-2 text-xs text-muted">
-          4 dígitos (ej: 1642). Definen a qué CP entregamos en esta zona.
+          Usá la herramienta de polígono (arriba a la derecha del mapa) para
+          dibujar el área. Tocá un vértice para editar, o el tacho para borrar.
+          {polygon ? " — Área definida ✓" : " — Sin área todavía"}
         </p>
-        <div className="flex flex-wrap gap-2">
-          {postalCodes.length === 0 && (
-            <span className="text-sm text-muted">Sin códigos todavía.</span>
-          )}
-          {postalCodes.map((c) => (
-            <span
-              key={c}
-              className="inline-flex items-center gap-2 rounded-full border border-black bg-white px-3 py-1 text-sm font-bold text-ink"
-            >
-              {c}
-              <button
-                type="button"
-                onClick={() => removeCode(c)}
-                aria-label={`Quitar ${c}`}
-                className="font-bold text-muted hover:text-ink"
-              >
-                ✕
-              </button>
-            </span>
-          ))}
-        </div>
-        <div className="mt-3 flex gap-2">
-          <input
-            type="text"
-            inputMode="numeric"
-            value={newCode}
-            onChange={(e) => setNewCode(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addCode();
-              }
-            }}
-            className="flex-1 rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black"
-            placeholder="Ej: 1642"
-          />
-          <button
-            type="button"
-            onClick={addCode}
-            className="border border-black px-4 py-2 font-bold uppercase tracking-widest text-xs text-ink hover:bg-black hover:text-white"
-          >
-            Agregar
-          </button>
-        </div>
-      </div>
-
-      {/* Localities (reference / labels) */}
-      <div className="mt-5">
-        <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
-          Localidades
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {localities.length === 0 && (
-            <span className="text-sm text-muted">
-              Sin localidades todavía.
-            </span>
-          )}
-          {localities.map((l) => (
-            <span
-              key={l}
-              className="inline-flex items-center gap-2 rounded-full border border-line bg-cream px-3 py-1 text-sm text-ink"
-            >
-              {l}
-              <button
-                type="button"
-                onClick={() => removeLocality(l)}
-                aria-label={`Quitar ${l}`}
-                className="font-bold text-muted hover:text-ink"
-              >
-                ✕
-              </button>
-            </span>
-          ))}
-        </div>
-        <div className="mt-3 flex gap-2">
-          <input
-            type="text"
-            value={newLocality}
-            onChange={(e) => setNewLocality(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addLocality();
-              }
-            }}
-            className="flex-1 rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black"
-            placeholder="Ej: Beccar"
-          />
-          <button
-            type="button"
-            onClick={addLocality}
-            className="border border-black px-4 py-2 font-bold uppercase tracking-widest text-xs text-ink hover:bg-black hover:text-white"
-          >
-            Agregar
-          </button>
-        </div>
+        <ZonePolygonMap
+          initial={zone.polygon}
+          onChange={(p) => {
+            setPolygon(p);
+            setStatus("idle");
+          }}
+        />
       </div>
 
       {/* Weekdays */}
