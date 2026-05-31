@@ -55,12 +55,25 @@ export async function listZones(): Promise<ZoneForUI[]> {
 export async function findZoneByLocality(
   locality: string
 ): Promise<ZoneForUI | null> {
-  const target = normalizeLocality(locality);
-  if (!target) return null;
+  return findZoneByLocalities([locality]);
+}
+
+// Finds the active zone that lists ANY of the given candidate localities.
+// Used with geocoding, which yields several place names per address (locality,
+// partido, barrio) — a match on any of them means we deliver there.
+export async function findZoneByLocalities(
+  candidates: string[]
+): Promise<ZoneForUI | null> {
+  const targets = candidates
+    .map(normalizeLocality)
+    .filter((t) => t.length > 0);
+  if (targets.length === 0) return null;
+
   const zones = await listZones();
   for (const zone of zones) {
     if (!zone.active) continue;
-    if (zone.localities.some((l) => normalizeLocality(l) === target)) {
+    const zoneLocalities = zone.localities.map(normalizeLocality);
+    if (zoneLocalities.some((l) => targets.includes(l))) {
       return zone;
     }
   }
@@ -73,24 +86,46 @@ export function isGeocodingConfigured(): boolean {
 }
 
 export type GeocodeResult = {
-  locality: string | null; // detected locality, or null if not found
+  // The single best-guess locality (for display/logging).
+  locality: string | null;
+  // All candidate place names from the address (locality, partido, barrio…),
+  // used to match against zones — in Greater Buenos Aires the partido we care
+  // about (e.g. "San Isidro") often comes as administrative_area_level_2 while
+  // `locality` is just "Buenos Aires".
+  candidates: string[];
   formattedAddress: string | null;
 };
 
-// Calls Google Geocoding API to resolve an address into a locality. Returns
-// { locality: null } when the key is missing or nothing usable is found.
-// We read the locality from address components, preferring "locality" and
-// falling back to administrative_area_level_2 (partido) when needed.
+// Address-component types that can name a place we'd put in a zone, in the
+// order we prefer them for the single `locality` field.
+const LOCALITY_TYPES = [
+  "locality",
+  "administrative_area_level_2", // partido (key for GBA)
+  "sublocality",
+  "sublocality_level_1",
+  "neighborhood",
+  "administrative_area_level_3",
+];
+
+// Calls Google Geocoding API to resolve an address into candidate localities.
+// Returns empty results when the key is missing or nothing usable is found.
 export async function geocodeLocality(
   address: string
 ): Promise<GeocodeResult> {
   const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) return { locality: null, formattedAddress: null };
+  if (!key) return { locality: null, candidates: [], formattedAddress: null };
+
+  // Bias results toward the delivery area (northern Greater Buenos Aires) so
+  // Google prefers a local match for ambiguous street names instead of, say,
+  // the famous Av. 9 de Julio in CABA. `bounds` is a soft hint, not a filter.
+  // SW corner .. NE corner roughly covering San Isidro / Vicente López / Tigre.
+  const bounds = "-34.60,-58.65|-34.40,-58.45";
 
   const url =
     "https://maps.googleapis.com/maps/api/geocode/json" +
     `?address=${encodeURIComponent(address)}` +
-    "&region=ar&language=es" +
+    "&components=country:AR&region=ar&language=es" +
+    `&bounds=${encodeURIComponent(bounds)}` +
     `&key=${key}`;
 
   const res = await fetch(url, { cache: "no-store" });
@@ -107,20 +142,25 @@ export async function geocodeLocality(
   };
 
   if (data.status !== "OK" || data.results.length === 0) {
-    return { locality: null, formattedAddress: null };
+    return { locality: null, candidates: [], formattedAddress: null };
   }
 
   const result = data.results[0];
   const components = result.address_components;
-  const byType = (type: string) =>
-    components.find((c) => c.types.includes(type))?.long_name ?? null;
 
-  // Preference order for what counts as the "locality" in AR addresses.
-  const locality =
-    byType("locality") ??
-    byType("administrative_area_level_2") ??
-    byType("sublocality") ??
-    null;
+  // Collect every candidate place name, in preference order, de-duplicated.
+  const candidates: string[] = [];
+  for (const type of LOCALITY_TYPES) {
+    for (const c of components) {
+      if (c.types.includes(type) && !candidates.includes(c.long_name)) {
+        candidates.push(c.long_name);
+      }
+    }
+  }
 
-  return { locality, formattedAddress: result.formatted_address };
+  return {
+    locality: candidates[0] ?? null,
+    candidates,
+    formattedAddress: result.formatted_address,
+  };
 }

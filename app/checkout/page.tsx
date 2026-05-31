@@ -86,7 +86,8 @@ export default function CheckoutPage() {
         return;
       }
       if (data.needLocality) {
-        // No API key: show the manual locality picker.
+        // Either there's no API key, or auto-detection couldn't pin a zone for
+        // an ambiguous address. Ask the customer to confirm their locality.
         setManualLocalities(data.localities ?? []);
         return;
       }
@@ -300,8 +301,11 @@ export default function CheckoutPage() {
               {/* Manual locality picker when geocoding isn't configured */}
               {manualLocalities && (
                 <div className="rounded-lg border border-line bg-cream/60 p-3">
-                  <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
-                    Elegí tu localidad
+                  <p className="mb-1 font-bold uppercase tracking-wide text-[11px] text-muted">
+                    Confirmá tu localidad
+                  </p>
+                  <p className="mb-2 text-xs text-muted">
+                    Elegí tu localidad de la lista para ver los días de entrega.
                   </p>
                   {manualLocalities.length === 0 ? (
                     <p className="text-sm text-muted">

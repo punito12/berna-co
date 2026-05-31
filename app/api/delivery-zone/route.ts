@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import {
   geocodeLocality,
   findZoneByLocality,
+  findZoneByLocalities,
   isGeocodingConfigured,
   listZones,
 } from "@/lib/zones";
@@ -42,10 +43,26 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Determine the locality: either chosen manually, or via geocoding.
-    let locality = body.locality?.trim() || null;
+    // Determine the zone: either from a manually chosen locality, or from the
+    // candidate localities geocoding returns for the address.
+    let zone = null;
+    let detectedLocality: string | null = body.locality?.trim() || null;
 
-    if (!locality) {
+    // Helper: the sorted list of localities we serve (for the manual picker).
+    const servedLocalities = async () => {
+      const zones = await listZones();
+      return Array.from(
+        new Set(zones.filter((z) => z.active).flatMap((z) => z.localities))
+      ).sort();
+    };
+
+    if (detectedLocality) {
+      // The customer picked a locality by hand: trust it, match it directly.
+      zone = await findZoneByLocality(detectedLocality);
+      if (!zone) {
+        return NextResponse.json({ covered: false });
+      }
+    } else {
       const address = body.address?.trim();
       if (!address) {
         return NextResponse.json(
@@ -55,23 +72,25 @@ export async function POST(request: Request) {
       }
       if (!isGeocodingConfigured()) {
         // No API key: ask the customer to pick their locality from our list.
-        const zones = await listZones();
-        const localities = Array.from(
-          new Set(zones.filter((z) => z.active).flatMap((z) => z.localities))
-        ).sort();
-        return NextResponse.json({ needLocality: true, localities });
+        return NextResponse.json({
+          needLocality: true,
+          localities: await servedLocalities(),
+        });
       }
       const geo = await geocodeLocality(address);
-      if (!geo.locality) {
-        // Geocoding worked but found no locality → treat as out of coverage.
-        return NextResponse.json({ covered: false });
-      }
-      locality = geo.locality;
-    }
+      zone = geo.candidates.length
+        ? await findZoneByLocalities(geo.candidates)
+        : null;
+      detectedLocality = geo.locality;
 
-    const zone = await findZoneByLocality(locality);
-    if (!zone) {
-      return NextResponse.json({ covered: false });
+      // Auto-detection didn't find a zone. Instead of rejecting outright (the
+      // address may just be ambiguous), let the customer confirm their locality.
+      if (!zone) {
+        return NextResponse.json({
+          needLocality: true,
+          localities: await servedLocalities(),
+        });
+      }
     }
 
     const slots = await prisma.deliverySlot.findMany({
@@ -81,7 +100,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       covered: true,
       zoneName: zone.name,
-      detectedLocality: locality,
+      detectedLocality,
       enabledWeekdays: zone.daysOfWeek,
       slots: slots.map((s) => ({ id: s.id, label: s.label })),
     });

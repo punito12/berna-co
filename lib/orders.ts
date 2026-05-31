@@ -7,6 +7,7 @@ import { BREADCRUMB_LABELS } from "@/lib/products";
 import {
   geocodeLocality,
   findZoneByLocality,
+  findZoneByLocalities,
   isGeocodingConfigured,
 } from "@/lib/zones";
 
@@ -84,14 +85,14 @@ export async function createOrder(
   if (input.deliveryType === "DELIVERY") {
     // With an API key we geocode the address (don't trust the client). Without
     // one, we fall back to the locality the customer picked in checkout.
-    let locality: string | null = null;
+    let zone = null;
     if (isGeocodingConfigured()) {
       const geo = await geocodeLocality(address ?? "");
-      locality = geo.locality;
+      zone = await findZoneByLocalities(geo.candidates);
     } else {
-      locality = input.locality?.trim() || null;
+      const locality = input.locality?.trim() || null;
+      zone = locality ? await findZoneByLocality(locality) : null;
     }
-    const zone = locality ? await findZoneByLocality(locality) : null;
     if (!zone) {
       throw new OrderValidationError(
         "Lo sentimos, por ahora no llegamos a tu zona."
