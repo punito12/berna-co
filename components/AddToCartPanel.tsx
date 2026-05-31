@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "@/components/CartProvider";
 import {
   BREADCRUMB_LABELS,
   formatPrice,
   priceFor,
+  stockFor,
   type ProductForUI,
 } from "@/lib/products";
 
@@ -25,7 +26,14 @@ export default function AddToCartPanel({
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
-  const outOfStock = product.stock <= 0;
+  // Stock of the currently selected empanado.
+  const stock = stockFor(product, selected);
+  const outOfStock = stock <= 0;
+
+  // When the empanado changes, clamp the quantity to that variant's stock.
+  useEffect(() => {
+    setQty((q) => Math.min(Math.max(1, q), Math.max(1, stock)));
+  }, [selected, stock]);
 
   function handleAdd() {
     if (outOfStock) return;
@@ -81,8 +89,8 @@ export default function AddToCartPanel({
           </span>
           <button
             type="button"
-            onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
-            disabled={qty >= product.stock}
+            onClick={() => setQty((q) => Math.min(stock, q + 1))}
+            disabled={qty >= stock}
             aria-label="Agregar uno"
             className="h-9 w-9 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
           >

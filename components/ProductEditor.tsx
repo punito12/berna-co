@@ -8,36 +8,43 @@ type ProductRow = {
   id: string;
   name: string;
   available: boolean;
-  stock: number;
   breadcrumbs: string[]; // which empanados this product offers
   prices: Record<string, number>; // current price per empanado
+  stocks: Record<string, number>; // current stock per empanado
 };
 
-// One editable row: a price input per empanado + availability toggle + save.
+// One editable row: price + stock input per empanado + availability + save.
 export default function ProductEditor({ product }: { product: ProductRow }) {
   const router = useRouter();
 
-  // Local editable copy of the prices, keyed by empanado (as strings for input).
-  const initial: Record<string, string> = {};
+  // Local editable copies, keyed by empanado (as strings for the inputs).
+  const initialPrices: Record<string, string> = {};
+  const initialStocks: Record<string, string> = {};
   for (const b of product.breadcrumbs) {
-    initial[b] = String(product.prices[b] ?? 0);
+    initialPrices[b] = String(product.prices[b] ?? 0);
+    initialStocks[b] = String(product.stocks[b] ?? 0);
   }
-  const [prices, setPrices] = useState<Record<string, string>>(initial);
+  const [prices, setPrices] = useState<Record<string, string>>(initialPrices);
+  const [stocks, setStocks] = useState<Record<string, string>>(initialStocks);
   const [available, setAvailable] = useState(product.available);
-  const [stock, setStock] = useState(String(product.stock));
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
 
-  // Dirty = any price changed, stock changed, or availability changed.
+  // Dirty = any price/stock changed, or availability changed.
   const dirty =
     available !== product.available ||
-    Number(stock) !== product.stock ||
     product.breadcrumbs.some(
-      (b) => Number(prices[b]) !== (product.prices[b] ?? 0)
+      (b) =>
+        Number(prices[b]) !== (product.prices[b] ?? 0) ||
+        Number(stocks[b]) !== (product.stocks[b] ?? 0)
     );
 
-  function setPrice(breadcrumb: string, value: string) {
-    setPrices((prev) => ({ ...prev, [breadcrumb]: value }));
+  function setPrice(b: string, value: string) {
+    setPrices((prev) => ({ ...prev, [b]: value }));
+    setStatus("idle");
+  }
+  function setStock(b: string, value: string) {
+    setStocks((prev) => ({ ...prev, [b]: value }));
     setStatus("idle");
   }
 
@@ -45,13 +52,21 @@ export default function ProductEditor({ product }: { product: ProductRow }) {
     setSaving(true);
     setStatus("idle");
     try {
-      const numeric: Record<string, number> = {};
-      for (const b of product.breadcrumbs) numeric[b] = Number(prices[b]);
+      const numericPrices: Record<string, number> = {};
+      const numericStocks: Record<string, number> = {};
+      for (const b of product.breadcrumbs) {
+        numericPrices[b] = Number(prices[b]);
+        numericStocks[b] = Number(stocks[b]);
+      }
 
       const res = await fetch(`/api/admin/products/${product.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prices: numeric, available, stock: Number(stock) }),
+        body: JSON.stringify({
+          prices: numericPrices,
+          stocks: numericStocks,
+          available,
+        }),
       });
       if (!res.ok) throw new Error();
       setStatus("saved");
@@ -86,43 +101,45 @@ export default function ProductEditor({ product }: { product: ProductRow }) {
         </label>
       </div>
 
-      {/* One price input per empanado */}
-      <div className="mt-4 flex flex-wrap items-end gap-4">
+      {/* One price + stock pair per empanado */}
+      <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-4">
         {product.breadcrumbs.map((b) => (
-          <label key={b} className="block">
-            <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-              {BREADCRUMB_LABELS[b] ?? b} — $
-            </span>
-            <input
-              type="number"
-              min={0}
-              step={1}
-              value={prices[b] ?? "0"}
-              onChange={(e) => setPrice(b, e.target.value)}
-              className="w-28 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
-            />
-          </label>
+          <div key={b} className="rounded-md bg-cream/60 p-3">
+            <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-ink">
+              {BREADCRUMB_LABELS[b] ?? b}
+            </p>
+            <div className="flex items-end gap-3">
+              <label className="block">
+                <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+                  Precio $
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={prices[b] ?? "0"}
+                  onChange={(e) => setPrice(b, e.target.value)}
+                  className="w-24 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+                  Stock
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={stocks[b] ?? "0"}
+                  onChange={(e) => setStock(b, e.target.value)}
+                  className="w-20 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
+                />
+              </label>
+            </div>
+          </div>
         ))}
 
-        {/* Stock */}
-        <label className="block">
-          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-            Stock (unid.)
-          </span>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={stock}
-            onChange={(e) => {
-              setStock(e.target.value);
-              setStatus("idle");
-            }}
-            className="w-24 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
-          />
-        </label>
-
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-3 self-center">
           {status === "saved" && (
             <span className="text-xs font-bold text-ink">Guardado ✓</span>
           )}

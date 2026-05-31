@@ -8,6 +8,8 @@ import {
   formatPrice,
   formatWeight,
   priceFor,
+  stockFor,
+  isProductOutOfStock,
   type ProductForUI,
 } from "@/lib/products";
 
@@ -24,10 +26,13 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
   // Falls back to the product's default cover if that variant has none.
   const cover = product.imagesByBreadcrumb[selected]?.[0] ?? product.imageUrl;
 
-  const outOfStock = product.stock <= 0;
+  // Stock is per empanado: the selected one may be out while others aren't.
+  const selectedOutOfStock = stockFor(product, selected) <= 0;
+  // The whole product is out only when every empanado is at 0.
+  const allOutOfStock = isProductOutOfStock(product);
 
   function handleAdd() {
-    if (outOfStock) return;
+    if (selectedOutOfStock) return;
     addToCart(product, selected);
     setJustAdded(true);
     window.setTimeout(() => setJustAdded(false), 1200);
@@ -52,18 +57,18 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
         <div
           key={cover}
           className={`absolute inset-0 bg-contain bg-top bg-no-repeat transition-transform duration-700 ease-out ${
-            outOfStock ? "opacity-40 grayscale" : "group-hover:scale-105"
+            allOutOfStock ? "opacity-40 grayscale" : "group-hover:scale-105"
           }`}
           style={{ backgroundImage: `url('${cover}')` }}
         />
 
-        {product.isNew && !outOfStock && (
+        {product.isNew && !allOutOfStock && (
           <span className="absolute left-3 top-3 bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
             New
           </span>
         )}
 
-        {outOfStock && (
+        {allOutOfStock && (
           <span className="absolute left-3 top-3 bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
             Sin stock
           </span>
@@ -129,9 +134,14 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
           <button
             type="button"
             onClick={handleAdd}
-            className="mt-3 w-full overflow-hidden bg-black px-4 py-3 font-bold uppercase tracking-widest text-sm text-white transition-colors hover:bg-ink/80"
+            disabled={selectedOutOfStock}
+            className="mt-3 w-full overflow-hidden bg-black px-4 py-3 font-bold uppercase tracking-widest text-sm text-white transition-colors hover:bg-ink/80 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:bg-muted"
           >
-            {justAdded ? "Agregado ✓" : "Agregar"}
+            {selectedOutOfStock
+              ? "Sin stock"
+              : justAdded
+              ? "Agregado ✓"
+              : "Agregar"}
           </button>
         </div>
       </div>

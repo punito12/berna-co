@@ -76,24 +76,35 @@ export async function listProductsForAdmin() {
 // still has a fallback.
 export async function updateProduct(
   id: string,
-  data: { prices: Record<string, number>; available: boolean; stock: number }
+  data: {
+    prices: Record<string, number>;
+    stocks: Record<string, number>;
+    available: boolean;
+  }
 ) {
-  const cleaned: Record<string, number> = {};
+  // Validate prices per empanado.
+  const cleanedPrices: Record<string, number> = {};
   for (const [breadcrumb, raw] of Object.entries(data.prices ?? {})) {
     const value = Math.round(Number(raw));
     if (!Number.isFinite(value) || value < 0) {
       throw new Error("Precio inválido.");
     }
-    cleaned[breadcrumb] = value;
+    cleanedPrices[breadcrumb] = value;
   }
 
-  const stock = Math.round(Number(data.stock));
-  if (!Number.isFinite(stock) || stock < 0) {
-    throw new Error("Stock inválido.");
+  // Validate stock per empanado.
+  const cleanedStocks: Record<string, number> = {};
+  for (const [breadcrumb, raw] of Object.entries(data.stocks ?? {})) {
+    const value = Math.round(Number(raw));
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error("Stock inválido.");
+    }
+    cleanedStocks[breadcrumb] = value;
   }
 
   // Default price = the product's own breadcrumbs order, first available > 0,
-  // else the traditional, else 0.
+  // else the traditional, else 0. Total stock = sum of the per-empanado stocks
+  // (kept in sync as a convenient fallback for any legacy reader).
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) throw new Error("Producto no encontrado.");
   const order: string[] = (() => {
@@ -105,17 +116,19 @@ export async function updateProduct(
     }
   })();
   const defaultPrice =
-    order.map((b) => cleaned[b]).find((v) => typeof v === "number" && v > 0) ??
-    cleaned[order[0]] ??
+    order.map((b) => cleanedPrices[b]).find((v) => typeof v === "number" && v > 0) ??
+    cleanedPrices[order[0]] ??
     0;
+  const totalStock = Object.values(cleanedStocks).reduce((a, b) => a + b, 0);
 
   await prisma.product.update({
     where: { id },
     data: {
       price: defaultPrice,
-      prices: JSON.stringify(cleaned),
+      prices: JSON.stringify(cleanedPrices),
+      stock: totalStock,
+      stocks: JSON.stringify(cleanedStocks),
       available: Boolean(data.available),
-      stock,
     },
   });
 }

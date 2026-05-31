@@ -26,7 +26,11 @@ model Product {
   prices String @default("{}")
   available   Boolean @default(true)
   isNew       Boolean @default(false)
-  stock       Int     @default(0) // units in stock; 0 = "Sin stock"
+  stock       Int     @default(0) // legacy/fallback total; per-empanado lives in `stocks`
+
+  // JSON map of stock per empanado, e.g. {"TRADITIONAL":10,"KETO":5}.
+  // When set, it overrides `stock`. Each variant is sold/decremented on its own.
+  stocks String @default("{}")
 
   // JSON array of photo paths for the product detail gallery, e.g.
   // ["/images/productos/peceto-pastura.jpg","/images/productos/peceto-pastura-2.jpg"]

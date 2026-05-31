@@ -10,7 +10,7 @@ function safeArray(raw: string): string[] {
     return [];
   }
 }
-function safePrices(raw: string): Record<string, number> {
+function safeNumberMap(raw: string): Record<string, number> {
   try {
     const v = JSON.parse(raw);
     return v && typeof v === "object" && !Array.isArray(v) ? v : {};
@@ -19,7 +19,8 @@ function safePrices(raw: string): Record<string, number> {
   }
 }
 
-// Edit price (per empanado) and availability for each product (no create/delete in v1).
+// Edit price + stock (per empanado) and availability for each product
+// (no create/delete in v1).
 export default async function AdminProductsPage() {
   const products = await listProductsForAdmin();
 
@@ -29,8 +30,9 @@ export default async function AdminProductsPage() {
         Productos
       </h1>
       <p className="mb-6 text-sm text-muted">
-        Cargá el precio de cada empanado (en pesos) y marcá si está disponible.
-        Un empanado con precio 0 aparece como “Precio a confirmar” en el sitio.
+        Cargá el precio y el stock de cada empanado, y marcá si está disponible.
+        Un empanado con precio 0 aparece como “Precio a confirmar”; con stock 0,
+        como “Sin stock”.
       </p>
 
       <div className="space-y-3">
@@ -41,9 +43,9 @@ export default async function AdminProductsPage() {
               id: p.id,
               name: p.name,
               available: p.available,
-              stock: p.stock,
               breadcrumbs: safeArray(p.availableBreadcrumbs),
-              prices: safePrices(p.prices),
+              prices: safeNumberMap(p.prices),
+              stocks: safeNumberMap(p.stocks),
             }}
           />
         ))}

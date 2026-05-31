@@ -13,8 +13,8 @@ export async function PATCH(
 
   let body: {
     prices?: Record<string, number>;
+    stocks?: Record<string, number>;
     available?: boolean;
-    stock?: number;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -25,8 +25,8 @@ export async function PATCH(
   try {
     await updateProduct(params.id, {
       prices: body.prices ?? {},
+      stocks: body.stocks ?? {},
       available: Boolean(body.available),
-      stock: Number(body.stock),
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

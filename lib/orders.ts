@@ -3,6 +3,7 @@
 // browser only sends product ids, the chosen empanado, and quantities.
 
 import { prisma } from "@/lib/db";
+import { BREADCRUMB_LABELS } from "@/lib/products";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -112,28 +113,32 @@ export async function createOrder(
     };
   });
 
-  // --- stock check: total units requested per product across all breadcrumbs ---
-  const unitsByProduct = new Map<string, number>();
+  // --- stock check: units requested per (product, empanado) ---
+  // Key is `${productId}__${breadcrumb}` so each variant is checked on its own.
+  const unitsByVariant = new Map<string, number>();
   for (const it of itemsToCreate) {
-    unitsByProduct.set(
-      it.productId,
-      (unitsByProduct.get(it.productId) ?? 0) + it.quantity
-    );
+    const key = `${it.productId}__${it.breadcrumbType}`;
+    unitsByVariant.set(key, (unitsByVariant.get(key) ?? 0) + it.quantity);
   }
-  for (const [productId, units] of unitsByProduct) {
+  for (const [key, units] of unitsByVariant) {
+    const [productId, breadcrumb] = key.split("__");
     const product = byId.get(productId)!;
-    if (product.stock < units) {
+    const available = stockForBreadcrumb(product, breadcrumb);
+    if (available < units) {
+      const label = BREADCRUMB_LABELS[breadcrumb] ?? breadcrumb;
       throw new OrderValidationError(
-        product.stock <= 0
-          ? `${product.name} está sin stock.`
-          : `Solo quedan ${product.stock} unidades de ${product.name}.`
+        available <= 0
+          ? `${product.name} (${label}) está sin stock.`
+          : `Solo quedan ${available} unidades de ${product.name} (${label}).`
       );
     }
   }
 
-  // --- persist order + decrement stock atomically ---
-  // The stock updates use a guarded decrement (where stock >= units) so two
-  // simultaneous orders can't drive stock negative.
+  // --- persist order + decrement per-empanado stock atomically ---
+  // We re-read each product's stocks inside the transaction, verify there is
+  // still enough, write the decremented JSON back, and keep the total `stock`
+  // in sync. A guarded updateMany on `stocks` (must match what we read) makes
+  // two simultaneous orders safe: the loser sees count 0 and aborts.
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
       data: {
@@ -154,13 +159,38 @@ export async function createOrder(
       select: { id: true },
     });
 
-    for (const [productId, units] of unitsByProduct) {
+    // Group requested units by product (a product may appear with >1 empanado).
+    const unitsByProductBreadcrumb = new Map<string, Map<string, number>>();
+    for (const [key, units] of unitsByVariant) {
+      const [productId, breadcrumb] = key.split("__");
+      if (!unitsByProductBreadcrumb.has(productId)) {
+        unitsByProductBreadcrumb.set(productId, new Map());
+      }
+      unitsByProductBreadcrumb.get(productId)!.set(breadcrumb, units);
+    }
+
+    for (const [productId, perBreadcrumb] of unitsByProductBreadcrumb) {
+      const current = await tx.product.findUnique({
+        where: { id: productId },
+        select: { stocks: true },
+      });
+      const stocks = parseNumberMap(current?.stocks ?? "{}");
+
+      // Verify and compute the new per-empanado map.
+      for (const [breadcrumb, units] of perBreadcrumb) {
+        if ((stocks[breadcrumb] ?? 0) < units) {
+          throw new OrderValidationError("Se agotó el stock de un producto.");
+        }
+        stocks[breadcrumb] = (stocks[breadcrumb] ?? 0) - units;
+      }
+      const newTotal = Object.values(stocks).reduce((a, b) => a + b, 0);
+
+      // Guarded write: only succeeds if `stocks` is still exactly what we read.
       const res = await tx.product.updateMany({
-        where: { id: productId, stock: { gte: units } },
-        data: { stock: { decrement: units } },
+        where: { id: productId, stocks: current?.stocks ?? "{}" },
+        data: { stocks: JSON.stringify(stocks), stock: newTotal },
       });
       if (res.count === 0) {
-        // Someone bought the last units between our check and here.
         throw new OrderValidationError("Se agotó el stock de un producto.");
       }
     }
@@ -169,6 +199,33 @@ export async function createOrder(
   });
 
   return { id: order.id };
+}
+
+// Stock of one empanado from a product's `stocks` JSON, falling back to the
+// total `stock` when no per-empanado map is set.
+function stockForBreadcrumb(
+  product: { stock: number; stocks: string },
+  breadcrumb: string
+): number {
+  const map = parseNumberMap(product.stocks);
+  if (Object.keys(map).length > 0) return map[breadcrumb] ?? 0;
+  return product.stock ?? 0;
+}
+
+function parseNumberMap(raw: string): Record<string, number> {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const out: Record<string, number> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (typeof v === "number") out[k] = v;
+      }
+      return out;
+    }
+    return {};
+  } catch {
+    return {};
+  }
 }
 
 function safeParse(raw: string): string[] {

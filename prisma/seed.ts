@@ -155,6 +155,12 @@ function galleryFor(
 async function main() {
   for (const p of products) {
     const images = JSON.stringify(galleryFor(p.slug, p.availableBreadcrumbs));
+    // Starting stock of 10 per empanado (admin adjusts from the panel).
+    const stocks: Record<string, number> = {};
+    for (const b of p.availableBreadcrumbs) stocks[b] = 10;
+    const stocksJson = JSON.stringify(stocks);
+    const totalStock = Object.values(stocks).reduce((a, b) => a + b, 0);
+
     await prisma.product.upsert({
       where: { slug: p.slug },
       update: {
@@ -174,7 +180,8 @@ async function main() {
         weightGrams: p.weightGrams,
         category: p.category,
         price: 0, // placeholder — admin loads real price
-        stock: 10, // starting stock — admin adjusts from the panel
+        stock: totalStock,
+        stocks: stocksJson,
         imageUrl: p.imageUrl,
         images,
         isNew: p.isNew,

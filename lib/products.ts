@@ -24,7 +24,8 @@ export type ProductForUI = {
   imagesByBreadcrumb: Record<string, string[]>; // gallery per empanado
   available: boolean;
   isNew: boolean;
-  stock: number;
+  stock: number; // legacy/fallback total
+  stocksByBreadcrumb: Record<string, number>; // stock per empanado
   breadcrumbs: string[];
 };
 
@@ -43,6 +44,7 @@ type ProductRow = {
   available: boolean;
   isNew: boolean;
   stock: number;
+  stocks: string;
   availableBreadcrumbs: string;
 };
 
@@ -62,6 +64,7 @@ function toProductForUI(p: ProductRow): ProductForUI {
     available: p.available,
     isNew: p.isNew,
     stock: p.stock,
+    stocksByBreadcrumb: safeParseStocks(p.stocks),
     breadcrumbs: safeParseArray(p.availableBreadcrumbs),
   };
 }
@@ -74,8 +77,34 @@ export function priceFor(product: ProductForUI, breadcrumb: string): number {
   return product.price ?? 0;
 }
 
+// The stock for a given empanado. If a per-empanado map exists, use it (0 when
+// that variant isn't listed). Otherwise fall back to the product's total stock.
+export function stockFor(product: ProductForUI, breadcrumb: string): number {
+  const map = product.stocksByBreadcrumb;
+  if (map && Object.keys(map).length > 0) {
+    return map[breadcrumb] ?? 0;
+  }
+  return product.stock ?? 0;
+}
+
+// True when EVERY available empanado of the product is out of stock.
+export function isProductOutOfStock(product: ProductForUI): boolean {
+  if (product.breadcrumbs.length === 0) return product.stock <= 0;
+  return product.breadcrumbs.every((b) => stockFor(product, b) <= 0);
+}
+
 // Parses the prices column into a { breadcrumb: price } map.
 function safeParsePrices(raw: string): Record<string, number> {
+  return safeParseNumberMap(raw);
+}
+
+// Parses the stocks column into a { breadcrumb: units } map.
+function safeParseStocks(raw: string): Record<string, number> {
+  return safeParseNumberMap(raw);
+}
+
+// Shared parser for a JSON object of { string: number }.
+function safeParseNumberMap(raw: string): Record<string, number> {
   try {
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
