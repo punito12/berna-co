@@ -3,15 +3,18 @@ Fotos de productos — por EMPANADO
 
 Cada empanado de un producto puede tener su propio set de fotos (porque viene
 en otro paquete). El sistema muestra las fotos del empanado que el cliente
-elige. Cada empanado admite hasta 3 fotos (portada + 2 extra opcionales).
+elige. Cada empanado usa 2 fotos: portada + 1 extra opcional.
+
+Las fotos deben ser VERTICALES (proporción 2:3, ej. 933x1400 px) para que
+llenen el marco sin recortarse.
 
 REGLA DE NOMBRES (carpeta: public/images/productos/)
-  Tradicional → slug.jpg            slug-2.jpg            slug-3.jpg
-  Integral    → slug-integral.jpg   slug-integral-2.jpg  slug-integral-3.jpg
-  Keto        → slug-keto.jpg       slug-keto-2.jpg       slug-keto-3.jpg
+  Tradicional → slug.jpg            slug-2.jpg
+  Integral    → slug-integral.jpg   slug-integral-2.jpg
+  Keto        → slug-keto.jpg       slug-keto-2.jpg
 
 La PORTADA (la primera, sin número) es la que se ve en la grilla del catálogo.
-Las -2 y -3 son opcionales (aparecen como miniaturas en el detalle).
+La -2 es opcional (aparece como segunda miniatura en el detalle).
 Si falta un archivo, se ve un bloque crema con el nombre — no se rompe nada.
 
 QUÉ EMPANADOS TIENE CADA PRODUCTO
@@ -28,7 +31,9 @@ EJEMPLO COMPLETO (pechuga-pastoril)
   pechuga-pastoril.jpg              (Tradicional, portada)
   pechuga-pastoril-2.jpg            (Tradicional, extra)
   pechuga-pastoril-integral.jpg     (Integral, portada)
+  pechuga-pastoril-integral-2.jpg   (Integral, extra)
   pechuga-pastoril-keto.jpg         (Keto, portada)
+  pechuga-pastoril-keto-2.jpg       (Keto, extra)
 
 HERO (portada del sitio)
   public/images/hero.jpg   — foto horizontal de las milanesas en la tabla
