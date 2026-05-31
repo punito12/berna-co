@@ -4,6 +4,11 @@
 
 import { prisma } from "@/lib/db";
 import { BREADCRUMB_LABELS } from "@/lib/products";
+import {
+  geocodeLocality,
+  findZoneByLocality,
+  isGeocodingConfigured,
+} from "@/lib/zones";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -15,6 +20,9 @@ export type CreateOrderInput = {
   notes?: string;
   deliveryType: string; // DELIVERY | PICKUP
   address?: string;
+  // Locality chosen manually in checkout when geocoding isn't configured.
+  // Only trusted server-side when there is no GOOGLE_MAPS_API_KEY.
+  locality?: string;
   scheduledDate: string; // ISO date string
   scheduledSlot: string;
   paymentMethod: string; // CASH (MERCADOPAGO arrives in Paso 4)
@@ -62,19 +70,46 @@ export async function createOrder(
     throw new OrderValidationError("La fecha de entrega ya pasó.");
   }
 
-  const [enabledDay, activeSlot] = await Promise.all([
-    prisma.availableDeliveryDay.findFirst({
-      where: { dayOfWeek: scheduledDate.getDay(), available: true },
-    }),
-    prisma.deliverySlot.findFirst({
-      where: { label: input.scheduledSlot, available: true },
-    }),
-  ]);
-  if (!enabledDay) {
-    throw new OrderValidationError("Ese día no hay entregas disponibles.");
-  }
+  // The chosen time slot must be an active one (same for all zones).
+  const activeSlot = await prisma.deliverySlot.findFirst({
+    where: { label: input.scheduledSlot, available: true },
+  });
   if (!activeSlot) {
     throw new OrderValidationError("Ese horario no está disponible.");
+  }
+
+  // The chosen weekday must be enabled for the delivery zone of this address.
+  // We re-derive the zone server-side (don't trust the client): geocode the
+  // address → find the zone → check the zone delivers on that weekday.
+  if (input.deliveryType === "DELIVERY") {
+    // With an API key we geocode the address (don't trust the client). Without
+    // one, we fall back to the locality the customer picked in checkout.
+    let locality: string | null = null;
+    if (isGeocodingConfigured()) {
+      const geo = await geocodeLocality(address ?? "");
+      locality = geo.locality;
+    } else {
+      locality = input.locality?.trim() || null;
+    }
+    const zone = locality ? await findZoneByLocality(locality) : null;
+    if (!zone) {
+      throw new OrderValidationError(
+        "Lo sentimos, por ahora no llegamos a tu zona."
+      );
+    }
+    if (!zone.daysOfWeek.includes(scheduledDate.getDay())) {
+      throw new OrderValidationError(
+        "Ese día no hacemos entregas en tu zona."
+      );
+    }
+  } else {
+    // PICKUP (not enabled yet) still uses the global delivery days.
+    const enabledDay = await prisma.availableDeliveryDay.findFirst({
+      where: { dayOfWeek: scheduledDate.getDay(), available: true },
+    });
+    if (!enabledDay) {
+      throw new OrderValidationError("Ese día no hay entregas disponibles.");
+    }
   }
 
   // --- recalculate items + total from the database ---

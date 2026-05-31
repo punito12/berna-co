@@ -156,3 +156,59 @@ export async function setSlotAvailability(id: string, available: boolean) {
     data: { available: Boolean(available) },
   });
 }
+
+// ---- Zones ----
+
+// Creates a zone with just a name; localities/days are added afterwards.
+export async function createZone(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("La zona necesita un nombre.");
+  await prisma.zone.create({
+    data: { name: trimmed, localities: "[]", daysOfWeek: "[]" },
+  });
+}
+
+// Updates a zone's name, localities, weekdays and active flag in one shot.
+export async function updateZone(
+  id: string,
+  data: {
+    name: string;
+    localities: string[];
+    daysOfWeek: number[];
+    active: boolean;
+  }
+) {
+  const name = data.name.trim();
+  if (!name) throw new Error("La zona necesita un nombre.");
+
+  // Clean localities: trim, drop empties, de-duplicate (case-insensitive).
+  const seen = new Set<string>();
+  const localities: string[] = [];
+  for (const raw of data.localities ?? []) {
+    const value = raw.trim();
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    localities.push(value);
+  }
+
+  // Clean weekdays: keep 0..6, unique, sorted.
+  const days = Array.from(
+    new Set((data.daysOfWeek ?? []).filter((d) => d >= 0 && d <= 6))
+  ).sort((a, b) => a - b);
+
+  await prisma.zone.update({
+    where: { id },
+    data: {
+      name,
+      localities: JSON.stringify(localities),
+      daysOfWeek: JSON.stringify(days),
+      active: Boolean(data.active),
+    },
+  });
+}
+
+export async function deleteZone(id: string) {
+  await prisma.zone.delete({ where: { id } });
+}

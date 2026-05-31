@@ -25,34 +25,90 @@ export default function CheckoutPage() {
   const [dateIso, setDateIso] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
 
-  // --- delivery options loaded from the server ---
+  // --- zone detection state ---
+  // options holds the enabled weekdays + slots for the detected zone.
   const [options, setOptions] = useState<DeliveryOptions | null>(null);
-  const [optionsError, setOptionsError] = useState<string | null>(null);
+  const [zoneName, setZoneName] = useState<string | null>(null);
+  const [checkingZone, setCheckingZone] = useState(false);
+  const [zoneError, setZoneError] = useState<string | null>(null);
+  const [notCovered, setNotCovered] = useState(false);
+  // Manual locality fallback (when there's no geocoding API key).
+  const [manualLocalities, setManualLocalities] = useState<string[] | null>(
+    null
+  );
+  const [manualLocality, setManualLocality] = useState<string>("");
+  // The locality that matched a zone, sent to the server on submit.
+  const [confirmedLocality, setConfirmedLocality] = useState<string | null>(
+    null
+  );
 
   // --- submission state ---
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    fetch("/api/delivery-options")
-      .then(async (res) => {
-        if (!res.ok) throw new Error();
-        return (await res.json()) as DeliveryOptions;
-      })
-      .then((data) => {
-        if (active) setOptions(data);
-      })
-      .catch(() => {
-        if (active)
-          setOptionsError(
-            "No pudimos cargar los días de entrega. Recargá la página."
-          );
+  // Resets everything tied to a particular detected zone.
+  function resetZone() {
+    setOptions(null);
+    setZoneName(null);
+    setNotCovered(false);
+    setZoneError(null);
+    setManualLocalities(null);
+    setConfirmedLocality(null);
+    setDateIso(null);
+    setSlot(null);
+  }
+
+  // Asks the server which zone an address (or manually chosen locality) is in,
+  // then loads that zone's days + slots.
+  async function checkZone(opts?: { locality?: string }) {
+    if (!address.trim() && !opts?.locality) {
+      return setZoneError("Ingresá la dirección primero.");
+    }
+    setCheckingZone(true);
+    setZoneError(null);
+    setNotCovered(false);
+    setOptions(null);
+    setZoneName(null);
+    setDateIso(null);
+    setSlot(null);
+    try {
+      const res = await fetch("/api/delivery-zone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: address.trim() || undefined,
+          locality: opts?.locality,
+        }),
       });
-    return () => {
-      active = false;
-    };
-  }, []);
+      const data = await res.json();
+      if (!res.ok) {
+        setZoneError(data?.error ?? "No pudimos verificar tu zona.");
+        return;
+      }
+      if (data.needLocality) {
+        // No API key: show the manual locality picker.
+        setManualLocalities(data.localities ?? []);
+        return;
+      }
+      if (!data.covered) {
+        setNotCovered(true);
+        return;
+      }
+      setManualLocalities(null);
+      setZoneName(data.zoneName);
+      // Remember the locality that matched (for the manual/no-key flow, the
+      // server needs it again when creating the order).
+      setConfirmedLocality(opts?.locality ?? data.detectedLocality ?? null);
+      setOptions({
+        enabledWeekdays: data.enabledWeekdays,
+        slots: data.slots,
+      });
+    } catch {
+      setZoneError("Hubo un problema de conexión. Probá de nuevo.");
+    } finally {
+      setCheckingZone(false);
+    }
+  }
 
   async function handleSubmit() {
     setError(null);
@@ -60,8 +116,13 @@ export default function CheckoutPage() {
     // Friendly client-side checks (the server validates again).
     if (!name.trim()) return setError("Ingresá tu nombre.");
     if (!phone.trim()) return setError("Ingresá tu teléfono.");
-    if (deliveryType === "DELIVERY" && !address.trim())
-      return setError("Ingresá la dirección de entrega.");
+    if (deliveryType === "DELIVERY") {
+      if (!address.trim()) return setError("Ingresá la dirección de entrega.");
+      if (notCovered)
+        return setError("Lo sentimos, por ahora no llegamos a tu zona.");
+      if (!options)
+        return setError("Verificá tu zona de entrega (paso 2) antes de seguir.");
+    }
     if (!dateIso) return setError("Elegí un día de entrega.");
     if (!slot) return setError("Elegí un horario.");
 
@@ -77,6 +138,10 @@ export default function CheckoutPage() {
           notes: notes || undefined,
           deliveryType,
           address: deliveryType === "DELIVERY" ? address : undefined,
+          locality:
+            deliveryType === "DELIVERY"
+              ? confirmedLocality ?? undefined
+              : undefined,
           scheduledDate: `${dateIso}T12:00:00`,
           scheduledSlot: slot,
           paymentMethod: "CASH",
@@ -206,27 +271,96 @@ export default function CheckoutPage() {
             </ChoiceButton>
           </div>
           {deliveryType === "DELIVERY" && (
-            <div className="mt-4">
+            <div className="mt-4 space-y-3">
               <Field label="Dirección de entrega" required>
                 <input
                   type="text"
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => {
+                    setAddress(e.target.value);
+                    // Address changed → previous zone result is stale.
+                    if (options || notCovered || manualLocalities) resetZone();
+                  }}
                   className={inputClass}
-                  placeholder="Calle, número, piso, localidad"
+                  placeholder="Calle, número, localidad (ej: Av. Centenario 123, San Isidro)"
                 />
               </Field>
+
+              <button
+                type="button"
+                onClick={() => checkZone()}
+                disabled={checkingZone || !address.trim()}
+                className="w-full border border-black px-4 py-3 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:bg-black hover:text-white disabled:opacity-40"
+              >
+                {checkingZone ? "Verificando…" : "Verificar zona"}
+              </button>
+
+              {zoneError && <ErrorNote>{zoneError}</ErrorNote>}
+
+              {/* Manual locality picker when geocoding isn't configured */}
+              {manualLocalities && (
+                <div className="rounded-lg border border-line bg-cream/60 p-3">
+                  <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
+                    Elegí tu localidad
+                  </p>
+                  {manualLocalities.length === 0 ? (
+                    <p className="text-sm text-muted">
+                      No hay zonas configuradas todavía.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {manualLocalities.map((loc) => (
+                        <button
+                          key={loc}
+                          type="button"
+                          onClick={() => {
+                            setManualLocality(loc);
+                            checkZone({ locality: loc });
+                          }}
+                          aria-pressed={manualLocality === loc}
+                          className={`rounded-full border px-4 py-1.5 font-bold uppercase tracking-wide text-xs transition-colors ${
+                            manualLocality === loc
+                              ? "border-black bg-black text-white"
+                              : "border-black bg-white text-black"
+                          }`}
+                        >
+                          {loc}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {notCovered && (
+                <p className="rounded-lg border border-black bg-ink px-4 py-3 text-sm font-bold text-white">
+                  Lo sentimos, por ahora no llegamos a tu zona.
+                </p>
+              )}
+
+              {zoneName && (
+                <p className="rounded-lg border border-line bg-cream/60 px-4 py-3 text-sm font-bold text-ink">
+                  ✓ Entregamos en tu zona: {zoneName}
+                </p>
+              )}
             </div>
           )}
         </Section>
 
         {/* 3. Cuándo */}
         <Section number="3" title="¿Cuándo?">
-          {optionsError && <ErrorNote>{optionsError}</ErrorNote>}
-          {!options && !optionsError && (
-            <p className="text-sm text-muted">Cargando días disponibles…</p>
+          {!options && (
+            <p className="text-sm text-muted">
+              Primero verificá tu zona de entrega (paso 2) para ver los días
+              disponibles.
+            </p>
           )}
-          {options && (
+          {options && options.enabledWeekdays.length === 0 && (
+            <p className="text-sm text-muted">
+              Tu zona no tiene días de entrega configurados por el momento.
+            </p>
+          )}
+          {options && options.enabledWeekdays.length > 0 && (
             <>
               <CheckoutCalendar
                 enabledWeekdays={options.enabledWeekdays}
