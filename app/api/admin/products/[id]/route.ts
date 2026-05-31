@@ -11,12 +11,13 @@ export async function PATCH(
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
-  let body: { prices?: Record<string, number>; available?: boolean };
+  let body: {
+    prices?: Record<string, number>;
+    available?: boolean;
+    stock?: number;
+  };
   try {
-    body = (await request.json()) as {
-      prices?: Record<string, number>;
-      available?: boolean;
-    };
+    body = (await request.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
@@ -25,6 +26,7 @@ export async function PATCH(
     await updateProduct(params.id, {
       prices: body.prices ?? {},
       available: Boolean(body.available),
+      stock: Number(body.stock),
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

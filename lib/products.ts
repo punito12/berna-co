@@ -24,6 +24,7 @@ export type ProductForUI = {
   imagesByBreadcrumb: Record<string, string[]>; // gallery per empanado
   available: boolean;
   isNew: boolean;
+  stock: number;
   breadcrumbs: string[];
 };
 
@@ -41,6 +42,7 @@ type ProductRow = {
   images: string;
   available: boolean;
   isNew: boolean;
+  stock: number;
   availableBreadcrumbs: string;
 };
 
@@ -59,6 +61,7 @@ function toProductForUI(p: ProductRow): ProductForUI {
     imagesByBreadcrumb: safeParseImages(p.images),
     available: p.available,
     isNew: p.isNew,
+    stock: p.stock,
     breadcrumbs: safeParseArray(p.availableBreadcrumbs),
   };
 }

@@ -106,11 +106,16 @@ const products: SeedProduct[] = [
   },
 ];
 
-// Default delivery config (admin tweaks these later). Mon/Wed/Fri enabled.
+// All 7 weekdays exist so the admin can toggle any of them. Mon/Wed/Fri start
+// enabled, the rest disabled — the admin changes this from the panel.
 const deliveryDays = [
-  { dayOfWeek: 1, available: true },
-  { dayOfWeek: 3, available: true },
-  { dayOfWeek: 5, available: true },
+  { dayOfWeek: 0, available: false }, // Sun
+  { dayOfWeek: 1, available: true }, // Mon
+  { dayOfWeek: 2, available: false }, // Tue
+  { dayOfWeek: 3, available: true }, // Wed
+  { dayOfWeek: 4, available: false }, // Thu
+  { dayOfWeek: 5, available: true }, // Fri
+  { dayOfWeek: 6, available: false }, // Sat
 ];
 
 const deliverySlots = [
@@ -121,10 +126,10 @@ const deliverySlots = [
 ];
 
 // Photo paths PER empanado. Each breadcrumb variant comes in different
-// packaging, so it gets its own set of up to 3 photos, by naming convention:
-//   TRADITIONAL: slug.jpg, slug-2.jpg, slug-3.jpg
-//   INTEGRAL:    slug-integral.jpg, slug-integral-2.jpg, slug-integral-3.jpg
-//   KETO:        slug-keto.jpg, slug-keto-2.jpg, slug-keto-3.jpg
+// packaging, so it gets its own set of 2 photos, by naming convention:
+//   TRADITIONAL: slug.jpg, slug-2.jpg
+//   INTEGRAL:    slug-integral.jpg, slug-integral-2.jpg
+//   KETO:        slug-keto.jpg, slug-keto-2.jpg
 // Missing files render as cream placeholders, so listing them is always safe.
 const BREADCRUMB_SUFFIX: Record<string, string> = {
   TRADITIONAL: "",
@@ -142,7 +147,6 @@ function galleryFor(
     out[b] = [
       `/images/productos/${slug}${s}.jpg`,
       `/images/productos/${slug}${s}-2.jpg`,
-      `/images/productos/${slug}${s}-3.jpg`,
     ];
   }
   return out;
@@ -170,6 +174,7 @@ async function main() {
         weightGrams: p.weightGrams,
         category: p.category,
         price: 0, // placeholder — admin loads real price
+        stock: 10, // starting stock — admin adjusts from the panel
         imageUrl: p.imageUrl,
         images,
         isNew: p.isNew,
@@ -179,11 +184,17 @@ async function main() {
   }
   console.log(`Seeded ${products.length} products.`);
 
-  // Seed delivery days/slots only if none exist yet (avoid duplicating).
-  if ((await prisma.availableDeliveryDay.count()) === 0) {
-    await prisma.availableDeliveryDay.createMany({ data: deliveryDays });
-    console.log(`Seeded ${deliveryDays.length} delivery days.`);
+  // Ensure all 7 weekdays exist (so the admin can toggle any). Create missing
+  // ones with their default availability; never overwrite the admin's choices.
+  for (const d of deliveryDays) {
+    await prisma.availableDeliveryDay.upsert({
+      where: { dayOfWeek: d.dayOfWeek },
+      update: {}, // keep whatever the admin set
+      create: d,
+    });
   }
+  console.log(`Ensured ${deliveryDays.length} delivery days.`);
+
   if ((await prisma.deliverySlot.count()) === 0) {
     await prisma.deliverySlot.createMany({ data: deliverySlots });
     console.log(`Seeded ${deliverySlots.length} delivery slots.`);

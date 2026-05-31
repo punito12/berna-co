@@ -22,15 +22,15 @@ export default function ProductGallery({
 
   return (
     <div>
-      {/* Main image */}
-      <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-line bg-cream">
+      {/* Main image. 2:3 frame matches the photos so nothing is cropped. */}
+      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-line bg-cream">
         {/* Placeholder name sits BEHIND the photo; only shows if a file is missing. */}
         <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-8 text-center font-black uppercase tracking-tight text-2xl text-line">
           {name}
         </span>
         <div
           key={active}
-          className="absolute inset-0 animate-fade-up bg-cover bg-center"
+          className="absolute inset-0 animate-fade-up bg-contain bg-top bg-no-repeat"
           style={{ backgroundImage: `url('${photos[active]}')` }}
         />
 

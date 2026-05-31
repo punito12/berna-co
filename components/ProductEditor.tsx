@@ -8,6 +8,7 @@ type ProductRow = {
   id: string;
   name: string;
   available: boolean;
+  stock: number;
   breadcrumbs: string[]; // which empanados this product offers
   prices: Record<string, number>; // current price per empanado
 };
@@ -23,12 +24,14 @@ export default function ProductEditor({ product }: { product: ProductRow }) {
   }
   const [prices, setPrices] = useState<Record<string, string>>(initial);
   const [available, setAvailable] = useState(product.available);
+  const [stock, setStock] = useState(String(product.stock));
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
 
-  // Dirty = any price changed, or availability changed.
+  // Dirty = any price changed, stock changed, or availability changed.
   const dirty =
     available !== product.available ||
+    Number(stock) !== product.stock ||
     product.breadcrumbs.some(
       (b) => Number(prices[b]) !== (product.prices[b] ?? 0)
     );
@@ -48,7 +51,7 @@ export default function ProductEditor({ product }: { product: ProductRow }) {
       const res = await fetch(`/api/admin/products/${product.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prices: numeric, available }),
+        body: JSON.stringify({ prices: numeric, available, stock: Number(stock) }),
       });
       if (!res.ok) throw new Error();
       setStatus("saved");
@@ -100,6 +103,24 @@ export default function ProductEditor({ product }: { product: ProductRow }) {
             />
           </label>
         ))}
+
+        {/* Stock */}
+        <label className="block">
+          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+            Stock (unid.)
+          </span>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={stock}
+            onChange={(e) => {
+              setStock(e.target.value);
+              setStatus("idle");
+            }}
+            className="w-24 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
+          />
+        </label>
 
         <div className="ml-auto flex items-center gap-3">
           {status === "saved" && (

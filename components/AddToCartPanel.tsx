@@ -25,7 +25,10 @@ export default function AddToCartPanel({
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
+  const outOfStock = product.stock <= 0;
+
   function handleAdd() {
+    if (outOfStock) return;
     // Add the chosen quantity (addToCart adds one unit per call).
     for (let i = 0; i < qty; i++) addToCart(product, selected);
     setJustAdded(true);
@@ -78,9 +81,10 @@ export default function AddToCartPanel({
           </span>
           <button
             type="button"
-            onClick={() => setQty((q) => q + 1)}
+            onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
+            disabled={qty >= product.stock}
             aria-label="Agregar uno"
-            className="h-9 w-9 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
+            className="h-9 w-9 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
           >
             +
           </button>
@@ -95,10 +99,20 @@ export default function AddToCartPanel({
         <button
           type="button"
           onClick={handleAdd}
-          className="mt-4 w-full bg-black px-4 py-4 font-bold uppercase tracking-widest text-sm text-white transition-colors hover:bg-ink/80"
+          disabled={outOfStock}
+          className="mt-4 w-full bg-black px-4 py-4 font-bold uppercase tracking-widest text-sm text-white transition-colors hover:bg-ink/80 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:bg-muted"
         >
-          {justAdded ? "Agregado al carrito ✓" : "Agregar al carrito"}
+          {outOfStock
+            ? "Sin stock"
+            : justAdded
+            ? "Agregado al carrito ✓"
+            : "Agregar al carrito"}
         </button>
+        {outOfStock && (
+          <p className="mt-3 text-center text-sm font-bold uppercase tracking-wide text-muted">
+            Producto sin stock por el momento
+          </p>
+        )}
       </div>
     </div>
   );

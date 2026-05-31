@@ -112,24 +112,60 @@ export async function createOrder(
     };
   });
 
-  // --- persist as PENDING ---
-  const order = await prisma.order.create({
-    data: {
-      status: "PENDING",
-      customerName: name,
-      customerPhone: phone,
-      customerEmail: input.customerEmail?.trim() || null,
-      notes: input.notes?.trim() || null,
-      deliveryType: input.deliveryType,
-      address: input.deliveryType === "DELIVERY" ? address : null,
-      scheduledDate,
-      scheduledSlot: input.scheduledSlot,
-      paymentMethod: input.paymentMethod,
-      total,
-      mpPaymentId: null,
-      items: { create: itemsToCreate },
-    },
-    select: { id: true },
+  // --- stock check: total units requested per product across all breadcrumbs ---
+  const unitsByProduct = new Map<string, number>();
+  for (const it of itemsToCreate) {
+    unitsByProduct.set(
+      it.productId,
+      (unitsByProduct.get(it.productId) ?? 0) + it.quantity
+    );
+  }
+  for (const [productId, units] of unitsByProduct) {
+    const product = byId.get(productId)!;
+    if (product.stock < units) {
+      throw new OrderValidationError(
+        product.stock <= 0
+          ? `${product.name} está sin stock.`
+          : `Solo quedan ${product.stock} unidades de ${product.name}.`
+      );
+    }
+  }
+
+  // --- persist order + decrement stock atomically ---
+  // The stock updates use a guarded decrement (where stock >= units) so two
+  // simultaneous orders can't drive stock negative.
+  const order = await prisma.$transaction(async (tx) => {
+    const created = await tx.order.create({
+      data: {
+        status: "PENDING",
+        customerName: name,
+        customerPhone: phone,
+        customerEmail: input.customerEmail?.trim() || null,
+        notes: input.notes?.trim() || null,
+        deliveryType: input.deliveryType,
+        address: input.deliveryType === "DELIVERY" ? address : null,
+        scheduledDate,
+        scheduledSlot: input.scheduledSlot,
+        paymentMethod: input.paymentMethod,
+        total,
+        mpPaymentId: null,
+        items: { create: itemsToCreate },
+      },
+      select: { id: true },
+    });
+
+    for (const [productId, units] of unitsByProduct) {
+      const res = await tx.product.updateMany({
+        where: { id: productId, stock: { gte: units } },
+        data: { stock: { decrement: units } },
+      });
+      if (res.count === 0) {
+        // Someone bought the last units between our check and here.
+        throw new OrderValidationError("Se agotó el stock de un producto.");
+      }
+    }
+
+    return created;
   });
 
   return { id: order.id };

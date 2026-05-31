@@ -41,6 +41,7 @@ export default async function AdminProductsPage() {
               id: p.id,
               name: p.name,
               available: p.available,
+              stock: p.stock,
               breadcrumbs: safeArray(p.availableBreadcrumbs),
               prices: safePrices(p.prices),
             }}

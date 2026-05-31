@@ -24,7 +24,10 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
   // Falls back to the product's default cover if that variant has none.
   const cover = product.imagesByBreadcrumb[selected]?.[0] ?? product.imageUrl;
 
+  const outOfStock = product.stock <= 0;
+
   function handleAdd() {
+    if (outOfStock) return;
     addToCart(product, selected);
     setJustAdded(true);
     window.setTimeout(() => setJustAdded(false), 1200);
@@ -37,23 +40,32 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
           /public/images/productos/. */}
       <Link
         href={`/producto/${product.slug}`}
-        className="relative block aspect-square w-full overflow-hidden bg-cream"
+        className="relative block aspect-[2/3] w-full overflow-hidden bg-cream"
         aria-label={`Ver ${product.name}`}
       >
         {/* Placeholder name sits BEHIND the photo (-z-10). Only visible when
-            the image file is missing (the photo layer is then transparent). */}
+            the image file is missing (the photo layer is then transparent).
+            The frame matches the photos' 2:3 ratio so nothing gets cropped. */}
         <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line">
           {product.name}
         </span>
         <div
           key={cover}
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
+          className={`absolute inset-0 bg-contain bg-top bg-no-repeat transition-transform duration-700 ease-out ${
+            outOfStock ? "opacity-40 grayscale" : "group-hover:scale-105"
+          }`}
           style={{ backgroundImage: `url('${cover}')` }}
         />
 
-        {product.isNew && (
+        {product.isNew && !outOfStock && (
           <span className="absolute left-3 top-3 bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
             New
+          </span>
+        )}
+
+        {outOfStock && (
+          <span className="absolute left-3 top-3 bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
+            Sin stock
           </span>
         )}
 

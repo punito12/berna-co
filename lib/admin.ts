@@ -76,7 +76,7 @@ export async function listProductsForAdmin() {
 // still has a fallback.
 export async function updateProduct(
   id: string,
-  data: { prices: Record<string, number>; available: boolean }
+  data: { prices: Record<string, number>; available: boolean; stock: number }
 ) {
   const cleaned: Record<string, number> = {};
   for (const [breadcrumb, raw] of Object.entries(data.prices ?? {})) {
@@ -85,6 +85,11 @@ export async function updateProduct(
       throw new Error("Precio inválido.");
     }
     cleaned[breadcrumb] = value;
+  }
+
+  const stock = Math.round(Number(data.stock));
+  if (!Number.isFinite(stock) || stock < 0) {
+    throw new Error("Stock inválido.");
   }
 
   // Default price = the product's own breadcrumbs order, first available > 0,
@@ -110,6 +115,7 @@ export async function updateProduct(
       price: defaultPrice,
       prices: JSON.stringify(cleaned),
       available: Boolean(data.available),
+      stock,
     },
   });
 }
