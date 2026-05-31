@@ -13,6 +13,7 @@ export async function PATCH(
 
   let body: {
     name?: string;
+    postalCodes?: string[];
     localities?: string[];
     daysOfWeek?: number[];
     active?: boolean;
@@ -26,6 +27,7 @@ export async function PATCH(
   try {
     await updateZone(params.id, {
       name: body.name ?? "",
+      postalCodes: body.postalCodes ?? [],
       localities: body.localities ?? [],
       daysOfWeek: body.daysOfWeek ?? [],
       active: Boolean(body.active),

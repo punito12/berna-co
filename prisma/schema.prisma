@@ -58,6 +58,7 @@ model Order {
 
   deliveryType String // DELIVERY | PICKUP
   address      String? // only for DELIVERY
+  postalCode   String? // 4-digit postal code (DELIVERY)
 
   scheduledDate DateTime
   scheduledSlot String // e.g. "10:00–12:00"
@@ -100,8 +101,11 @@ model AvailableDeliveryDay {
 model Zone {
   id        String  @id @default(cuid())
   name      String // e.g. "San Isidro"
-  // JSON array of locality names, lowercased for matching, e.g.
-  // ["san isidro","beccar","martinez"].
+  // JSON array of 4-digit postal codes we deliver to, e.g. ["1640","1642"].
+  // This is the primary coverage check (no ambiguity).
+  postalCodes String @default("[]")
+  // JSON array of locality names (kept for reference/labels), e.g.
+  // ["San Isidro","Beccar","Martinez"].
   localities String @default("[]")
   // JSON array of weekday numbers we deliver here, e.g. [1,3,5] (0=Sun..6=Sat).
   daysOfWeek String @default("[]")

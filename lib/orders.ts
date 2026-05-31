@@ -4,12 +4,7 @@
 
 import { prisma } from "@/lib/db";
 import { BREADCRUMB_LABELS } from "@/lib/products";
-import {
-  geocodeLocality,
-  findZoneByLocality,
-  findZoneByLocalities,
-  isGeocodingConfigured,
-} from "@/lib/zones";
+import { findZoneByPostalCode, normalizePostalCode } from "@/lib/zones";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -21,9 +16,7 @@ export type CreateOrderInput = {
   notes?: string;
   deliveryType: string; // DELIVERY | PICKUP
   address?: string;
-  // Locality chosen manually in checkout when geocoding isn't configured.
-  // Only trusted server-side when there is no GOOGLE_MAPS_API_KEY.
-  locality?: string;
+  postalCode?: string; // 4-digit (or CPA) code; coverage is checked from this
   scheduledDate: string; // ISO date string
   scheduledSlot: string;
   paymentMethod: string; // CASH (MERCADOPAGO arrives in Paso 4)
@@ -83,16 +76,12 @@ export async function createOrder(
   // We re-derive the zone server-side (don't trust the client): geocode the
   // address → find the zone → check the zone delivers on that weekday.
   if (input.deliveryType === "DELIVERY") {
-    // With an API key we geocode the address (don't trust the client). Without
-    // one, we fall back to the locality the customer picked in checkout.
-    let zone = null;
-    if (isGeocodingConfigured()) {
-      const geo = await geocodeLocality(address ?? "");
-      zone = await findZoneByLocalities(geo.candidates);
-    } else {
-      const locality = input.locality?.trim() || null;
-      zone = locality ? await findZoneByLocality(locality) : null;
+    // Coverage is determined by the postal code (the checkout "barrier").
+    const code = normalizePostalCode(input.postalCode ?? "");
+    if (!code) {
+      throw new OrderValidationError("Falta el código postal.");
     }
+    const zone = await findZoneByPostalCode(code);
     if (!zone) {
       throw new OrderValidationError(
         "Lo sentimos, por ahora no llegamos a tu zona."
@@ -185,6 +174,10 @@ export async function createOrder(
         notes: input.notes?.trim() || null,
         deliveryType: input.deliveryType,
         address: input.deliveryType === "DELIVERY" ? address : null,
+        postalCode:
+          input.deliveryType === "DELIVERY"
+            ? normalizePostalCode(input.postalCode ?? "")
+            : null,
         scheduledDate,
         scheduledSlot: input.scheduledSlot,
         paymentMethod: input.paymentMethod,

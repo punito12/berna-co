@@ -21,85 +21,67 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("DELIVERY");
+  const [postalCode, setPostalCode] = useState("");
   const [address, setAddress] = useState("");
   const [dateIso, setDateIso] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
 
-  // --- zone detection state ---
-  // options holds the enabled weekdays + slots for the detected zone.
+  // --- zone (postal code) state ---
+  // options holds the enabled weekdays + slots for the covered zone.
   const [options, setOptions] = useState<DeliveryOptions | null>(null);
   const [zoneName, setZoneName] = useState<string | null>(null);
   const [checkingZone, setCheckingZone] = useState(false);
   const [zoneError, setZoneError] = useState<string | null>(null);
   const [notCovered, setNotCovered] = useState(false);
-  // Manual locality fallback (when there's no geocoding API key).
-  const [manualLocalities, setManualLocalities] = useState<string[] | null>(
-    null
-  );
-  const [manualLocality, setManualLocality] = useState<string>("");
-  // The locality that matched a zone, sent to the server on submit.
-  const [confirmedLocality, setConfirmedLocality] = useState<string | null>(
-    null
-  );
+  // The postal code that was confirmed as covered (sent to the server).
+  const [confirmedCode, setConfirmedCode] = useState<string | null>(null);
 
   // --- submission state ---
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Resets everything tied to a particular detected zone.
+  const covered = Boolean(options) && confirmedCode !== null;
+
+  // Resets everything tied to a confirmed postal code / zone.
   function resetZone() {
     setOptions(null);
     setZoneName(null);
     setNotCovered(false);
     setZoneError(null);
-    setManualLocalities(null);
-    setConfirmedLocality(null);
+    setConfirmedCode(null);
     setDateIso(null);
     setSlot(null);
   }
 
-  // Asks the server which zone an address (or manually chosen locality) is in,
-  // then loads that zone's days + slots.
-  async function checkZone(opts?: { locality?: string }) {
-    if (!address.trim() && !opts?.locality) {
-      return setZoneError("Ingresá la dirección primero.");
+  // Checks coverage for the entered postal code. If covered, loads the zone's
+  // days + slots; if not, shows the "no llegamos" message.
+  async function checkZone() {
+    if (!postalCode.trim()) {
+      return setZoneError("Ingresá tu código postal.");
     }
     setCheckingZone(true);
-    setZoneError(null);
-    setNotCovered(false);
-    setOptions(null);
-    setZoneName(null);
-    setDateIso(null);
-    setSlot(null);
+    resetZone();
     try {
       const res = await fetch("/api/delivery-zone", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address: address.trim() || undefined,
-          locality: opts?.locality,
-        }),
+        body: JSON.stringify({ postalCode: postalCode.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
         setZoneError(data?.error ?? "No pudimos verificar tu zona.");
         return;
       }
-      if (data.needLocality) {
-        // Either there's no API key, or auto-detection couldn't pin a zone for
-        // an ambiguous address. Ask the customer to confirm their locality.
-        setManualLocalities(data.localities ?? []);
+      if (data.invalid) {
+        setZoneError("El código postal debe tener 4 dígitos (ej: 1642).");
         return;
       }
       if (!data.covered) {
         setNotCovered(true);
         return;
       }
-      setManualLocalities(null);
       setZoneName(data.zoneName);
-      // Remember the locality that matched (for the manual/no-key flow, the
-      // server needs it again when creating the order).
-      setConfirmedLocality(opts?.locality ?? data.detectedLocality ?? null);
+      setConfirmedCode(data.postalCode);
       setOptions({
         enabledWeekdays: data.enabledWeekdays,
         slots: data.slots,
@@ -118,11 +100,11 @@ export default function CheckoutPage() {
     if (!name.trim()) return setError("Ingresá tu nombre.");
     if (!phone.trim()) return setError("Ingresá tu teléfono.");
     if (deliveryType === "DELIVERY") {
-      if (!address.trim()) return setError("Ingresá la dirección de entrega.");
       if (notCovered)
         return setError("Lo sentimos, por ahora no llegamos a tu zona.");
-      if (!options)
-        return setError("Verificá tu zona de entrega (paso 2) antes de seguir.");
+      if (!covered)
+        return setError("Verificá tu código postal (paso 2) antes de seguir.");
+      if (!address.trim()) return setError("Ingresá la dirección de entrega.");
     }
     if (!dateIso) return setError("Elegí un día de entrega.");
     if (!slot) return setError("Elegí un horario.");
@@ -139,9 +121,9 @@ export default function CheckoutPage() {
           notes: notes || undefined,
           deliveryType,
           address: deliveryType === "DELIVERY" ? address : undefined,
-          locality:
+          postalCode:
             deliveryType === "DELIVERY"
-              ? confirmedLocality ?? undefined
+              ? confirmedCode ?? undefined
               : undefined,
           scheduledDate: `${dateIso}T12:00:00`,
           scheduledSlot: slot,
@@ -273,68 +255,39 @@ export default function CheckoutPage() {
           </div>
           {deliveryType === "DELIVERY" && (
             <div className="mt-4 space-y-3">
-              <Field label="Dirección de entrega" required>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => {
-                    setAddress(e.target.value);
-                    // Address changed → previous zone result is stale.
-                    if (options || notCovered || manualLocalities) resetZone();
-                  }}
-                  className={inputClass}
-                  placeholder="Calle, número, localidad (ej: Av. Centenario 123, San Isidro)"
-                />
+              {/* Step A: postal code as the coverage barrier */}
+              <Field label="Código postal" required>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={postalCode}
+                    onChange={(e) => {
+                      setPostalCode(e.target.value);
+                      // Changing the code invalidates a previous check.
+                      if (covered || notCovered || zoneError) resetZone();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        checkZone();
+                      }
+                    }}
+                    className={inputClass}
+                    placeholder="Ej: 1642"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => checkZone()}
+                    disabled={checkingZone || !postalCode.trim()}
+                    className="shrink-0 border border-black px-4 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:bg-black hover:text-white disabled:opacity-40"
+                  >
+                    {checkingZone ? "…" : "Verificar"}
+                  </button>
+                </div>
               </Field>
 
-              <button
-                type="button"
-                onClick={() => checkZone()}
-                disabled={checkingZone || !address.trim()}
-                className="w-full border border-black px-4 py-3 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:bg-black hover:text-white disabled:opacity-40"
-              >
-                {checkingZone ? "Verificando…" : "Verificar zona"}
-              </button>
-
               {zoneError && <ErrorNote>{zoneError}</ErrorNote>}
-
-              {/* Manual locality picker when geocoding isn't configured */}
-              {manualLocalities && (
-                <div className="rounded-lg border border-line bg-cream/60 p-3">
-                  <p className="mb-1 font-bold uppercase tracking-wide text-[11px] text-muted">
-                    Confirmá tu localidad
-                  </p>
-                  <p className="mb-2 text-xs text-muted">
-                    Elegí tu localidad de la lista para ver los días de entrega.
-                  </p>
-                  {manualLocalities.length === 0 ? (
-                    <p className="text-sm text-muted">
-                      No hay zonas configuradas todavía.
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {manualLocalities.map((loc) => (
-                        <button
-                          key={loc}
-                          type="button"
-                          onClick={() => {
-                            setManualLocality(loc);
-                            checkZone({ locality: loc });
-                          }}
-                          aria-pressed={manualLocality === loc}
-                          className={`rounded-full border px-4 py-1.5 font-bold uppercase tracking-wide text-xs transition-colors ${
-                            manualLocality === loc
-                              ? "border-black bg-black text-white"
-                              : "border-black bg-white text-black"
-                          }`}
-                        >
-                          {loc}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
 
               {notCovered && (
                 <p className="rounded-lg border border-black bg-ink px-4 py-3 text-sm font-bold text-white">
@@ -342,10 +295,22 @@ export default function CheckoutPage() {
                 </p>
               )}
 
-              {zoneName && (
-                <p className="rounded-lg border border-line bg-cream/60 px-4 py-3 text-sm font-bold text-ink">
-                  ✓ Entregamos en tu zona: {zoneName}
-                </p>
+              {/* Step B: once covered, show confirmation + the address field */}
+              {covered && (
+                <>
+                  <p className="rounded-lg border border-line bg-cream/60 px-4 py-3 text-sm font-bold text-ink">
+                    ✓ Entregamos en tu zona{zoneName ? `: ${zoneName}` : ""}
+                  </p>
+                  <Field label="Dirección de entrega" required>
+                    <input
+                      type="text"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      className={inputClass}
+                      placeholder="Calle, número, piso/depto"
+                    />
+                  </Field>
+                </>
               )}
             </div>
           )}

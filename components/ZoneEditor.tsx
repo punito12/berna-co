@@ -16,21 +16,42 @@ const WEEKDAYS = [
 type Zone = {
   id: string;
   name: string;
+  postalCodes: string[];
   localities: string[];
   daysOfWeek: number[];
   active: boolean;
 };
 
-// Editable card for one zone: name, localities list, weekday toggles, active.
+// Editable card for one zone: name, postal codes, localities, weekdays, active.
 export default function ZoneEditor({ zone }: { zone: Zone }) {
   const router = useRouter();
   const [name, setName] = useState(zone.name);
+  const [postalCodes, setPostalCodes] = useState<string[]>(zone.postalCodes);
+  const [newCode, setNewCode] = useState("");
   const [localities, setLocalities] = useState<string[]>(zone.localities);
   const [newLocality, setNewLocality] = useState("");
   const [days, setDays] = useState<number[]>(zone.daysOfWeek);
   const [active, setActive] = useState(zone.active);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+
+  function addCode() {
+    const m = newCode.trim().match(/\d{4}/);
+    if (!m) {
+      setError("El código postal debe tener 4 dígitos (ej: 1642).");
+      return;
+    }
+    const code = m[0];
+    if (!postalCodes.includes(code)) setPostalCodes((p) => [...p, code]);
+    setNewCode("");
+    setError(null);
+    setStatus("idle");
+  }
+  function removeCode(code: string) {
+    setPostalCodes((p) => p.filter((c) => c !== code));
+    setStatus("idle");
+  }
 
   function addLocality() {
     const value = newLocality.trim();
@@ -63,13 +84,24 @@ export default function ZoneEditor({ zone }: { zone: Zone }) {
       const res = await fetch(`/api/admin/zones/${zone.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, localities, daysOfWeek: days, active }),
+        body: JSON.stringify({
+          name,
+          postalCodes,
+          localities,
+          daysOfWeek: days,
+          active,
+        }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.error ?? "No se pudo guardar.");
+      }
       setStatus("saved");
+      setError(null);
       router.refresh();
-    } catch {
+    } catch (e) {
       setStatus("error");
+      setError((e as Error).message);
     } finally {
       setSaving(false);
     }
@@ -119,7 +151,61 @@ export default function ZoneEditor({ zone }: { zone: Zone }) {
         </label>
       </div>
 
-      {/* Localities */}
+      {/* Postal codes — the coverage barrier */}
+      <div className="mt-5">
+        <p className="mb-1 font-bold uppercase tracking-wide text-[11px] text-muted">
+          Códigos postales
+        </p>
+        <p className="mb-2 text-xs text-muted">
+          4 dígitos (ej: 1642). Definen a qué CP entregamos en esta zona.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {postalCodes.length === 0 && (
+            <span className="text-sm text-muted">Sin códigos todavía.</span>
+          )}
+          {postalCodes.map((c) => (
+            <span
+              key={c}
+              className="inline-flex items-center gap-2 rounded-full border border-black bg-white px-3 py-1 text-sm font-bold text-ink"
+            >
+              {c}
+              <button
+                type="button"
+                onClick={() => removeCode(c)}
+                aria-label={`Quitar ${c}`}
+                className="font-bold text-muted hover:text-ink"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="mt-3 flex gap-2">
+          <input
+            type="text"
+            inputMode="numeric"
+            value={newCode}
+            onChange={(e) => setNewCode(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addCode();
+              }
+            }}
+            className="flex-1 rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black"
+            placeholder="Ej: 1642"
+          />
+          <button
+            type="button"
+            onClick={addCode}
+            className="border border-black px-4 py-2 font-bold uppercase tracking-widest text-xs text-ink hover:bg-black hover:text-white"
+          >
+            Agregar
+          </button>
+        </div>
+      </div>
+
+      {/* Localities (reference / labels) */}
       <div className="mt-5">
         <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
           Localidades
@@ -225,6 +311,10 @@ export default function ZoneEditor({ zone }: { zone: Zone }) {
           </button>
         </div>
       </div>
+
+      {error && (
+        <p className="mt-3 text-right text-sm font-bold text-ink">{error}</p>
+      )}
     </div>
   );
 }

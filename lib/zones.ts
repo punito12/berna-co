@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 export type ZoneForUI = {
   id: string;
   name: string;
+  postalCodes: string[];
   localities: string[];
   daysOfWeek: number[];
   active: boolean;
@@ -21,6 +22,17 @@ export function normalizeLocality(s: string): string {
     .trim();
 }
 
+// Extracts the 4-digit postal code from either format the customer might type:
+//   "1642"      -> "1642"
+//   "B1642DHG"  -> "1642"  (CPA: letter + 4 digits + 3 letters)
+//   "C1002"     -> "1002"
+// Returns null when no 4-digit run is found.
+export function normalizePostalCode(input: string): string | null {
+  if (!input) return null;
+  const match = input.trim().match(/\d{4}/);
+  return match ? match[0] : null;
+}
+
 function parseArray<T>(raw: string): T[] {
   try {
     const v = JSON.parse(raw);
@@ -33,6 +45,7 @@ function parseArray<T>(raw: string): T[] {
 function toZoneForUI(z: {
   id: string;
   name: string;
+  postalCodes: string;
   localities: string;
   daysOfWeek: string;
   active: boolean;
@@ -40,6 +53,7 @@ function toZoneForUI(z: {
   return {
     id: z.id,
     name: z.name,
+    postalCodes: parseArray<string>(z.postalCodes),
     localities: parseArray<string>(z.localities),
     daysOfWeek: parseArray<number>(z.daysOfWeek),
     active: z.active,
@@ -49,6 +63,23 @@ function toZoneForUI(z: {
 export async function listZones(): Promise<ZoneForUI[]> {
   const rows = await prisma.zone.findMany({ orderBy: { name: "asc" } });
   return rows.map(toZoneForUI);
+}
+
+// Finds the active zone that covers the given postal code (matched by its
+// 4-digit number, so "1642" and "B1642DHG" both work).
+export async function findZoneByPostalCode(
+  postalCode: string
+): Promise<ZoneForUI | null> {
+  const target = normalizePostalCode(postalCode);
+  if (!target) return null;
+  const zones = await listZones();
+  for (const zone of zones) {
+    if (!zone.active) continue;
+    if (zone.postalCodes.some((c) => normalizePostalCode(c) === target)) {
+      return zone;
+    }
+  }
+  return null;
 }
 
 // Finds the active zone that lists the given locality (normalized match).
