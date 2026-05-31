@@ -23,8 +23,10 @@ export type ProductFormValues = {
   breadcrumbs: string[];
   prices: Record<string, number>;
   stocks: Record<string, number>;
-  images: Record<string, string>; // cover path per empanado
+  images: Record<string, string[]>; // up to 2 photo paths per empanado
 };
+
+const PHOTO_SLOTS = [0, 1]; // two photos per empanado
 
 const inputClass =
   "w-full rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black";
@@ -56,9 +58,13 @@ export default function ProductForm({
       BREADCRUMBS.map((b) => [b, String(initial.stocks[b] ?? 0)])
     )
   );
-  const [images, setImages] = useState<Record<string, string>>({
-    ...initial.images,
+  // Photos as a 2-slot array per empanado.
+  const [images, setImages] = useState<Record<string, string[]>>(() => {
+    const out: Record<string, string[]> = {};
+    for (const b of BREADCRUMBS) out[b] = initial.images[b] ?? [];
+    return out;
   });
+  // Tracks which slot is uploading, keyed "breadcrumb:slot".
   const [uploading, setUploading] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,8 +76,16 @@ export default function ProductForm({
     setError(null);
   }
 
-  async function uploadImage(breadcrumb: string, file: File) {
-    setUploading(breadcrumb);
+  function setPhoto(breadcrumb: string, slot: number, url: string) {
+    setImages((prev) => {
+      const arr = [...(prev[breadcrumb] ?? [])];
+      arr[slot] = url;
+      return { ...prev, [breadcrumb]: arr };
+    });
+  }
+
+  async function uploadImage(breadcrumb: string, slot: number, file: File) {
+    setUploading(`${breadcrumb}:${slot}`);
     setError(null);
     try {
       const fd = new FormData();
@@ -82,7 +96,7 @@ export default function ProductForm({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "No se pudo subir la imagen.");
-      setImages((prev) => ({ ...prev, [breadcrumb]: data.url }));
+      setPhoto(breadcrumb, slot, data.url);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -109,7 +123,10 @@ export default function ProductForm({
         prices: Object.fromEntries(breadcrumbs.map((b) => [b, Number(prices[b])])),
         stocks: Object.fromEntries(breadcrumbs.map((b) => [b, Number(stocks[b])])),
         images: Object.fromEntries(
-          breadcrumbs.map((b) => [b, images[b] ?? ""])
+          breadcrumbs.map((b) => [
+            b,
+            (images[b] ?? []).filter((u) => u && u.trim()),
+          ])
         ),
       };
       const url =
@@ -307,36 +324,42 @@ export default function ProductForm({
                   className="w-20 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
                 />
               </label>
-              {/* Image upload + preview */}
-              <div className="flex items-end gap-3">
-                <div
-                  className="h-16 w-16 shrink-0 rounded border border-line bg-white bg-cover bg-center"
-                  style={
-                    images[b]
-                      ? { backgroundImage: `url('${images[b]}')` }
-                      : undefined
-                  }
-                  aria-label="Vista previa"
-                />
-                <label className="cursor-pointer border border-black px-3 py-1.5 font-bold uppercase tracking-widest text-[11px] text-ink hover:bg-black hover:text-white">
-                  {uploading === b
-                    ? "Subiendo…"
-                    : images[b]
-                    ? "Cambiar foto"
-                    : "Subir foto"}
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    disabled={uploading !== null}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) uploadImage(b, f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-              </div>
+              {/* Two photo slots per empanado */}
+              {PHOTO_SLOTS.map((slot) => {
+                const current = images[b]?.[slot];
+                const key = `${b}:${slot}`;
+                return (
+                  <div key={slot} className="flex items-end gap-2">
+                    <div
+                      className="h-16 w-16 shrink-0 rounded border border-line bg-white bg-cover bg-center"
+                      style={
+                        current
+                          ? { backgroundImage: `url('${current}')` }
+                          : undefined
+                      }
+                      aria-label={`Foto ${slot + 1}`}
+                    />
+                    <label className="cursor-pointer border border-black px-3 py-1.5 font-bold uppercase tracking-widest text-[11px] text-ink hover:bg-black hover:text-white">
+                      {uploading === key
+                        ? "Subiendo…"
+                        : current
+                        ? `Cambiar ${slot + 1}`
+                        : `Foto ${slot + 1}`}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        disabled={uploading !== null}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) uploadImage(b, slot, f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>

@@ -73,8 +73,9 @@ export async function listProductsForAdmin() {
 export const PRODUCT_CATEGORIES = ["CARNE", "POLLO", "CERDO", "VEGANO"];
 export const BREADCRUMB_CODES = ["TRADITIONAL", "INTEGRAL", "KETO"];
 
-// Everything the admin can set on a product. Images is a cover path per
-// empanado (one photo each); prices/stocks are also keyed by empanado.
+// Everything the admin can set on a product. Images is up to 2 photo paths per
+// empanado (the gallery shown on the detail page); prices/stocks are keyed by
+// empanado too.
 export type ProductInput = {
   name: string;
   description: string;
@@ -85,7 +86,7 @@ export type ProductInput = {
   breadcrumbs: string[]; // which empanados the product offers
   prices: Record<string, number>; // pesos, by empanado
   stocks: Record<string, number>; // units, by empanado
-  images: Record<string, string>; // cover image path, by empanado
+  images: Record<string, string[]>; // up to 2 photo paths, by empanado
 };
 
 // Turns a name into a URL-safe slug (no accents, spaces → dashes).
@@ -152,8 +153,12 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
     if (!Number.isFinite(stock) || stock < 0) throw new Error("Stock inválido.");
     stocks[b] = stock;
 
-    const img = (input.images?.[b] ?? "").trim();
-    images[b] = img ? [img] : [];
+    // Up to 2 photos per empanado; drop empty slots, keep order.
+    const photos = (input.images?.[b] ?? [])
+      .map((s) => (s ?? "").trim())
+      .filter(Boolean)
+      .slice(0, 2);
+    images[b] = photos;
   }
 
   // Default price = first breadcrumb with a price > 0, else first, else 0.

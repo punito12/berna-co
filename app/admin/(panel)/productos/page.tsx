@@ -20,14 +20,16 @@ function safeNumberMap(raw: string): Record<string, number> {
     return {};
   }
 }
-// images column is { breadcrumb: string[] }; we use the first (cover) per empanado.
-function safeCoverMap(raw: string): Record<string, string> {
+// images column is { breadcrumb: string[] }; pass through the photo arrays.
+function safeImagesMap(raw: string): Record<string, string[]> {
   try {
     const v = JSON.parse(raw);
     if (!v || typeof v !== "object" || Array.isArray(v)) return {};
-    const out: Record<string, string> = {};
+    const out: Record<string, string[]> = {};
     for (const [k, arr] of Object.entries(v)) {
-      if (Array.isArray(arr) && typeof arr[0] === "string") out[k] = arr[0];
+      if (Array.isArray(arr)) {
+        out[k] = arr.filter((s): s is string => typeof s === "string");
+      }
     }
     return out;
   } catch {
@@ -67,7 +69,7 @@ export default async function AdminProductsPage() {
             breadcrumbs: safeArray(p.availableBreadcrumbs),
             prices: safeNumberMap(p.prices),
             stocks: safeNumberMap(p.stocks),
-            images: safeCoverMap(p.images),
+            images: safeImagesMap(p.images),
           };
           return <ProductEditor key={p.id} product={value} />;
         })}
