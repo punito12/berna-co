@@ -109,27 +109,38 @@ export type GeocodeResult = {
   displayName: string;
 };
 
-// Geocodes an address to coordinates via OpenStreetMap Nominatim (no API key).
-// Biased to Argentina. Returns null when nothing is found. Nominatim asks for a
-// descriptive User-Agent and rate-limits to ~1 req/s — fine for checkout use.
-export async function geocodeAddress(
-  address: string
-): Promise<GeocodeResult | null> {
-  const query = address.trim();
-  if (!query) return null;
+// Structured address parts. `street` should include the number (e.g.
+// "Avenida Italia 600"). `floor` (piso/depto) is for the delivery only and is
+// NOT used for geocoding. Postal code is optional but helps disambiguate.
+export type AddressParts = {
+  street: string;
+  locality: string;
+  postalCode?: string;
+  floor?: string;
+};
 
-  const url =
-    "https://nominatim.openstreetmap.org/search" +
-    `?q=${encodeURIComponent(query)}` +
-    "&countrycodes=ar&format=jsonv2&addressdetails=0&limit=1";
+// Builds a human-readable one-line address from the structured parts.
+export function formatAddress(parts: AddressParts): string {
+  const bits = [parts.street.trim()];
+  if (parts.floor?.trim()) bits.push(parts.floor.trim());
+  if (parts.locality.trim()) bits.push(parts.locality.trim());
+  if (parts.postalCode?.trim()) bits.push(`CP ${parts.postalCode.trim()}`);
+  return bits.filter(Boolean).join(", ");
+}
 
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent": "berna-and-co-delivery/1.0 (pedidos web)",
-      "Accept-Language": "es",
-    },
-    cache: "no-store",
-  });
+const NOMINATIM_HEADERS = {
+  "User-Agent": "berna-and-co-delivery/1.0 (pedidos web)",
+  "Accept-Language": "es",
+};
+
+async function nominatimFetch(params: URLSearchParams): Promise<GeocodeResult | null> {
+  params.set("countrycodes", "ar");
+  params.set("format", "jsonv2");
+  params.set("addressdetails", "0");
+  params.set("limit", "1");
+  const url = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+
+  const res = await fetch(url, { headers: NOMINATIM_HEADERS, cache: "no-store" });
   if (!res.ok) throw new Error(`Nominatim HTTP ${res.status}`);
 
   const data = (await res.json()) as {
@@ -139,10 +150,52 @@ export async function geocodeAddress(
   }[];
   if (!Array.isArray(data) || data.length === 0) return null;
 
-  const first = data[0];
-  const lat = Number(first.lat);
-  const lng = Number(first.lon);
+  const lat = Number(data[0].lat);
+  const lng = Number(data[0].lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng, displayName: data[0].display_name };
+}
 
-  return { lat, lng, displayName: first.display_name };
+// Geocodes a STRUCTURED address via Nominatim. Using separate street/city/
+// postalcode fields lets Nominatim disambiguate streets that exist in several
+// places (e.g. "Avenida Italia" appears in many AR cities). Falls back to a
+// free-text query if the structured search finds nothing.
+export async function geocodeStructured(
+  parts: AddressParts
+): Promise<GeocodeResult | null> {
+  const street = parts.street.trim();
+  const locality = parts.locality.trim();
+  if (!street) return null;
+
+  // 1) Structured query (most precise).
+  if (locality || parts.postalCode?.trim()) {
+    const structured = new URLSearchParams();
+    structured.set("street", street);
+    if (locality) structured.set("city", locality);
+    if (parts.postalCode?.trim()) {
+      structured.set("postalcode", parts.postalCode.trim());
+    }
+    const hit = await nominatimFetch(structured);
+    if (hit) return hit;
+  }
+
+  // 2) Fallback: free-text with everything joined (helps odd cases).
+  const freeText = [street, locality, parts.postalCode?.trim()]
+    .filter(Boolean)
+    .join(", ");
+  const free = new URLSearchParams();
+  free.set("q", freeText);
+  return nominatimFetch(free);
+}
+
+// Backwards-compatible single-string geocoder (free text), kept for any caller
+// that still passes one line.
+export async function geocodeAddress(
+  address: string
+): Promise<GeocodeResult | null> {
+  const query = address.trim();
+  if (!query) return null;
+  const params = new URLSearchParams();
+  params.set("q", query);
+  return nominatimFetch(params);
 }

@@ -4,7 +4,7 @@
 
 import { prisma } from "@/lib/db";
 import { BREADCRUMB_LABELS } from "@/lib/products";
-import { geocodeAddress, findZoneByPoint } from "@/lib/zones";
+import { geocodeStructured, findZoneByPoint, formatAddress } from "@/lib/zones";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -15,7 +15,12 @@ export type CreateOrderInput = {
   customerEmail?: string;
   notes?: string;
   deliveryType: string; // DELIVERY | PICKUP
-  address?: string;
+  // Structured delivery address (DELIVERY). street includes the number; floor
+  // (piso/depto) is for the delivery only and isn't used for geocoding.
+  street?: string;
+  locality?: string;
+  postalCode?: string;
+  floor?: string;
   scheduledDate: string; // ISO date string
   scheduledSlot: string;
   paymentMethod: string; // CASH (MERCADOPAGO arrives in Paso 4)
@@ -37,10 +42,23 @@ export async function createOrder(
   if (!DELIVERY_TYPES.includes(input.deliveryType)) {
     throw new OrderValidationError("Tipo de entrega inválido.");
   }
-  const address = input.address?.trim();
-  if (input.deliveryType === "DELIVERY" && !address) {
-    throw new OrderValidationError("Falta la dirección para el delivery.");
+  // Structured address parts for delivery.
+  const street = input.street?.trim();
+  const locality = input.locality?.trim();
+  if (input.deliveryType === "DELIVERY") {
+    if (!street) throw new OrderValidationError("Falta la calle y número.");
+    if (!locality) throw new OrderValidationError("Falta la localidad.");
   }
+  // The full one-line address we store on the order.
+  const address =
+    input.deliveryType === "DELIVERY"
+      ? formatAddress({
+          street: street ?? "",
+          locality: locality ?? "",
+          postalCode: input.postalCode,
+          floor: input.floor,
+        })
+      : undefined;
 
   if (!PAYMENT_METHODS.includes(input.paymentMethod)) {
     throw new OrderValidationError(
@@ -78,12 +96,13 @@ export async function createOrder(
   let deliveryCoords: { lat: number; lng: number } | null = null;
 
   if (input.deliveryType === "DELIVERY") {
-    // Coverage is decided by geocoding the address and testing the zone
-    // polygons. We re-geocode server-side (don't trust client coordinates).
-    if (!address) {
-      throw new OrderValidationError("Falta la dirección de entrega.");
-    }
-    const geo = await geocodeAddress(address);
+    // Coverage is decided by geocoding the structured address and testing the
+    // zone polygons. We re-geocode server-side (don't trust client coordinates).
+    const geo = await geocodeStructured({
+      street: street ?? "",
+      locality: locality ?? "",
+      postalCode: input.postalCode,
+    });
     if (!geo) {
       throw new OrderValidationError(
         "No pudimos ubicar tu dirección. Revisá que esté completa."

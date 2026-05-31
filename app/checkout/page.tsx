@@ -21,7 +21,11 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("DELIVERY");
-  const [address, setAddress] = useState("");
+  // Structured delivery address.
+  const [street, setStreet] = useState(""); // calle + número
+  const [locality, setLocality] = useState(""); // localidad
+  const [postalCode, setPostalCode] = useState(""); // CP (opcional)
+  const [floor, setFloor] = useState(""); // piso/depto (opcional)
   const [dateIso, setDateIso] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
 
@@ -51,19 +55,22 @@ export default function CheckoutPage() {
     setSlot(null);
   }
 
-  // Geocodes the address and checks which zone polygon it lands in. If covered,
-  // loads that zone's days + slots; otherwise shows the right message.
+  // Geocodes the structured address and checks which zone polygon it lands in.
+  // If covered, loads that zone's days + slots; otherwise shows the right msg.
   async function checkZone() {
-    if (!address.trim()) {
-      return setZoneError("Ingresá tu dirección.");
-    }
+    if (!street.trim()) return setZoneError("Ingresá la calle y número.");
+    if (!locality.trim()) return setZoneError("Ingresá la localidad.");
     setCheckingZone(true);
     resetZone();
     try {
       const res = await fetch("/api/delivery-zone", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: address.trim() }),
+        body: JSON.stringify({
+          street: street.trim(),
+          locality: locality.trim(),
+          postalCode: postalCode.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -95,7 +102,8 @@ export default function CheckoutPage() {
     if (!name.trim()) return setError("Ingresá tu nombre.");
     if (!phone.trim()) return setError("Ingresá tu teléfono.");
     if (deliveryType === "DELIVERY") {
-      if (!address.trim()) return setError("Ingresá la dirección de entrega.");
+      if (!street.trim()) return setError("Ingresá la calle y número.");
+      if (!locality.trim()) return setError("Ingresá la localidad.");
       if (notCovered || notLocated)
         return setError("Lo sentimos, por ahora no llegamos a tu dirección.");
       if (!covered)
@@ -115,7 +123,14 @@ export default function CheckoutPage() {
           customerEmail: email || undefined,
           notes: notes || undefined,
           deliveryType,
-          address: deliveryType === "DELIVERY" ? address : undefined,
+          street: deliveryType === "DELIVERY" ? street : undefined,
+          locality: deliveryType === "DELIVERY" ? locality : undefined,
+          postalCode:
+            deliveryType === "DELIVERY"
+              ? postalCode.trim() || undefined
+              : undefined,
+          floor:
+            deliveryType === "DELIVERY" ? floor.trim() || undefined : undefined,
           scheduledDate: `${dateIso}T12:00:00`,
           scheduledSlot: slot,
           paymentMethod: "CASH",
@@ -246,31 +261,64 @@ export default function CheckoutPage() {
           </div>
           {deliveryType === "DELIVERY" && (
             <div className="mt-4 space-y-3">
-              <Field label="Dirección de entrega" required>
+              <Field label="Calle y número" required>
                 <input
                   type="text"
-                  value={address}
+                  value={street}
                   onChange={(e) => {
-                    setAddress(e.target.value);
-                    // Editing the address invalidates a previous check.
+                    setStreet(e.target.value);
                     if (covered || notCovered || notLocated || zoneError)
                       resetZone();
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      checkZone();
-                    }
-                  }}
                   className={inputClass}
-                  placeholder="Calle, número, localidad (ej: Av. Centenario 123, San Isidro)"
+                  placeholder="Ej: Avenida Italia 600"
+                />
+              </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Localidad" required>
+                  <input
+                    type="text"
+                    value={locality}
+                    onChange={(e) => {
+                      setLocality(e.target.value);
+                      if (covered || notCovered || notLocated || zoneError)
+                        resetZone();
+                    }}
+                    className={inputClass}
+                    placeholder="Ej: Tigre"
+                  />
+                </Field>
+                <Field label="Código postal (opcional)">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={postalCode}
+                    onChange={(e) => {
+                      setPostalCode(e.target.value);
+                      if (covered || notCovered || notLocated || zoneError)
+                        resetZone();
+                    }}
+                    className={inputClass}
+                    placeholder="Ej: 1648"
+                  />
+                </Field>
+              </div>
+
+              <Field label="Piso / depto / barrio (opcional)">
+                <input
+                  type="text"
+                  value={floor}
+                  onChange={(e) => setFloor(e.target.value)}
+                  className={inputClass}
+                  placeholder="Ej: Piso 3 B, o Barrio Los Robles, lote 12"
                 />
               </Field>
 
               <button
                 type="button"
                 onClick={() => checkZone()}
-                disabled={checkingZone || !address.trim()}
+                disabled={checkingZone || !street.trim() || !locality.trim()}
                 className="w-full border border-black px-4 py-3 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:bg-black hover:text-white disabled:opacity-40"
               >
                 {checkingZone ? "Verificando…" : "Verificar dirección"}
