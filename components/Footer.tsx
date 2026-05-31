@@ -1,4 +1,5 @@
 import BernaLogo from "@/components/BernaLogo";
+import NewsletterForm from "@/components/NewsletterForm";
 
 export default function Footer() {
   return (
@@ -26,6 +27,11 @@ export default function Footer() {
         >
           @berna.and.co
         </a>
+
+        {/* Newsletter signup */}
+        <div className="mt-12 border-t border-white/10 pt-10">
+          <NewsletterForm />
+        </div>
       </div>
     </footer>
   );

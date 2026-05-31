@@ -1,0 +1,14 @@
+Subí acá el catálogo de Berna&co
+================================
+
+Dejá el archivo del catálogo en esta carpeta (catalogo/). Sirve cualquiera de:
+  - PDF        (ej: catalogo.pdf)
+  - Imágenes   (fotos/escaneos: .jpg, .png) — una o varias
+  - Texto      (.txt) si ya lo tenés escrito
+
+Yo de ahí extraigo los textos que necesito para la sección "Por qué Berna&co":
+  1) Beneficios de los huevos agroecológicos certificados
+  2) Marinadas durante 24 horas
+  3) Empanado simple
+
+Cuando lo subas, avisame y los saco textuales (no invento nada).

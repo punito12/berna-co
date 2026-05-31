@@ -97,6 +97,13 @@ model AvailableDeliveryDay {
   available Boolean @default(true)
 }
 
+// Newsletter subscribers captured from the footer form.
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
 // A delivery zone is a polygon on the map plus the weekdays we deliver inside
 // it. Coverage is decided by point-in-polygon on the customer's coordinates.
 model Zone {
