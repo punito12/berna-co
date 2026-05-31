@@ -1,5 +1,7 @@
 import { listProductsForAdmin } from "@/lib/admin";
 import ProductEditor from "@/components/ProductEditor";
+import NewProductButton from "@/components/NewProductButton";
+import type { ProductFormValues } from "@/components/ProductForm";
 
 // Helpers to parse the JSON columns coming from the database row.
 function safeArray(raw: string): string[] {
@@ -18,37 +20,57 @@ function safeNumberMap(raw: string): Record<string, number> {
     return {};
   }
 }
+// images column is { breadcrumb: string[] }; we use the first (cover) per empanado.
+function safeCoverMap(raw: string): Record<string, string> {
+  try {
+    const v = JSON.parse(raw);
+    if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+    const out: Record<string, string> = {};
+    for (const [k, arr] of Object.entries(v)) {
+      if (Array.isArray(arr) && typeof arr[0] === "string") out[k] = arr[0];
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
 
-// Edit price + stock (per empanado) and availability for each product
-// (no create/delete in v1).
+// Full product management: create, edit every field (incl. photo upload) and
+// delete, all from the panel.
 export default async function AdminProductsPage() {
   const products = await listProductsForAdmin();
 
   return (
     <div>
-      <h1 className="mb-2 font-black uppercase tracking-tight text-3xl text-ink">
-        Productos
-      </h1>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-black uppercase tracking-tight text-3xl text-ink">
+          Productos
+        </h1>
+        <NewProductButton />
+      </div>
       <p className="mb-6 text-sm text-muted">
-        Cargá el precio y el stock de cada empanado, y marcá si está disponible.
-        Un empanado con precio 0 aparece como “Precio a confirmar”; con stock 0,
-        como “Sin stock”.
+        Tocá “Editar” en un producto para cambiar nombre, descripción, precio,
+        categoría, stock, empanados y foto, o crear uno nuevo. Un empanado con
+        precio 0 aparece como “Precio a confirmar”; con stock 0, como “Sin stock”.
       </p>
 
       <div className="space-y-3">
-        {products.map((p) => (
-          <ProductEditor
-            key={p.id}
-            product={{
-              id: p.id,
-              name: p.name,
-              available: p.available,
-              breadcrumbs: safeArray(p.availableBreadcrumbs),
-              prices: safeNumberMap(p.prices),
-              stocks: safeNumberMap(p.stocks),
-            }}
-          />
-        ))}
+        {products.map((p) => {
+          const value: ProductFormValues = {
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            category: p.category,
+            weightGrams: p.weightGrams,
+            isNew: p.isNew,
+            available: p.available,
+            breadcrumbs: safeArray(p.availableBreadcrumbs),
+            prices: safeNumberMap(p.prices),
+            stocks: safeNumberMap(p.stocks),
+            images: safeCoverMap(p.images),
+          };
+          return <ProductEditor key={p.id} product={value} />;
+        })}
       </div>
     </div>
   );
