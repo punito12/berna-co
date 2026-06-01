@@ -28,6 +28,8 @@ export type CustomerInput = {
   defaultDiscount: number;
   phone?: string;
   notes?: string;
+  neighborhood?: string;
+  lot?: string;
 };
 
 function cleanCustomer(input: CustomerInput) {
@@ -46,11 +48,43 @@ function cleanCustomer(input: CustomerInput) {
     defaultDiscount: discount,
     phone: input.phone?.trim() || null,
     notes: input.notes?.trim() || null,
+    neighborhood: input.neighborhood?.trim() || null,
+    lot: input.lot?.trim() || null,
   };
 }
 
 export async function listCustomers() {
   return prisma.customer.findMany({ orderBy: { name: "asc" } });
+}
+
+// Distinct neighborhoods already used (by customers OR assigned to orders),
+// for the picker datalist. De-duplicated and sorted.
+export async function listNeighborhoods(): Promise<string[]> {
+  const [fromCustomers, fromOrders] = await Promise.all([
+    prisma.customer.findMany({
+      where: { neighborhood: { not: null } },
+      select: { neighborhood: true },
+      distinct: ["neighborhood"],
+    }),
+    prisma.order.findMany({
+      where: { neighborhood: { not: null } },
+      select: { neighborhood: true },
+      distinct: ["neighborhood"],
+    }),
+  ]);
+  const set = new Set<string>();
+  for (const r of [...fromCustomers, ...fromOrders]) {
+    if (r.neighborhood) set.add(r.neighborhood);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, "es"));
+}
+
+// Assigns (or clears) the neighborhood of a web order, for billing breakdown.
+export async function setOrderNeighborhood(id: string, neighborhood: string) {
+  await prisma.order.update({
+    where: { id },
+    data: { neighborhood: neighborhood.trim() || null },
+  });
 }
 
 export async function createCustomer(input: CustomerInput) {
@@ -150,6 +184,8 @@ export async function createManualSale(input: SaleInput) {
       channel: input.channel,
       customerId: customer?.id ?? null,
       customerName,
+      // Snapshot the chosen customer's neighborhood for the billing breakdown.
+      neighborhood: customer?.neighborhood ?? null,
       discountPct: pct,
       gross,
       discountAmount,
@@ -204,6 +240,13 @@ export type BillingReport = {
   byProduct: { name: string; qtyKg: number; units: number; net: number }[];
   byCustomer: { name: string; net: number; salesCount: number }[];
   byChannel: { channel: string; net: number; gross: number }[];
+  byNeighborhood: {
+    neighborhood: string;
+    qtyKg: number;
+    units: number;
+    gross: number;
+    net: number;
+  }[];
 };
 
 // Builds the billing report over [from, to). Combines manual sales and web
@@ -235,6 +278,33 @@ export async function getBillingReport(
   >();
   const byCustomer = new Map<string, { net: number; salesCount: number }>();
   const byChannel = new Map<string, { net: number; gross: number }>();
+  // Keyed by neighborhood; only real neighborhoods are added (no "sin barrio").
+  const byNeighborhood = new Map<
+    string,
+    { qtyKg: number; units: number; gross: number; net: number }
+  >();
+
+  function addNeighborhood(
+    name: string | null | undefined,
+    qtyKg: number,
+    units: number,
+    g: number,
+    n: number
+  ) {
+    const key = name?.trim();
+    if (!key) return; // sales without a neighborhood are left out of this table
+    const cur = byNeighborhood.get(key) ?? {
+      qtyKg: 0,
+      units: 0,
+      gross: 0,
+      net: 0,
+    };
+    cur.qtyKg += qtyKg;
+    cur.units += units;
+    cur.gross += g;
+    cur.net += n;
+    byNeighborhood.set(key, cur);
+  }
 
   function addProduct(
     name: string,
@@ -271,10 +341,13 @@ export async function getBillingReport(
     // Distribute the sale's net across items proportionally to their subtotal,
     // so per-product net reflects the discount.
     const saleGross = s.gross || 1;
+    let saleKg = 0;
     for (const it of s.items) {
       const share = s.net * (it.lineSubtotal / saleGross);
       addProduct(it.productName, it.qtyKg, 0, Math.round(share));
+      saleKg += it.qtyKg;
     }
+    addNeighborhood(s.neighborhood, saleKg, 0, s.gross, s.net);
   }
 
   // Web orders (channel WEB; no discount; quantities are units).
@@ -291,6 +364,7 @@ export async function getBillingReport(
     c.salesCount += 1;
     byCustomer.set(name, c);
 
+    let orderUnits = 0;
     for (const it of o.items) {
       addProduct(
         it.product?.name ?? "Producto",
@@ -298,7 +372,10 @@ export async function getBillingReport(
         it.quantity,
         it.priceAtTime * it.quantity
       );
+      orderUnits += it.quantity;
     }
+    // Web order's neighborhood is the one the admin assigned (if any).
+    addNeighborhood(o.neighborhood, 0, orderUnits, productsTotal, productsTotal);
   }
 
   return {
@@ -309,6 +386,9 @@ export async function getBillingReport(
       .sort((a, b) => b.net - a.net),
     byChannel: [...byChannel.entries()]
       .map(([channel, v]) => ({ channel, ...v }))
+      .sort((a, b) => b.net - a.net),
+    byNeighborhood: [...byNeighborhood.entries()]
+      .map(([neighborhood, v]) => ({ neighborhood, ...v }))
       .sort((a, b) => b.net - a.net),
   };
 }

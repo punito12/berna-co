@@ -5,7 +5,13 @@ import CustomerForm, { type CustomerValues } from "@/components/CustomerForm";
 import { CUSTOMER_TYPE_LABELS } from "@/lib/management";
 
 // A customer row that expands into the edit form.
-export default function CustomerRow({ customer }: { customer: CustomerValues }) {
+export default function CustomerRow({
+  customer,
+  neighborhoods,
+}: {
+  customer: CustomerValues;
+  neighborhoods: string[];
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -20,6 +26,11 @@ export default function CustomerRow({ customer }: { customer: CustomerValues }) 
           </p>
           <p className="mt-0.5 text-xs text-muted">
             Descuento {customer.defaultDiscount}%
+            {customer.neighborhood
+              ? ` · ${customer.neighborhood}${
+                  customer.lot ? ` (lote ${customer.lot})` : ""
+                }`
+              : ""}
             {customer.phone ? ` · ${customer.phone}` : ""}
           </p>
         </div>
@@ -37,6 +48,7 @@ export default function CustomerRow({ customer }: { customer: CustomerValues }) 
           <CustomerForm
             mode="edit"
             initial={customer}
+            neighborhoods={neighborhoods}
             onDone={() => setOpen(false)}
           />
         </div>

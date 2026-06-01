@@ -16,6 +16,8 @@ export type CustomerValues = {
   defaultDiscount: number;
   phone: string;
   notes: string;
+  neighborhood: string;
+  lot: string;
 };
 
 const inputClass =
@@ -27,10 +29,12 @@ export default function CustomerForm({
   initial,
   mode,
   onDone,
+  neighborhoods = [],
 }: {
   initial: CustomerValues;
   mode: "create" | "edit";
   onDone?: () => void;
+  neighborhoods?: string[]; // existing barrios, for the picker datalist
 }) {
   const router = useRouter();
   const [name, setName] = useState(initial.name);
@@ -38,6 +42,8 @@ export default function CustomerForm({
   const [discount, setDiscount] = useState(String(initial.defaultDiscount));
   const [phone, setPhone] = useState(initial.phone);
   const [notes, setNotes] = useState(initial.notes);
+  const [neighborhood, setNeighborhood] = useState(initial.neighborhood);
+  const [lot, setLot] = useState(initial.lot);
   // Track whether the user manually edited the discount; if not, follow type.
   const [discountTouched, setDiscountTouched] = useState(mode === "edit");
   const [saving, setSaving] = useState(false);
@@ -62,6 +68,8 @@ export default function CustomerForm({
         defaultDiscount: Number(discount),
         phone,
         notes,
+        neighborhood,
+        lot,
       };
       const url =
         mode === "create"
@@ -163,6 +171,40 @@ export default function CustomerForm({
             onChange={(e) => setPhone(e.target.value)}
             className={inputClass}
             placeholder="Ej: 11 5555 5555"
+          />
+        </label>
+      </div>
+
+      {/* Barrio + lote */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+            Barrio
+          </span>
+          <input
+            type="text"
+            list="barrios-list"
+            value={neighborhood}
+            onChange={(e) => setNeighborhood(e.target.value)}
+            className={inputClass}
+            placeholder="Ej: Nordelta"
+          />
+          <datalist id="barrios-list">
+            {neighborhoods.map((b) => (
+              <option key={b} value={b} />
+            ))}
+          </datalist>
+        </label>
+        <label className="block">
+          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+            Lote
+          </span>
+          <input
+            type="text"
+            value={lot}
+            onChange={(e) => setLot(e.target.value)}
+            className={inputClass}
+            placeholder="Ej: A-142"
           />
         </label>
       </div>

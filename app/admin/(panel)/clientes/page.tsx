@@ -1,10 +1,13 @@
-import { listCustomers } from "@/lib/management";
+import { listCustomers, listNeighborhoods } from "@/lib/management";
 import CustomerRow from "@/components/CustomerRow";
 import NewCustomerButton from "@/components/NewCustomerButton";
 
 // Customer database: create, edit, delete clients for manual sales.
 export default async function AdminCustomersPage() {
-  const customers = await listCustomers();
+  const [customers, neighborhoods] = await Promise.all([
+    listCustomers(),
+    listNeighborhoods(),
+  ]);
 
   return (
     <div>
@@ -12,12 +15,13 @@ export default async function AdminCustomersPage() {
         <h1 className="font-black uppercase tracking-tight text-3xl text-ink">
           Clientes
         </h1>
-        <NewCustomerButton />
+        <NewCustomerButton neighborhoods={neighborhoods} />
       </div>
       <p className="mb-6 text-sm text-muted">
         Tu base de clientes para las ventas manuales. El tipo define el
         descuento sugerido (Minorista 10%, Mayorista 25%, Kiosco 30%), que
-        siempre podés ajustar por cliente o por venta.
+        siempre podés ajustar por cliente o por venta. Cargá barrio y lote para
+        ver la facturación por barrio.
       </p>
 
       {customers.length === 0 ? (
@@ -29,6 +33,7 @@ export default async function AdminCustomersPage() {
           {customers.map((c) => (
             <CustomerRow
               key={c.id}
+              neighborhoods={neighborhoods}
               customer={{
                 id: c.id,
                 name: c.name,
@@ -36,6 +41,8 @@ export default async function AdminCustomersPage() {
                 defaultDiscount: c.defaultDiscount,
                 phone: c.phone ?? "",
                 notes: c.notes ?? "",
+                neighborhood: c.neighborhood ?? "",
+                lot: c.lot ?? "",
               }}
             />
           ))}

@@ -155,6 +155,25 @@ export default async function AdminBillingPage({
             />
           )}
         </Panel>
+
+        <Panel title="Por barrio">
+          {report.byNeighborhood.length === 0 ? (
+            <p className="text-sm text-muted">
+              Sin barrios cargados en este período. Cargá barrio en los clientes
+              (o asignalo a un pedido web desde Pedidos).
+            </p>
+          ) : (
+            <Table
+              head={["Barrio", "Kg", "Bruto", "Neto"]}
+              rows={report.byNeighborhood.map((b) => [
+                b.neighborhood,
+                b.qtyKg ? b.qtyKg.toFixed(1) : "—",
+                pesos(b.gross),
+                pesos(b.net),
+              ])}
+            />
+          )}
+        </Panel>
       </div>
     </div>
   );

@@ -9,9 +9,15 @@ const EMPTY: CustomerValues = {
   defaultDiscount: 10,
   phone: "",
   notes: "",
+  neighborhood: "",
+  lot: "",
 };
 
-export default function NewCustomerButton() {
+export default function NewCustomerButton({
+  neighborhoods,
+}: {
+  neighborhoods: string[];
+}) {
   const [open, setOpen] = useState(false);
 
   if (!open) {
@@ -31,7 +37,12 @@ export default function NewCustomerButton() {
       <p className="mb-4 font-black uppercase tracking-tight text-lg text-ink">
         Nuevo cliente
       </p>
-      <CustomerForm mode="create" initial={EMPTY} onDone={() => setOpen(false)} />
+      <CustomerForm
+        mode="create"
+        initial={EMPTY}
+        neighborhoods={neighborhoods}
+        onDone={() => setOpen(false)}
+      />
     </div>
   );
 }

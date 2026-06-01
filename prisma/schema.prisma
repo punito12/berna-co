@@ -77,6 +77,7 @@ model Order {
   total         Int
   mpPaymentId   String? // null when paying cash
   notes         String?
+  neighborhood  String? // barrio assigned manually by the admin (for billing)
 
   items OrderItem[]
 }
@@ -145,6 +146,8 @@ model Customer {
   defaultDiscount Int     @default(0) // percent (0..100)
   phone           String?
   notes           String?
+  neighborhood    String? // barrio (cerrado), for grouping
+  lot             String? // lote within the neighborhood
 
   sales ManualSale[]
 
@@ -162,6 +165,8 @@ model ManualSale {
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   // Free-text customer name when not picking one from the list.
   customerName String?
+  // Neighborhood snapshot (from the chosen customer) for billing breakdown.
+  neighborhood String?
 
   discountPct Int @default(0) // discount applied to this sale (percent)
   // Stored money fields (pesos): gross = sum of item subtotals (no discount),
