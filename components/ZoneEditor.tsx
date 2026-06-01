@@ -31,16 +31,20 @@ type Zone = {
   polygon: GeoPolygon | null;
   daysOfWeek: number[];
   active: boolean;
+  shippingCost: number;
+  freeShippingFrom: number;
 };
 
 // Editable card for one zone: name, a drawing map for the coverage polygon,
-// weekday toggles and active flag.
+// weekday toggles, delivery pricing and active flag.
 export default function ZoneEditor({ zone }: { zone: Zone }) {
   const router = useRouter();
   const [name, setName] = useState(zone.name);
   const [polygon, setPolygon] = useState<GeoPolygon | null>(zone.polygon);
   const [days, setDays] = useState<number[]>(zone.daysOfWeek);
   const [active, setActive] = useState(zone.active);
+  const [shippingCost, setShippingCost] = useState(String(zone.shippingCost));
+  const [freeFrom, setFreeFrom] = useState(String(zone.freeShippingFrom));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
@@ -65,7 +69,14 @@ export default function ZoneEditor({ zone }: { zone: Zone }) {
       const res = await fetch(`/api/admin/zones/${zone.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, polygon, daysOfWeek: days, active }),
+        body: JSON.stringify({
+          name,
+          polygon,
+          daysOfWeek: days,
+          active,
+          shippingCost: Number(shippingCost),
+          freeShippingFrom: Number(freeFrom),
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -168,6 +179,48 @@ export default function ZoneEditor({ zone }: { zone: Zone }) {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* Delivery pricing */}
+      <div className="mt-5">
+        <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
+          Costo de envío
+        </p>
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="block">
+            <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+              Envío $
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={shippingCost}
+              onChange={(e) => {
+                setShippingCost(e.target.value);
+                setStatus("idle");
+              }}
+              className="w-28 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+              Gratis desde $
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={freeFrom}
+              onChange={(e) => {
+                setFreeFrom(e.target.value);
+                setStatus("idle");
+              }}
+              className="w-28 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
+            />
+          </label>
+          <p className="text-xs text-muted">
+            0 en “gratis desde” = nunca gratis.
+          </p>
         </div>
       </div>
 

@@ -16,6 +16,8 @@ export async function PATCH(
     polygon?: unknown;
     daysOfWeek?: number[];
     active?: boolean;
+    shippingCost?: number;
+    freeShippingFrom?: number;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -29,6 +31,8 @@ export async function PATCH(
       polygon: body.polygon ?? null,
       daysOfWeek: body.daysOfWeek ?? [],
       active: Boolean(body.active),
+      shippingCost: Number(body.shippingCost ?? 0),
+      freeShippingFrom: Number(body.freeShippingFrom ?? 0),
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

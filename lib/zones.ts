@@ -16,7 +16,16 @@ export type ZoneForUI = {
   polygon: GeoPolygon | null;
   daysOfWeek: number[];
   active: boolean;
+  shippingCost: number; // flat delivery fee (pesos)
+  freeShippingFrom: number; // free from this subtotal; 0 = never free
 };
+
+// Delivery fee for a zone given the products subtotal. Free when the zone has
+// a freeShippingFrom threshold and the subtotal reaches it.
+export function shippingFor(zone: ZoneForUI, subtotal: number): number {
+  if (zone.freeShippingFrom > 0 && subtotal >= zone.freeShippingFrom) return 0;
+  return zone.shippingCost;
+}
 
 function parseArray<T>(raw: string): T[] {
   try {
@@ -46,6 +55,8 @@ function toZoneForUI(z: {
   polygon: string | null;
   daysOfWeek: string;
   active: boolean;
+  shippingCost: number;
+  freeShippingFrom: number;
 }): ZoneForUI {
   return {
     id: z.id,
@@ -53,6 +64,8 @@ function toZoneForUI(z: {
     polygon: parsePolygon(z.polygon),
     daysOfWeek: parseArray<number>(z.daysOfWeek),
     active: z.active,
+    shippingCost: z.shippingCost,
+    freeShippingFrom: z.freeShippingFrom,
   };
 }
 

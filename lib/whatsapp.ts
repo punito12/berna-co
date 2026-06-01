@@ -20,6 +20,7 @@ export type OrderForMessage = {
   scheduledDate: Date;
   scheduledSlot: string;
   paymentMethod: string;
+  shippingCost: number;
   total: number;
   notes: string | null;
   items: {
@@ -49,6 +50,11 @@ function buildMessage(order: OrderForMessage): string {
     );
   }
   lines.push("");
+  if (order.deliveryType === "DELIVERY") {
+    lines.push(
+      `Envío: ${order.shippingCost > 0 ? formatPrice(order.shippingCost) : "Gratis"}`
+    );
+  }
   lines.push(`*Total:* ${formatPrice(order.total)}`);
   lines.push("");
   lines.push(`Entrega: ${deliveryTypeLabel(order.deliveryType)}`);

@@ -4,7 +4,12 @@
 
 import { prisma } from "@/lib/db";
 import { BREADCRUMB_LABELS } from "@/lib/products";
-import { geocodeStructured, findZoneByPoint, formatAddress } from "@/lib/zones";
+import {
+  geocodeStructured,
+  findZoneByPoint,
+  formatAddress,
+  shippingFor,
+} from "@/lib/zones";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -92,8 +97,10 @@ export async function createOrder(
   // The chosen weekday must be enabled for the delivery zone of this address.
   // We re-derive the zone server-side (don't trust the client): geocode the
   // address → find the zone → check the zone delivers on that weekday.
-  // deliveryCoords is filled for DELIVERY and saved on the order.
+  // deliveryCoords is filled for DELIVERY and saved on the order. deliveryZone
+  // is kept so we can add the zone's shipping fee once the subtotal is known.
   let deliveryCoords: { lat: number; lng: number } | null = null;
+  let deliveryZone: Awaited<ReturnType<typeof findZoneByPoint>> = null;
 
   if (input.deliveryType === "DELIVERY") {
     // Coverage is decided by geocoding the structured address and testing the
@@ -120,6 +127,7 @@ export async function createOrder(
       );
     }
     deliveryCoords = { lat: geo.lat, lng: geo.lng };
+    deliveryZone = zone;
   } else {
     // PICKUP (not enabled yet) still uses the global delivery days.
     const enabledDay = await prisma.availableDeliveryDay.findFirst({
@@ -167,6 +175,10 @@ export async function createOrder(
     };
   });
 
+  // Add the delivery fee for the zone (free if the subtotal hits the threshold).
+  const shipping = deliveryZone ? shippingFor(deliveryZone, total) : 0;
+  total += shipping;
+
   // --- stock check: units requested per (product, empanado) ---
   // Key is `${productId}__${breadcrumb}` so each variant is checked on its own.
   const unitsByVariant = new Map<string, number>();
@@ -208,6 +220,7 @@ export async function createOrder(
         scheduledDate,
         scheduledSlot: input.scheduledSlot,
         paymentMethod: input.paymentMethod,
+        shippingCost: shipping,
         total,
         mpPaymentId: null,
         items: { create: itemsToCreate },

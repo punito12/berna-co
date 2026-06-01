@@ -100,7 +100,27 @@ export default async function ConfirmadoPage({
             ))}
           </ul>
 
-          <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+          {order.shippingCost > 0 ? (
+            <div className="mt-3 space-y-1 border-t border-line pt-3 text-sm">
+              <div className="flex items-center justify-between text-muted">
+                <span>Productos</span>
+                <span>{formatPrice(order.total - order.shippingCost)}</span>
+              </div>
+              <div className="flex items-center justify-between text-muted">
+                <span>Envío</span>
+                <span>{formatPrice(order.shippingCost)}</span>
+              </div>
+            </div>
+          ) : (
+            order.deliveryType === "DELIVERY" && (
+              <div className="mt-3 flex items-center justify-between border-t border-line pt-3 text-sm text-muted">
+                <span>Envío</span>
+                <span>Gratis</span>
+              </div>
+            )
+          )}
+
+          <div className="mt-2 flex items-center justify-between border-t border-line pt-3">
             <span className="font-bold uppercase tracking-wide text-ink">
               Total
             </span>

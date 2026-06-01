@@ -37,12 +37,20 @@ export default function CheckoutPage() {
   const [zoneError, setZoneError] = useState<string | null>(null);
   const [notCovered, setNotCovered] = useState(false);
   const [notLocated, setNotLocated] = useState(false);
+  // Delivery pricing for the matched zone.
+  const [shippingCost, setShippingCost] = useState(0);
+  const [freeShippingFrom, setFreeShippingFrom] = useState(0);
 
   // --- submission state ---
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const covered = Boolean(options);
+
+  // Delivery fee: free when the zone has a threshold and the subtotal reaches it.
+  const shipping =
+    freeShippingFrom > 0 && totalPrice >= freeShippingFrom ? 0 : shippingCost;
+  const grandTotal = totalPrice + shipping;
 
   // Resets everything tied to a verified address / zone.
   function resetZone() {
@@ -51,6 +59,8 @@ export default function CheckoutPage() {
     setNotCovered(false);
     setNotLocated(false);
     setZoneError(null);
+    setShippingCost(0);
+    setFreeShippingFrom(0);
     setDateIso(null);
     setSlot(null);
   }
@@ -84,6 +94,8 @@ export default function CheckoutPage() {
         return;
       }
       setZoneName(data.zoneName);
+      setShippingCost(Number(data.shippingCost ?? 0));
+      setFreeShippingFrom(Number(data.freeShippingFrom ?? 0));
       setOptions({
         enabledWeekdays: data.enabledWeekdays,
         slots: data.slots,
@@ -446,12 +458,27 @@ export default function CheckoutPage() {
               </li>
             ))}
           </ul>
-          <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+
+          {/* Subtotal + shipping (when a delivery zone is confirmed) */}
+          <div className="mt-3 space-y-1 border-t border-line pt-3 text-sm">
+            <div className="flex items-center justify-between text-muted">
+              <span>Productos</span>
+              <span>{formatPrice(totalPrice)}</span>
+            </div>
+            {deliveryType === "DELIVERY" && covered && (
+              <div className="flex items-center justify-between text-muted">
+                <span>Envío{zoneName ? ` (${zoneName})` : ""}</span>
+                <span>{shipping === 0 ? "Gratis" : formatPrice(shipping)}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-2 flex items-center justify-between border-t border-line pt-3">
             <span className="font-bold uppercase tracking-wide text-ink">
               Total
             </span>
             <span className="font-black text-2xl text-ink">
-              {formatPrice(totalPrice)}
+              {formatPrice(deliveryType === "DELIVERY" ? grandTotal : totalPrice)}
             </span>
           </div>
         </Section>

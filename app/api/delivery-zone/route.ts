@@ -66,6 +66,9 @@ export async function POST(request: Request) {
       displayName: geo.displayName,
       enabledWeekdays: zone.daysOfWeek,
       slots: slots.map((s) => ({ id: s.id, label: s.label })),
+      // Delivery pricing for this zone (the checkout shows it and adds it).
+      shippingCost: zone.shippingCost,
+      freeShippingFrom: zone.freeShippingFrom,
     });
   } catch (error) {
     console.error("delivery-zone error:", error);

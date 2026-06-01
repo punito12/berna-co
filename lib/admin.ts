@@ -286,6 +286,8 @@ export async function updateZone(
     polygon: unknown; // GeoJSON Polygon or null
     daysOfWeek: number[];
     active: boolean;
+    shippingCost: number;
+    freeShippingFrom: number;
   }
 ) {
   const name = data.name.trim();
@@ -298,6 +300,15 @@ export async function updateZone(
     new Set((data.daysOfWeek ?? []).filter((d) => d >= 0 && d <= 6))
   ).sort((a, b) => a - b);
 
+  const shippingCost = Math.round(Number(data.shippingCost));
+  if (!Number.isFinite(shippingCost) || shippingCost < 0) {
+    throw new Error("Costo de envío inválido.");
+  }
+  const freeShippingFrom = Math.round(Number(data.freeShippingFrom));
+  if (!Number.isFinite(freeShippingFrom) || freeShippingFrom < 0) {
+    throw new Error("Monto de envío gratis inválido.");
+  }
+
   await prisma.zone.update({
     where: { id },
     data: {
@@ -305,6 +316,8 @@ export async function updateZone(
       polygon: polygon ? JSON.stringify(polygon) : null,
       daysOfWeek: JSON.stringify(days),
       active: Boolean(data.active),
+      shippingCost,
+      freeShippingFrom,
     },
   });
 }
