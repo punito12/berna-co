@@ -7,8 +7,9 @@ import {
   paymentMethodLabel,
 } from "@/lib/format";
 
-// Business WhatsApp number (+54 9 11 5049-3297) as digits for the wa.me link.
-export const BUSINESS_WHATSAPP = "5491150493297";
+// Business WhatsApp number (+54 11 2545-0305) as digits for the wa.me link.
+// AR mobile links need the "9" after the country code: 54 9 11 ...
+export const BUSINESS_WHATSAPP = "5491125450305";
 
 // The shape we need from a saved order (matches the Prisma query in the
 // confirmation page: order with items, each item including its product).
