@@ -1,5 +1,5 @@
 import Hero from "@/components/Hero";
-import QualityBadges from "@/components/QualityBadges";
+import Ingredients from "@/components/Ingredients";
 import Catalog from "@/components/Catalog";
 import PointsOfSale from "@/components/PointsOfSale";
 import Footer from "@/components/Footer";
@@ -14,7 +14,7 @@ export default async function HomePage() {
   return (
     <main>
       <Hero />
-      <QualityBadges />
+      <Ingredients />
 
       {products.length > 0 ? (
         <Catalog products={products} />
