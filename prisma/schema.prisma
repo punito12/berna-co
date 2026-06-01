@@ -39,6 +39,10 @@ model Product {
   // JSON array of allowed breadcrumb types, e.g. ["TRADITIONAL","INTEGRAL","KETO"]
   availableBreadcrumbs String
 
+  // JSON array of breadcrumb types temporarily turned OFF by the admin, e.g.
+  // ["KETO"]. They keep their price/stock/photos but aren't sold until re-enabled.
+  disabledBreadcrumbs String @default("[]")
+
   orderItems OrderItem[]
 
   createdAt DateTime @default(now())

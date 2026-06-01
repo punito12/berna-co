@@ -84,6 +84,7 @@ export type ProductInput = {
   isNew: boolean;
   available: boolean;
   breadcrumbs: string[]; // which empanados the product offers
+  disabledBreadcrumbs?: string[]; // empanados temporarily turned off
   prices: Record<string, number>; // pesos, by empanado
   stocks: Record<string, number>; // units, by empanado
   images: Record<string, string[]>; // up to 2 photo paths, by empanado
@@ -170,6 +171,11 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
   // Cover = first breadcrumb's image, if any.
   const imageUrl = images[breadcrumbs[0]]?.[0] ?? "";
 
+  // Disabled empanados: keep only ones the product actually offers.
+  const disabledBreadcrumbs = (input.disabledBreadcrumbs ?? []).filter((b) =>
+    breadcrumbs.includes(b)
+  );
+
   return {
     name,
     description,
@@ -178,6 +184,7 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
     isNew: Boolean(input.isNew),
     available: Boolean(input.available),
     availableBreadcrumbs: JSON.stringify(breadcrumbs),
+    disabledBreadcrumbs: JSON.stringify(disabledBreadcrumbs),
     prices: JSON.stringify(prices),
     stocks: JSON.stringify(stocks),
     images: JSON.stringify(images),

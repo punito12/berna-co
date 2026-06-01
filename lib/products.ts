@@ -46,10 +46,15 @@ type ProductRow = {
   stock: number;
   stocks: string;
   availableBreadcrumbs: string;
+  disabledBreadcrumbs: string;
 };
 
-// Maps a database row into the UI shape (parsing the JSON columns).
+// Maps a database row into the UI shape (parsing the JSON columns). The
+// customer-facing `breadcrumbs` excludes any empanado the admin turned off.
 function toProductForUI(p: ProductRow): ProductForUI {
+  const all = safeParseArray(p.availableBreadcrumbs);
+  const disabled = safeParseArray(p.disabledBreadcrumbs);
+  const visible = all.filter((b) => !disabled.includes(b));
   return {
     id: p.id,
     name: p.name,
@@ -65,7 +70,7 @@ function toProductForUI(p: ProductRow): ProductForUI {
     isNew: p.isNew,
     stock: p.stock,
     stocksByBreadcrumb: safeParseStocks(p.stocks),
-    breadcrumbs: safeParseArray(p.availableBreadcrumbs),
+    breadcrumbs: visible,
   };
 }
 

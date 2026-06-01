@@ -21,6 +21,7 @@ export type ProductFormValues = {
   isNew: boolean;
   available: boolean;
   breadcrumbs: string[];
+  disabledBreadcrumbs?: string[];
   prices: Record<string, number>;
   stocks: Record<string, number>;
   images: Record<string, string[]>; // up to 2 photo paths per empanado
@@ -48,6 +49,9 @@ export default function ProductForm({
   const [isNew, setIsNew] = useState(initial.isNew);
   const [available, setAvailable] = useState(initial.available);
   const [breadcrumbs, setBreadcrumbs] = useState<string[]>(initial.breadcrumbs);
+  const [disabled, setDisabled] = useState<string[]>(
+    initial.disabledBreadcrumbs ?? []
+  );
   const [prices, setPrices] = useState<Record<string, string>>(
     Object.fromEntries(
       BREADCRUMBS.map((b) => [b, String(initial.prices[b] ?? 0)])
@@ -120,6 +124,7 @@ export default function ProductForm({
         isNew,
         available,
         breadcrumbs,
+        disabledBreadcrumbs: disabled.filter((b) => breadcrumbs.includes(b)),
         prices: Object.fromEntries(breadcrumbs.map((b) => [b, Number(prices[b])])),
         stocks: Object.fromEntries(breadcrumbs.map((b) => [b, Number(stocks[b])])),
         images: Object.fromEntries(
@@ -293,9 +298,33 @@ export default function ProductForm({
               key={b}
               className="flex flex-wrap items-end gap-4 rounded-md bg-cream/60 p-3"
             >
-              <p className="w-full font-bold uppercase tracking-wide text-[11px] text-ink">
-                {BREADCRUMB_LABELS[b] ?? b}
-              </p>
+              <div className="flex w-full items-center justify-between gap-3">
+                <p className="font-bold uppercase tracking-wide text-[11px] text-ink">
+                  {BREADCRUMB_LABELS[b] ?? b}
+                  {disabled.includes(b) && (
+                    <span className="ml-2 rounded bg-muted px-2 py-0.5 text-[10px] text-white">
+                      Desactivado
+                    </span>
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDisabled((prev) =>
+                      prev.includes(b)
+                        ? prev.filter((x) => x !== b)
+                        : [...prev, b]
+                    )
+                  }
+                  className={`rounded-full border px-3 py-1 font-bold uppercase tracking-wide text-[10px] transition-colors ${
+                    disabled.includes(b)
+                      ? "border-line bg-white text-muted hover:border-black hover:text-ink"
+                      : "border-black bg-black text-white"
+                  }`}
+                >
+                  {disabled.includes(b) ? "Activar" : "Activo — apagar"}
+                </button>
+              </div>
               <label className="block">
                 <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
                   Precio $

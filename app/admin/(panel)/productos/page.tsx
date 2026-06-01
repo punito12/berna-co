@@ -67,6 +67,7 @@ export default async function AdminProductsPage() {
             isNew: p.isNew,
             available: p.available,
             breadcrumbs: safeArray(p.availableBreadcrumbs),
+            disabledBreadcrumbs: safeArray(p.disabledBreadcrumbs),
             prices: safeNumberMap(p.prices),
             stocks: safeNumberMap(p.stocks),
             images: safeImagesMap(p.images),

@@ -150,7 +150,8 @@ export async function createOrder(
       throw new OrderValidationError("Cantidad inválida.");
     }
     const allowed: string[] = safeParse(product.availableBreadcrumbs);
-    if (!allowed.includes(item.breadcrumbType)) {
+    const disabled: string[] = safeParse(product.disabledBreadcrumbs);
+    if (!allowed.includes(item.breadcrumbType) || disabled.includes(item.breadcrumbType)) {
       throw new OrderValidationError(
         `El empanado elegido no está disponible para ${product.name}.`
       );
