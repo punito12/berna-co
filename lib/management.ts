@@ -189,3 +189,155 @@ export async function listProductsForSale() {
     price: p.price, // auto-fills the unit price; editable per sale
   }));
 }
+
+// ---- Billing dashboard ----
+
+export type BillingTotals = {
+  gross: number; // sum of subtotals before discount
+  discount: number; // total discounts in pesos
+  net: number; // total charged
+  salesCount: number;
+};
+
+export type BillingReport = {
+  totals: BillingTotals;
+  byProduct: { name: string; qtyKg: number; units: number; net: number }[];
+  byCustomer: { name: string; net: number; salesCount: number }[];
+  byChannel: { channel: string; net: number; gross: number }[];
+};
+
+// Builds the billing report over [from, to). Combines manual sales and web
+// orders (web orders count as channel WEB, no discount, qty in units).
+export async function getBillingReport(
+  from: Date,
+  to: Date
+): Promise<BillingReport> {
+  const [sales, orders] = await Promise.all([
+    prisma.manualSale.findMany({
+      where: { soldAt: { gte: from, lt: to } },
+      include: { items: true },
+    }),
+    prisma.order.findMany({
+      where: {
+        createdAt: { gte: from, lt: to },
+        status: { not: "CANCELLED" },
+      },
+      include: { items: { include: { product: true } } },
+    }),
+  ]);
+
+  let gross = 0;
+  let discount = 0;
+  let net = 0;
+  const byProduct = new Map<
+    string,
+    { name: string; qtyKg: number; units: number; net: number }
+  >();
+  const byCustomer = new Map<string, { net: number; salesCount: number }>();
+  const byChannel = new Map<string, { net: number; gross: number }>();
+
+  function addProduct(
+    name: string,
+    qtyKg: number,
+    units: number,
+    netAmount: number
+  ) {
+    const cur = byProduct.get(name) ?? { name, qtyKg: 0, units: 0, net: 0 };
+    cur.qtyKg += qtyKg;
+    cur.units += units;
+    cur.net += netAmount;
+    byProduct.set(name, cur);
+  }
+  function addChannel(channel: string, g: number, n: number) {
+    const cur = byChannel.get(channel) ?? { net: 0, gross: 0 };
+    cur.gross += g;
+    cur.net += n;
+    byChannel.set(channel, cur);
+  }
+
+  // Manual sales.
+  for (const s of sales) {
+    gross += s.gross;
+    discount += s.discountAmount;
+    net += s.net;
+    addChannel(s.channel, s.gross, s.net);
+
+    const name = s.customerName || "Sin cliente";
+    const c = byCustomer.get(name) ?? { net: 0, salesCount: 0 };
+    c.net += s.net;
+    c.salesCount += 1;
+    byCustomer.set(name, c);
+
+    // Distribute the sale's net across items proportionally to their subtotal,
+    // so per-product net reflects the discount.
+    const saleGross = s.gross || 1;
+    for (const it of s.items) {
+      const share = s.net * (it.lineSubtotal / saleGross);
+      addProduct(it.productName, it.qtyKg, 0, Math.round(share));
+    }
+  }
+
+  // Web orders (channel WEB; no discount; quantities are units).
+  for (const o of orders) {
+    // Order.total includes shipping; bill on the products subtotal only.
+    const productsTotal = o.total - (o.shippingCost ?? 0);
+    gross += productsTotal;
+    net += productsTotal;
+    addChannel("WEB", productsTotal, productsTotal);
+
+    const name = o.customerName || "Cliente web";
+    const c = byCustomer.get(name) ?? { net: 0, salesCount: 0 };
+    c.net += productsTotal;
+    c.salesCount += 1;
+    byCustomer.set(name, c);
+
+    for (const it of o.items) {
+      addProduct(
+        it.product?.name ?? "Producto",
+        0,
+        it.quantity,
+        it.priceAtTime * it.quantity
+      );
+    }
+  }
+
+  return {
+    totals: { gross, discount, net, salesCount: sales.length + orders.length },
+    byProduct: [...byProduct.values()].sort((a, b) => b.net - a.net),
+    byCustomer: [...byCustomer.entries()]
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.net - a.net),
+    byChannel: [...byChannel.entries()]
+      .map(([channel, v]) => ({ channel, ...v }))
+      .sort((a, b) => b.net - a.net),
+  };
+}
+
+// Resolves a period preset or custom range into [from, to) dates.
+export function resolvePeriod(
+  preset: string,
+  fromStr?: string,
+  toStr?: string
+): { from: Date; to: Date; label: string } {
+  const now = new Date();
+  if (preset === "week") {
+    const from = new Date(now);
+    from.setDate(from.getDate() - 7);
+    from.setHours(0, 0, 0, 0);
+    return { from, to: now, label: "Últimos 7 días" };
+  }
+  if (preset === "custom" && fromStr && toStr) {
+    const from = new Date(`${fromStr}T00:00:00`);
+    const to = new Date(`${toStr}T00:00:00`);
+    to.setDate(to.getDate() + 1); // inclusive of the end day
+    return { from, to, label: `${fromStr} a ${toStr}` };
+  }
+  // default: current month
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const monthName = from.toLocaleDateString("es-AR", {
+    month: "long",
+    year: "numeric",
+  });
+  return { from, to, label: monthName };
+}
