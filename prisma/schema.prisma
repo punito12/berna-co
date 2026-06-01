@@ -43,7 +43,11 @@ model Product {
   // ["KETO"]. They keep their price/stock/photos but aren't sold until re-enabled.
   disabledBreadcrumbs String @default("[]")
 
+  // Current cost per kg (pesos), loaded by the admin. Used for margin/profit.
+  costPerKg Int @default(0)
+
   orderItems OrderItem[]
+  saleItems  SaleItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -128,4 +132,63 @@ model Zone {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---- Admin management (clients, manual sales, profitability) ----
+
+// A wholesale/retail customer for manual sales. type drives the default
+// discount, which can still be overridden per sale.
+model Customer {
+  id              String  @id @default(cuid())
+  name            String
+  type            String // MINORISTA | MAYORISTA | KIOSCO
+  defaultDiscount Int     @default(0) // percent (0..100)
+  phone           String?
+  notes           String?
+
+  sales ManualSale[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A sale entered by hand (not from the web): WhatsApp, wholesale, kiosk, etc.
+// Totals are stored in pesos and recomputed server-side from the items.
+model ManualSale {
+  id         String   @id @default(cuid())
+  soldAt     DateTime // sale date (admin chooses it)
+  channel    String // WEB | WHATSAPP | MAYORISTA | KIOSCO
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  // Free-text customer name when not picking one from the list.
+  customerName String?
+
+  discountPct Int @default(0) // discount applied to this sale (percent)
+  // Stored money fields (pesos): gross = sum of item subtotals (no discount),
+  // discountAmount = gross - net, net = what was charged.
+  gross          Int
+  discountAmount Int
+  net            Int
+
+  notes String?
+
+  items SaleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// One product line within a manual sale. Quantities are in kg.
+model SaleItem {
+  id        String @id @default(cuid())
+  saleId    String
+  sale      ManualSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  // Snapshot of the product name (so it survives product deletion / free items).
+  productName String
+
+  qtyKg        Float // kilograms sold
+  unitPrice    Int // price per kg at sale time (pesos)
+  lineSubtotal Int // qtyKg * unitPrice, before the sale discount (pesos)
 }

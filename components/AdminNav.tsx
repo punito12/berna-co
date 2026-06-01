@@ -6,6 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 const LINKS = [
   { href: "/admin", label: "Pedidos" },
   { href: "/admin/productos", label: "Productos" },
+  { href: "/admin/clientes", label: "Clientes" },
+  { href: "/admin/ventas", label: "Ventas" },
+  { href: "/admin/facturacion", label: "Facturación" },
+  { href: "/admin/rentabilidad", label: "Rentabilidad" },
   { href: "/admin/entregas", label: "Entregas" },
   { href: "/admin/zonas", label: "Zonas" },
   { href: "/admin/newsletter", label: "Newsletter" },
@@ -23,8 +27,8 @@ export default function AdminNav() {
 
   return (
     <header className="border-b border-line bg-ink text-white">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-        <nav className="flex items-center gap-1">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-2 gap-x-4 px-4 py-3">
+        <nav className="flex flex-wrap items-center gap-1">
           {LINKS.map((link) => {
             const active =
               link.href === "/admin"
