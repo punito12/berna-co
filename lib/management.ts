@@ -313,6 +313,45 @@ export async function getBillingReport(
   };
 }
 
+// ---- Profitability ----
+
+// Discount percentages used to derive each channel's selling price from the
+// public (minorista) price. Minorista has no extra discount.
+export const CHANNEL_DISCOUNTS = {
+  MINORISTA: 0,
+  MAYORISTA: 25,
+  KIOSCO: 30,
+} as const;
+
+export type ProfitRow = {
+  name: string;
+  price: number; // public price (minorista)
+  costPerKg: number;
+  channels: {
+    channel: string;
+    sellPrice: number; // price after the channel discount
+    marginPesos: number; // sellPrice - cost
+    marginPct: number; // margin / sellPrice * 100
+  }[];
+};
+
+// Builds the profitability table: for each product, the margin per channel
+// (price after the channel discount minus the cost per kg).
+export async function getProfitability(): Promise<ProfitRow[]> {
+  const products = await prisma.product.findMany({ orderBy: { name: "asc" } });
+  return products.map((p) => {
+    const cost = p.costPerKg;
+    const channels = Object.entries(CHANNEL_DISCOUNTS).map(([channel, pct]) => {
+      const sellPrice = Math.round((p.price * (100 - pct)) / 100);
+      const marginPesos = sellPrice - cost;
+      const marginPct =
+        sellPrice > 0 ? (marginPesos / sellPrice) * 100 : 0;
+      return { channel, sellPrice, marginPesos, marginPct };
+    });
+    return { name: p.name, price: p.price, costPerKg: cost, channels };
+  });
+}
+
 // Resolves a period preset or custom range into [from, to) dates.
 export function resolvePeriod(
   preset: string,

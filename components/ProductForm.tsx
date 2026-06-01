@@ -18,6 +18,7 @@ export type ProductFormValues = {
   description: string;
   category: string;
   weightGrams: number;
+  costPerKg?: number;
   isNew: boolean;
   available: boolean;
   breadcrumbs: string[];
@@ -46,6 +47,7 @@ export default function ProductForm({
   const [description, setDescription] = useState(initial.description);
   const [category, setCategory] = useState(initial.category || "CARNE");
   const [weight, setWeight] = useState(String(initial.weightGrams || 1000));
+  const [costPerKg, setCostPerKg] = useState(String(initial.costPerKg ?? 0));
   const [isNew, setIsNew] = useState(initial.isNew);
   const [available, setAvailable] = useState(initial.available);
   const [breadcrumbs, setBreadcrumbs] = useState<string[]>(initial.breadcrumbs);
@@ -121,6 +123,7 @@ export default function ProductForm({
         description,
         category,
         weightGrams: Number(weight),
+        costPerKg: Number(costPerKg),
         isNew,
         available,
         breadcrumbs,
@@ -237,6 +240,19 @@ export default function ProductForm({
             onChange={(e) => setWeight(e.target.value)}
             className="w-32 rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black"
             placeholder="1000"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+            Costo x kg $
+          </span>
+          <input
+            type="number"
+            min={0}
+            value={costPerKg}
+            onChange={(e) => setCostPerKg(e.target.value)}
+            className="w-32 rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black"
+            placeholder="0"
           />
         </label>
         <label className="flex items-center gap-2">

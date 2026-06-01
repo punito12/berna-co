@@ -64,6 +64,7 @@ export default async function AdminProductsPage() {
             description: p.description,
             category: p.category,
             weightGrams: p.weightGrams,
+            costPerKg: p.costPerKg,
             isNew: p.isNew,
             available: p.available,
             breadcrumbs: safeArray(p.availableBreadcrumbs),

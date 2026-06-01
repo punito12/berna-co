@@ -85,6 +85,7 @@ export type ProductInput = {
   available: boolean;
   breadcrumbs: string[]; // which empanados the product offers
   disabledBreadcrumbs?: string[]; // empanados temporarily turned off
+  costPerKg?: number; // cost per kg (pesos), for profitability
   prices: Record<string, number>; // pesos, by empanado
   stocks: Record<string, number>; // units, by empanado
   images: Record<string, string[]>; // up to 2 photo paths, by empanado
@@ -176,6 +177,8 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
     breadcrumbs.includes(b)
   );
 
+  const costPerKg = Math.max(0, Math.round(Number(input.costPerKg ?? 0)));
+
   return {
     name,
     description,
@@ -183,6 +186,7 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
     weightGrams,
     isNew: Boolean(input.isNew),
     available: Boolean(input.available),
+    costPerKg,
     availableBreadcrumbs: JSON.stringify(breadcrumbs),
     disabledBreadcrumbs: JSON.stringify(disabledBreadcrumbs),
     prices: JSON.stringify(prices),
