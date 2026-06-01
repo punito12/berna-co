@@ -80,7 +80,9 @@ export default function Catalog({ products }: { products: ProductForUI[] }) {
       {/* Sticky cart bar — only when there is something in the cart */}
       {totalItems > 0 && (
         <div className="sticky bottom-0 z-20 border-t border-line bg-white/95 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+          {/* Extra right padding (pr-20) keeps the total clear of the floating
+              WhatsApp button in the corner. */}
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 py-3 pl-4 pr-20">
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
