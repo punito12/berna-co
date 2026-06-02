@@ -53,16 +53,6 @@ export default function Hero() {
           ↓
         </span>
       </a>
-
-      {/* Slogan banner pinned to the bottom of the hero */}
-      <div
-        className="absolute inset-x-0 bottom-0 animate-fade-up border-t border-white/15 py-4"
-        style={{ animationDelay: "640ms" }}
-      >
-        <p className="font-black uppercase tracking-[0.35em] text-white text-sm sm:text-base">
-          ¡La vida es rica!
-        </p>
-      </div>
     </section>
   );
 }

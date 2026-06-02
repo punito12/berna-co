@@ -23,36 +23,51 @@ function EggIcon() {
 }
 
 function ChickenIcon() {
+  // A hen in profile: round body, tail, head with comb, beak, wattle, legs.
   return (
     <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
       {/* body */}
       <path
-        d="M22 30a14 14 0 0 1 28 0c0 9-6 16-14 16-2.5 0-5-.7-7-2"
+        d="M14 40c0-8 6-15 15-15 7 0 11 4 13 8 2-1 5 0 5 3 0 2-2 3-4 3 1 6-3 12-10 12-1.5 0-3-.2-4.5-.7"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinejoin="round"
+        strokeLinecap="round"
       />
-      {/* head */}
-      <circle cx="22" cy="22" r="7" stroke="currentColor" strokeWidth="2.5" />
+      {/* head + neck */}
+      <path
+        d="M29 25c0-5 3-9 8-9s8 4 8 9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
       {/* comb */}
       <path
-        d="M19 15c1-3 5-3 6 0"
+        d="M34 8c1.5 1 1.5 3 0 4m4-4c1.5 1 1.5 3 0 4"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinecap="round"
       />
       {/* beak */}
       <path
-        d="M15 22l-5 1 5 2"
+        d="M45 18l6-1-6 3"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinejoin="round"
       />
       {/* eye */}
-      <circle cx="22" cy="21" r="1.4" fill="currentColor" />
+      <circle cx="40" cy="18" r="1.5" fill="currentColor" />
+      {/* tail */}
+      <path
+        d="M14 40c-4-2-7-7-6-13 3 3 6 4 9 4"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
       {/* legs */}
       <path
-        d="M30 46v6m8-6v6"
+        d="M26 52v5m-3 0h6m5-5v5m-3 0h6"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinecap="round"
@@ -62,28 +77,43 @@ function ChickenIcon() {
 }
 
 function CowIcon() {
+  // A front-facing cow face: ears, horns, muzzle and eyes.
   return (
     <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
-      {/* head outline */}
+      {/* ears */}
       <path
-        d="M20 24c0-6 5-10 12-10s12 4 12 10c0 4-2 7-5 9 0 4-3 8-7 8s-7-4-7-8c-3-2-5-5-5-9Z"
+        d="M19 24c-6-2-9 0-11 4 4 3 8 3 11 1m23-5c6-2 9 0 11 4-4 3-8 3-11 1"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinejoin="round"
       />
-      {/* horns / ears */}
+      {/* horns */}
       <path
-        d="M20 24c-4-1-7-4-7-8m31 8c4-1 7-4 7-8"
+        d="M22 18c-2-4-1-8 1-10 1 3 3 5 5 6m13 4c2-4 1-8-1-10-1 3-3 5-5 6"
         stroke="currentColor"
         strokeWidth="2.5"
+        strokeLinejoin="round"
         strokeLinecap="round"
       />
+      {/* head */}
+      <path
+        d="M20 22c0-5 5-8 12-8s12 3 12 8c0 6-2 9-4 12 3 1 4 4 4 7 0 5-5 9-12 9s-12-4-12-9c0-3 1-6 4-7-2-3-4-6-4-12Z"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
       {/* eyes */}
-      <circle cx="26" cy="26" r="1.6" fill="currentColor" />
-      <circle cx="38" cy="26" r="1.6" fill="currentColor" />
-      {/* nostrils */}
-      <circle cx="29" cy="38" r="1.3" fill="currentColor" />
-      <circle cx="35" cy="38" r="1.3" fill="currentColor" />
+      <circle cx="27" cy="26" r="1.8" fill="currentColor" />
+      <circle cx="37" cy="26" r="1.8" fill="currentColor" />
+      {/* muzzle line + nostrils */}
+      <path
+        d="M24 44h16"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <circle cx="29" cy="40" r="1.4" fill="currentColor" />
+      <circle cx="35" cy="40" r="1.4" fill="currentColor" />
     </svg>
   );
 }

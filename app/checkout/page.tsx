@@ -240,7 +240,7 @@ export default function CheckoutPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className={inputClass}
-              placeholder="Ej: 11 5049 3297"
+              placeholder="Ej: 11 2345 6789"
             />
           </Field>
           <Field label="Email (opcional)">
