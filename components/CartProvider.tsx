@@ -9,6 +9,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { promoPriceFor, type ProductForUI } from "@/lib/products";
@@ -37,15 +38,22 @@ type CartContextValue = {
   addToCart: (product: ProductForUI, breadcrumbType: string) => void;
   changeQuantity: (key: string, delta: number) => void;
   clearCart: () => void;
+  // Refreshes unit prices + promos against the live products (used by checkout
+  // so the shown amount always matches what the server will charge).
+  reprice: () => Promise<void>;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-const STORAGE_KEY = "berna-cart-v1";
+// Bumped to v2: lines now carry promoType (older saved carts lacked it).
+const STORAGE_KEY = "berna-cart-v2";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  // Mirror of `lines` so async callbacks (reprice) read the latest value.
+  const linesRef = useRef<CartLine[]>([]);
+  linesRef.current = lines;
 
   // Load saved cart once on mount (client only).
   useEffect(() => {
@@ -114,6 +122,43 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = useCallback(() => setLines([]), []);
 
+  // Re-fetch live prices/promos for the current lines and update them. Drops
+  // lines for products that are no longer available.
+  const reprice = useCallback(async () => {
+    const current = linesRef.current;
+    if (current.length === 0) return;
+    try {
+      const res = await fetch("/api/cart/reprice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lines: current.map((l) => ({
+            productId: l.productId,
+            breadcrumbType: l.breadcrumbType,
+          })),
+        }),
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        prices: Record<
+          string,
+          { unitPrice: number; promoType: string; available: boolean }
+        >;
+      };
+      setLines((prev) =>
+        prev
+          .map((l) => {
+            const info = data.prices[l.key];
+            if (!info) return l;
+            return { ...l, price: info.unitPrice, promoType: info.promoType };
+          })
+          .filter((l) => data.prices[l.key]?.available !== false)
+      );
+    } catch {
+      // Network issue — keep the saved prices; the server validates at checkout.
+    }
+  }, []);
+
   const totalItems = useMemo(
     () => lines.reduce((sum, line) => sum + line.quantity, 0),
     [lines]
@@ -147,6 +192,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       addToCart,
       changeQuantity,
       clearCart,
+      reprice,
     }),
     [
       lines,
@@ -158,6 +204,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       addToCart,
       changeQuantity,
       clearCart,
+      reprice,
     ]
   );
 

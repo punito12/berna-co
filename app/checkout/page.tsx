@@ -13,8 +13,22 @@ type DeliveryType = "DELIVERY" | "PICKUP";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { lines, subtotal, promoDiscount, totalPrice, hydrated, clearCart } =
-    useCart();
+  const {
+    lines,
+    subtotal,
+    promoDiscount,
+    totalPrice,
+    hydrated,
+    clearCart,
+    reprice,
+  } = useCart();
+
+  // On entering checkout, refresh prices/promos against the live products so
+  // the shown amount always matches what the server will charge.
+  useEffect(() => {
+    if (hydrated) reprice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
 
   // --- form state ---
   const [name, setName] = useState("");

@@ -63,17 +63,29 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
           style={{ backgroundImage: `url('${cover}')` }}
         />
 
-        {product.isNew && !allOutOfStock && (
-          <span className="absolute left-3 top-3 bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
-            New
-          </span>
-        )}
-
-        {allOutOfStock && (
-          <span className="absolute left-3 top-3 bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
-            Sin stock
-          </span>
-        )}
+        {/* Top-left badges: promos stand out the most (red), then New / stock. */}
+        <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
+          {!allOutOfStock && product.promoType && (
+            <span className="bg-[#c0392b] px-3 py-1.5 font-black uppercase tracking-widest text-sm text-white shadow-md">
+              {product.promoType}
+            </span>
+          )}
+          {!allOutOfStock && product.promoPercent > 0 && (
+            <span className="bg-[#c0392b] px-3 py-1.5 font-black uppercase tracking-widest text-sm text-white shadow-md">
+              -{product.promoPercent}%
+            </span>
+          )}
+          {product.isNew && !allOutOfStock && (
+            <span className="bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
+              New
+            </span>
+          )}
+          {allOutOfStock && (
+            <span className="bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
+              Sin stock
+            </span>
+          )}
+        </div>
 
         <span className="absolute right-3 top-3 bg-white/90 px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-ink backdrop-blur-sm">
           {product.category}
@@ -127,26 +139,13 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
           </div>
         </div>
 
-        {/* Price + add button pinned to the bottom of the card */}
+        {/* Price + add button pinned to the bottom of the card. The promo
+            badges live over the photo (top-left); here we only show the price,
+            with the original struck through when there's a % promo. */}
         <div className="mt-auto pt-5">
-          {/* Promo badges (2x1/3x2 or % off) */}
-          {(product.promoType || product.promoPercent > 0) && (
-            <div className="mb-2 flex flex-wrap gap-1">
-              {product.promoType && (
-                <span className="bg-ink px-2 py-0.5 font-bold uppercase tracking-widest text-[10px] text-white">
-                  {product.promoType}
-                </span>
-              )}
-              {product.promoPercent > 0 && (
-                <span className="bg-ink px-2 py-0.5 font-bold uppercase tracking-widest text-[10px] text-white">
-                  -{product.promoPercent}%
-                </span>
-              )}
-            </div>
-          )}
           {product.promoPercent > 0 ? (
             <p className="flex items-baseline gap-2">
-              <span className="font-black text-2xl text-black">
+              <span className="font-black text-2xl text-[#c0392b]">
                 {formatPrice(promoPriceFor(product, selected))}
               </span>
               <span className="text-sm text-muted line-through">
