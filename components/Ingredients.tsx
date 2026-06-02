@@ -23,55 +23,26 @@ function EggIcon() {
 }
 
 function ChickenIcon() {
-  // A hen in profile: round body, tail, head with comb, beak, wattle, legs.
+  // A chicken drumstick: meaty top + bone with two knobs at the end.
   return (
     <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
-      {/* body */}
+      {/* meat */}
       <path
-        d="M14 40c0-8 6-15 15-15 7 0 11 4 13 8 2-1 5 0 5 3 0 2-2 3-4 3 1 6-3 12-10 12-1.5 0-3-.2-4.5-.7"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      {/* head + neck */}
-      <path
-        d="M29 25c0-5 3-9 8-9s8 4 8 9"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      {/* comb */}
-      <path
-        d="M34 8c1.5 1 1.5 3 0 4m4-4c1.5 1 1.5 3 0 4"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      {/* beak */}
-      <path
-        d="M45 18l6-1-6 3"
+        d="M40 14c7 0 12 5 12 12 0 6-4 10-9 11l-3 3a7 7 0 0 1-10-10l3-3c1-5 5-9 10-9Z"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinejoin="round"
       />
-      {/* eye */}
-      <circle cx="40" cy="18" r="1.5" fill="currentColor" />
-      {/* tail */}
+      {/* bone */}
       <path
-        d="M14 40c-4-2-7-7-6-13 3 3 6 4 9 4"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      {/* legs */}
-      <path
-        d="M26 52v5m-3 0h6m5-5v5m-3 0h6"
+        d="M30 34 18 46"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinecap="round"
       />
+      {/* bone knobs at the end */}
+      <circle cx="15" cy="45" r="3.5" stroke="currentColor" strokeWidth="2.5" />
+      <circle cx="19" cy="49" r="3.5" stroke="currentColor" strokeWidth="2.5" />
     </svg>
   );
 }

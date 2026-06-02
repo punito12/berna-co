@@ -14,8 +14,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
   try {
-    await createCustomer(body);
-    return NextResponse.json({ ok: true });
+    const customer = await createCustomer(body);
+    return NextResponse.json({
+      ok: true,
+      customer: { id: customer.id, defaultDiscount: customer.defaultDiscount },
+    });
   } catch (error) {
     return NextResponse.json(
       { error: (error as Error).message || "No se pudo crear." },

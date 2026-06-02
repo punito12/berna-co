@@ -91,7 +91,9 @@ export async function getCustomerFile(id: string) {
 }
 
 export async function createCustomer(input: CustomerInput) {
-  await prisma.customer.create({ data: { ...cleanCustomer(input), source: "MANUAL" } });
+  return prisma.customer.create({
+    data: { ...cleanCustomer(input), source: "MANUAL" },
+  });
 }
 
 export async function updateCustomer(id: string, input: CustomerInput) {
@@ -244,7 +246,8 @@ export const SALE_CHANNEL_LABELS: Record<string, string> = {
 
 export type SaleItemInput = {
   productId?: string; // optional: a free-text item has none
-  productName: string;
+  productName: string; // already includes the empanado label when applicable
+  breadcrumbType?: string; // chosen empanado (informational)
   qtyKg: number;
   unitPrice: number; // pesos per kg
 };
@@ -348,11 +351,31 @@ export async function deleteManualSale(id: string) {
 // Products for the sale form: name + current price (the tradicional/default).
 export async function listProductsForSale() {
   const products = await prisma.product.findMany({ orderBy: { name: "asc" } });
-  return products.map((p) => ({
-    id: p.id,
-    name: p.name,
-    price: p.price, // auto-fills the unit price; editable per sale
-  }));
+  return products.map((p) => {
+    // Empanados the product offers, with the price of each (falls back to the
+    // product's default price). Used to auto-fill the unit price per empanado.
+    let breadcrumbs: string[] = [];
+    try {
+      const b = JSON.parse(p.availableBreadcrumbs);
+      breadcrumbs = Array.isArray(b) ? b : [];
+    } catch {
+      breadcrumbs = [];
+    }
+    let priceMap: Record<string, number> = {};
+    try {
+      const pr = JSON.parse(p.prices);
+      if (pr && typeof pr === "object") priceMap = pr;
+    } catch {
+      priceMap = {};
+    }
+    return {
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      breadcrumbs,
+      prices: priceMap,
+    };
+  });
 }
 
 // ---- Billing dashboard ----

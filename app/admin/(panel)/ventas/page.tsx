@@ -2,16 +2,18 @@ import {
   listProductsForSale,
   searchCustomers,
   listManualSales,
+  listBarrios,
 } from "@/lib/management";
 import SaleForm from "@/components/SaleForm";
 import SaleRow from "@/components/SaleRow";
 
 // Load a manual sale (not from the web) + recent sales list.
 export default async function AdminSalesPage() {
-  const [products, customers, sales] = await Promise.all([
+  const [products, customers, sales, barrios] = await Promise.all([
     listProductsForSale(),
     searchCustomers(""),
     listManualSales(50),
+    listBarrios(),
   ]);
 
   const dateFmt = new Intl.DateTimeFormat("es-AR", {
@@ -38,6 +40,7 @@ export default async function AdminSalesPage() {
           type: c.type,
           defaultDiscount: c.defaultDiscount,
         }))}
+        barrios={barrios.map((b) => ({ id: b.id, name: b.name }))}
       />
 
       <h2 className="mb-3 mt-10 font-black uppercase tracking-tight text-xl text-ink">

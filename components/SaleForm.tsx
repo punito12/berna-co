@@ -2,8 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import CustomerForm, { type BarrioOption } from "@/components/CustomerForm";
+import { BREADCRUMB_LABELS } from "@/lib/products";
 
-type ProductOption = { id: string; name: string; price: number };
+type ProductOption = {
+  id: string;
+  name: string;
+  price: number;
+  breadcrumbs: string[];
+  prices: Record<string, number>;
+};
 type CustomerOption = {
   id: string;
   name: string;
@@ -14,6 +22,7 @@ type CustomerOption = {
 type Line = {
   productId: string; // "" = free text
   productName: string;
+  breadcrumbType: string; // chosen empanado ("" when product has none/free)
   qtyKg: string;
   unitPrice: string;
 };
@@ -42,22 +51,28 @@ function pesos(n: number): string {
 export default function SaleForm({
   products,
   customers,
+  barrios,
 }: {
   products: ProductOption[];
   customers: CustomerOption[];
+  barrios: BarrioOption[];
 }) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
 
   const [soldAt, setSoldAt] = useState(today);
   const [channel, setChannel] = useState("WHATSAPP");
-  const [customerId, setCustomerId] = useState(""); // "" = free text
-  const [customerName, setCustomerName] = useState("");
+  // Customer mode: "existing" picks from the list, "new" shows the create form.
+  const [customerMode, setCustomerMode] = useState<"existing" | "new">(
+    "existing"
+  );
+  const [customerId, setCustomerId] = useState("");
+  const [customerName, setCustomerName] = useState(""); // free text
   const [discount, setDiscount] = useState("0");
   const [discountTouched, setDiscountTouched] = useState(false);
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([
-    { productId: "", productName: "", qtyKg: "", unitPrice: "" },
+    { productId: "", productName: "", breadcrumbType: "", qtyKg: "", unitPrice: "" },
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,24 +90,42 @@ export default function SaleForm({
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   }
 
+  // Price for a product's chosen empanado (specific price > 0, else default).
+  function priceFor(p: ProductOption, breadcrumb: string): number {
+    const specific = p.prices?.[breadcrumb];
+    if (typeof specific === "number" && specific > 0) return specific;
+    return p.price;
+  }
+
   function pickProduct(i: number, productId: string) {
     if (!productId) {
-      updateLine(i, { productId: "", productName: "" });
+      updateLine(i, { productId: "", productName: "", breadcrumbType: "" });
       return;
     }
     const p = products.find((x) => x.id === productId);
+    const firstBc = p?.breadcrumbs?.[0] ?? "";
     updateLine(i, {
       productId,
       productName: p?.name ?? "",
-      // Auto-fill unit price with the product's current price (editable).
-      unitPrice: p ? String(p.price) : "",
+      breadcrumbType: firstBc,
+      // Auto-fill unit price with the chosen empanado's price (editable).
+      unitPrice: p ? String(priceFor(p, firstBc)) : "",
+    });
+  }
+
+  function pickBreadcrumb(i: number, breadcrumb: string) {
+    const line = lines[i];
+    const p = products.find((x) => x.id === line.productId);
+    updateLine(i, {
+      breadcrumbType: breadcrumb,
+      unitPrice: p ? String(priceFor(p, breadcrumb)) : line.unitPrice,
     });
   }
 
   function addLine() {
     setLines((prev) => [
       ...prev,
-      { productId: "", productName: "", qtyKg: "", unitPrice: "" },
+      { productId: "", productName: "", breadcrumbType: "", qtyKg: "", unitPrice: "" },
     ]);
   }
   function removeLine(i: number) {
@@ -119,12 +152,18 @@ export default function SaleForm({
       .filter((l) => l.productName.trim() && Number(l.qtyKg) > 0)
       .map((l) => ({
         productId: l.productId || undefined,
-        productName: l.productName.trim(),
+        productName:
+          l.breadcrumbType && BREADCRUMB_LABELS[l.breadcrumbType]
+            ? `${l.productName.trim()} (${BREADCRUMB_LABELS[l.breadcrumbType]})`
+            : l.productName.trim(),
+        breadcrumbType: l.breadcrumbType || undefined,
         qtyKg: Number(l.qtyKg),
         unitPrice: Number(l.unitPrice) || 0,
       }));
     if (items.length === 0)
       return setError("Agregá al menos un producto con cantidad.");
+    if (customerMode === "existing" && !customerId && !customerName.trim())
+      return setError("Elegí un cliente o escribí un nombre.");
 
     setSaving(true);
     try {
@@ -144,7 +183,9 @@ export default function SaleForm({
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "No se pudo guardar.");
       // Reset for the next sale.
-      setLines([{ productId: "", productName: "", qtyKg: "", unitPrice: "" }]);
+      setLines([
+        { productId: "", productName: "", breadcrumbType: "", qtyKg: "", unitPrice: "" },
+      ]);
       setCustomerId("");
       setCustomerName("");
       setDiscount("0");
@@ -190,38 +231,102 @@ export default function SaleForm({
             ))}
           </select>
         </label>
-        <label className="block">
+        <div>
           <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
             Cliente
           </span>
-          <select
-            value={customerId}
-            onChange={(e) => pickCustomer(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">— Nombre libre —</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => setCustomerMode("existing")}
+              className={`flex-1 rounded border px-2 py-2 font-bold uppercase tracking-wide text-[11px] transition-colors ${
+                customerMode === "existing"
+                  ? "border-black bg-black text-white"
+                  : "border-line text-ink hover:border-black"
+              }`}
+            >
+              Existente
+            </button>
+            <button
+              type="button"
+              onClick={() => setCustomerMode("new")}
+              className={`flex-1 rounded border px-2 py-2 font-bold uppercase tracking-wide text-[11px] transition-colors ${
+                customerMode === "new"
+                  ? "border-black bg-black text-white"
+                  : "border-line text-ink hover:border-black"
+              }`}
+            >
+              + Nuevo
+            </button>
+          </div>
+        </div>
       </div>
 
-      {!customerId && (
-        <label className="mt-3 block">
-          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-            Nombre del cliente (libre)
-          </span>
-          <input
-            type="text"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className={inputClass}
-            placeholder="Ej: Juan (WhatsApp)"
+      {/* Existing customer: pick from list or type a free name */}
+      {customerMode === "existing" && (
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+              Elegir cliente
+            </span>
+            <select
+              value={customerId}
+              onChange={(e) => pickCustomer(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">— Nombre libre —</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!customerId && (
+            <label className="block">
+              <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+                Nombre libre
+              </span>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className={inputClass}
+                placeholder="Ej: Juan (WhatsApp)"
+              />
+            </label>
+          )}
+        </div>
+      )}
+
+      {/* New customer: same fields as the Clientes section. On create we pick
+          it automatically for this sale. */}
+      {customerMode === "new" && (
+        <div className="mt-3 rounded-lg border border-dashed border-line bg-cream/40 p-4">
+          <p className="mb-3 font-bold uppercase tracking-wide text-[11px] text-muted">
+            Nuevo cliente
+          </p>
+          <CustomerForm
+            mode="create"
+            barrios={barrios}
+            initial={{
+              name: "",
+              type: "MINORISTA",
+              defaultDiscount: 10,
+              phone: "",
+              notes: "",
+              barrioId: "",
+              lot: "",
+            }}
+            onCreated={(c) => {
+              // Switch to "existing" with the newly created customer selected.
+              setCustomerMode("existing");
+              setCustomerId(c.id);
+              if (!discountTouched) setDiscount(String(c.defaultDiscount));
+            }}
+            onDone={() => setCustomerMode("existing")}
           />
-        </label>
+        </div>
       )}
 
       {/* Product lines */}
@@ -265,6 +370,24 @@ export default function SaleForm({
                       placeholder="Nombre del producto"
                     />
                   )}
+                  {/* Empanado selector (only when the product offers more than one) */}
+                  {(() => {
+                    const p = products.find((x) => x.id === line.productId);
+                    if (!p || p.breadcrumbs.length <= 1) return null;
+                    return (
+                      <select
+                        value={line.breadcrumbType}
+                        onChange={(e) => pickBreadcrumb(i, e.target.value)}
+                        className="mt-1 w-full rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
+                      >
+                        {p.breadcrumbs.map((b) => (
+                          <option key={b} value={b}>
+                            {BREADCRUMB_LABELS[b] ?? b}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  })()}
                 </label>
                 <label className="block">
                   <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">

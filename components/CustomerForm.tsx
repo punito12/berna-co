@@ -31,11 +31,14 @@ export default function CustomerForm({
   mode,
   barrios,
   onDone,
+  onCreated,
 }: {
   initial: CustomerValues;
   mode: "create" | "edit";
   barrios: BarrioOption[];
   onDone?: () => void;
+  // Called after a successful create, with the new customer (for the sale form).
+  onCreated?: (c: { id: string; defaultDiscount: number }) => void;
 }) {
   const router = useRouter();
   const [name, setName] = useState(initial.name);
@@ -83,7 +86,14 @@ export default function CustomerForm({
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "No se pudo guardar.");
       router.refresh();
-      onDone?.();
+      if (mode === "create" && data?.customer && onCreated) {
+        onCreated({
+          id: data.customer.id,
+          defaultDiscount: data.customer.defaultDiscount,
+        });
+      } else {
+        onDone?.();
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -103,8 +113,10 @@ export default function CustomerForm({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "No se pudo eliminar.");
+      // Go back to the customer list — refreshing the (now deleted) file page
+      // would 404. replace() + refresh() lands cleanly on the list.
+      router.replace("/admin/clientes");
       router.refresh();
-      onDone?.();
     } catch (e) {
       setError((e as Error).message);
       setSaving(false);
