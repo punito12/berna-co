@@ -28,6 +28,9 @@ export default function CheckoutPage() {
   const [floor, setFloor] = useState(""); // piso/depto (opcional)
   const [dateIso, setDateIso] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "MERCADOPAGO">(
+    "CASH"
+  );
 
   // --- zone (address → coordinates → polygon) state ---
   // options holds the enabled weekdays + slots for the covered zone.
@@ -145,7 +148,7 @@ export default function CheckoutPage() {
             deliveryType === "DELIVERY" ? floor.trim() || undefined : undefined,
           scheduledDate: `${dateIso}T12:00:00`,
           scheduledSlot: slot,
-          paymentMethod: "CASH",
+          paymentMethod,
           items: lines.map((l) => ({
             productId: l.productId,
             breadcrumbType: l.breadcrumbType,
@@ -162,6 +165,11 @@ export default function CheckoutPage() {
       }
 
       clearCart();
+      // Mercado Pago: redirect to the hosted checkout. Cash: go to confirmation.
+      if (paymentMethod === "MERCADOPAGO" && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+        return;
+      }
       router.push(`/pedido/confirmado?id=${data.id}`);
     } catch {
       setError("Hubo un problema de conexión. Probá de nuevo.");
@@ -420,18 +428,24 @@ export default function CheckoutPage() {
         {/* 4. Pago */}
         <Section number="4" title="Pago">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <ChoiceButton active onClick={() => {}}>
+            <ChoiceButton
+              active={paymentMethod === "CASH"}
+              onClick={() => setPaymentMethod("CASH")}
+            >
               Efectivo al recibir
             </ChoiceButton>
-            <button
-              type="button"
-              disabled
-              title="Mercado Pago llega en el Paso 4"
-              className="cursor-not-allowed rounded-lg border border-line bg-white px-4 py-4 font-bold uppercase tracking-wide text-sm text-muted opacity-60"
+            <ChoiceButton
+              active={paymentMethod === "MERCADOPAGO"}
+              onClick={() => setPaymentMethod("MERCADOPAGO")}
             >
-              Mercado Pago — próximamente
-            </button>
+              Mercado Pago
+            </ChoiceButton>
           </div>
+          {paymentMethod === "MERCADOPAGO" && (
+            <p className="mt-3 text-sm text-muted">
+              Al confirmar te llevamos a Mercado Pago para completar el pago.
+            </p>
+          )}
         </Section>
 
         {/* 5. Resumen */}
@@ -491,7 +505,11 @@ export default function CheckoutPage() {
           disabled={submitting}
           className="mt-6 w-full bg-black px-4 py-4 font-bold uppercase tracking-widest text-sm text-white transition-colors hover:bg-ink/80 disabled:opacity-50"
         >
-          {submitting ? "Guardando…" : "Confirmar pedido"}
+          {submitting
+            ? "Procesando…"
+            : paymentMethod === "MERCADOPAGO"
+            ? "Ir a pagar"
+            : "Confirmar pedido"}
         </button>
       </div>
     </main>

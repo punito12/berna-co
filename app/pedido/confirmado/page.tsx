@@ -8,14 +8,26 @@ import {
   paymentMethodLabel,
 } from "@/lib/format";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
+import { syncPaymentToOrder, isMpConfigured } from "@/lib/mercadopago";
 
 // Server component: reads the saved order and shows the confirmation + WhatsApp.
+// When Mercado Pago redirects here it carries payment_id/status — we sync that
+// payment right away so the order status reflects it without waiting the webhook.
 export default async function ConfirmadoPage({
   searchParams,
 }: {
-  searchParams: { id?: string };
+  searchParams: { id?: string; payment_id?: string; collection_id?: string };
 }) {
   const id = searchParams.id;
+
+  const mpPaymentId = searchParams.payment_id || searchParams.collection_id;
+  if (mpPaymentId && isMpConfigured()) {
+    try {
+      await syncPaymentToOrder(mpPaymentId);
+    } catch (e) {
+      console.error("sync on confirmado failed:", e);
+    }
+  }
 
   const order = id
     ? await prisma.order.findUnique({

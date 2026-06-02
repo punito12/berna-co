@@ -33,7 +33,7 @@ export type CreateOrderInput = {
 };
 
 const DELIVERY_TYPES = ["DELIVERY", "PICKUP"];
-const PAYMENT_METHODS = ["CASH"]; // MERCADOPAGO not wired yet
+const PAYMENT_METHODS = ["CASH", "MERCADOPAGO"];
 
 export async function createOrder(
   input: CreateOrderInput
