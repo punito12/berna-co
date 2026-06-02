@@ -16,6 +16,7 @@ export type ProductFormValues = {
   id?: string; // present in edit mode
   name: string;
   description: string;
+  longDescription: string;
   category: string;
   weightGrams: number;
   costPerKg?: number;
@@ -45,6 +46,9 @@ export default function ProductForm({
   const router = useRouter();
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description);
+  const [longDescription, setLongDescription] = useState(
+    initial.longDescription ?? ""
+  );
   const [category, setCategory] = useState(initial.category || "CARNE");
   const [weight, setWeight] = useState(String(initial.weightGrams || 1000));
   const [costPerKg, setCostPerKg] = useState(String(initial.costPerKg ?? 0));
@@ -121,6 +125,7 @@ export default function ProductForm({
       const payload = {
         name,
         description,
+        longDescription,
         category,
         weightGrams: Number(weight),
         costPerKg: Number(costPerKg),
@@ -217,7 +222,7 @@ export default function ProductForm({
 
       <label className="block">
         <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-          Descripción
+          Descripción corta (grilla)
         </span>
         <textarea
           value={description}
@@ -225,6 +230,19 @@ export default function ProductForm({
           rows={2}
           className={inputClass}
           placeholder="Ej: Corte de carne vacuna de alta calidad, criados a pasto."
+        />
+      </label>
+
+      <label className="block">
+        <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+          Descripción larga (página del producto)
+        </span>
+        <textarea
+          value={longDescription}
+          onChange={(e) => setLongDescription(e.target.value)}
+          rows={4}
+          className={inputClass}
+          placeholder="Descripción completa que aparece al entrar al producto: detalle del corte, empanados, recomendaciones…"
         />
       </label>
 

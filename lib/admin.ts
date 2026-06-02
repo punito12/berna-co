@@ -82,6 +82,7 @@ export const BREADCRUMB_CODES = ["TRADITIONAL", "INTEGRAL", "KETO"];
 export type ProductInput = {
   name: string;
   description: string;
+  longDescription?: string;
   category: string;
   weightGrams: number;
   isNew: boolean;
@@ -127,6 +128,7 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
   if (!name) throw new Error("El producto necesita un nombre.");
 
   const description = input.description.trim();
+  const longDescription = (input.longDescription ?? "").trim();
 
   if (!PRODUCT_CATEGORIES.includes(input.category)) {
     throw new Error("Categoría inválida.");
@@ -185,6 +187,7 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
   return {
     name,
     description,
+    longDescription,
     category: input.category,
     weightGrams,
     isNew: Boolean(input.isNew),

@@ -1,39 +1,97 @@
 import Reveal from "@/components/Reveal";
 
-// "Nuestros ingredientes" — five items with verbatim copy from the owner.
-// Two groups: the raw ingredients (eggs/chicken/beef) and the two breadcrumbs.
-type Ingredient = {
-  kicker: string; // small group label
-  title: string;
-  body: string;
-};
+// "Nuestros ingredientes" — three pillars, each with a hand-drawn line icon in
+// the brand's black/line style. Title only (no body copy).
 
-const INGREDIENTS: Ingredient[] = [
-  {
-    kicker: "Materia prima",
-    title: "Huevos de gallinas libres",
-    body: "Seleccionamos cuidadosamente huevos de gallinas criadas en libertad, que pastorean libremente en pastos de alta calidad, libres de agroquímicos. Este entorno natural permite que las gallinas expresen su comportamiento innato al 100%. Por la noche, duermen en un gallinero cerrado para su protección, y al amanecer, salen temprano a disfrutar del rocío matinal. Los huevos de gallinas que pastorean presentan un perfil nutricional superior, con el doble de vitaminas A y D, así como una mayor cantidad de ácidos grasos saludables como el Omega 3.",
-  },
-  {
-    kicker: "Materia prima",
-    title: "Pollo pastoril",
-    body: "Nuestro compromiso con el bienestar animal se refleja en la elección de pollo pastoril, criado a campo y que pastorea libremente durante todo el día. Estos pollos se crían sin el uso de antibióticos ni hormonas. La combinación de una nutrición óptima, un estilo de vida activo y espacios seguros y saludables garantiza que los pollos desarrollen un sistema inmunológico robusto y un alto nivel de bienestar a lo largo de su crianza.",
-  },
-  {
-    kicker: "Materia prima",
-    title: "Peceto de pastura",
-    body: "Nuestros bovinos se alimentan exclusivamente de pasto durante toda su vida. La carne de pastura se distingue por su riqueza en nutrientes, incluyendo proteínas de alta calidad, grasas saludables, vitaminas y minerales. Ofrece un sabor más intenso y una textura más tierna. Además, la producción de este tipo de carnes es sostenible, ya que se maximiza el impacto positivo que estos herbívoros tienen en el suelo.",
-  },
-  {
-    kicker: "Empanados",
-    title: "Empanado integral",
-    body: "Elaborado con harina integral de trigo, centeno y cebada orgánicas, avena arrollada orgánica y una mezcla de semillas de chía, lino, quinoa, sésamo y girasol.",
-  },
-  {
-    kicker: "Empanados",
-    title: "Empanado keto",
-    body: "Hecho con harina de almendras, queso parmesano, sésamo, aceite de oliva, sal marina, tomillo, romero y pimienta.",
-  },
+function EggIcon() {
+  return (
+    <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
+      <path
+        d="M32 6c-9 0-17 14-17 27a17 17 0 1 0 34 0C49 20 41 6 32 6Z"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M24 38a8 8 0 0 0 8 8"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ChickenIcon() {
+  return (
+    <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
+      {/* body */}
+      <path
+        d="M22 30a14 14 0 0 1 28 0c0 9-6 16-14 16-2.5 0-5-.7-7-2"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      {/* head */}
+      <circle cx="22" cy="22" r="7" stroke="currentColor" strokeWidth="2.5" />
+      {/* comb */}
+      <path
+        d="M19 15c1-3 5-3 6 0"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      {/* beak */}
+      <path
+        d="M15 22l-5 1 5 2"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      {/* eye */}
+      <circle cx="22" cy="21" r="1.4" fill="currentColor" />
+      {/* legs */}
+      <path
+        d="M30 46v6m8-6v6"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CowIcon() {
+  return (
+    <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
+      {/* head outline */}
+      <path
+        d="M20 24c0-6 5-10 12-10s12 4 12 10c0 4-2 7-5 9 0 4-3 8-7 8s-7-4-7-8c-3-2-5-5-5-9Z"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      {/* horns / ears */}
+      <path
+        d="M20 24c-4-1-7-4-7-8m31 8c4-1 7-4 7-8"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      {/* eyes */}
+      <circle cx="26" cy="26" r="1.6" fill="currentColor" />
+      <circle cx="38" cy="26" r="1.6" fill="currentColor" />
+      {/* nostrils */}
+      <circle cx="29" cy="38" r="1.3" fill="currentColor" />
+      <circle cx="35" cy="38" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
+const ITEMS = [
+  { title: "Huevos de gallinas libres", Icon: EggIcon },
+  { title: "Pollo pastoril", Icon: ChickenIcon },
+  { title: "Peceto de pastura", Icon: CowIcon },
 ];
 
 export default function Ingredients() {
@@ -49,37 +107,23 @@ export default function Ingredients() {
           </h2>
         </Reveal>
 
-        <div className="divide-y divide-line border-y border-line">
-          {INGREDIENTS.map((item, i) => (
+        <ul className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3">
+          {ITEMS.map((item, i) => (
             <Reveal
+              as="li"
               key={item.title}
-              delay={(i % 2) * 80}
-              className="grid grid-cols-1 gap-4 py-10 sm:grid-cols-[auto_1fr] sm:gap-10"
+              delay={i * 100}
+              className="flex flex-col items-center gap-5 bg-white px-6 py-12 text-center transition-colors hover:bg-cream"
             >
-              {/* Big catalog-style number */}
-              <div className="flex items-start gap-4 sm:w-44">
-                <span className="font-black leading-none text-5xl sm:text-6xl text-ink/15">
-                  0{i + 1}
-                </span>
-                <span className="mt-2 hidden font-bold uppercase tracking-[0.2em] text-[10px] text-muted sm:block">
-                  {item.kicker}
-                </span>
-              </div>
-
-              <div>
-                <p className="mb-1 font-bold uppercase tracking-[0.2em] text-[10px] text-muted sm:hidden">
-                  {item.kicker}
-                </p>
-                <h3 className="font-black uppercase tracking-tight text-2xl sm:text-3xl text-ink">
-                  {item.title}
-                </h3>
-                <p className="mt-3 max-w-2xl font-serif text-lg leading-relaxed text-ink/75">
-                  {item.body}
-                </p>
-              </div>
+              <span className="text-ink">
+                <item.Icon />
+              </span>
+              <h3 className="font-black uppercase tracking-tight text-xl text-ink">
+                {item.title}
+              </h3>
             </Reveal>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );

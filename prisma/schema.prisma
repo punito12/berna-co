@@ -14,7 +14,8 @@ datasource db {
 model Product {
   id          String  @id @default(cuid())
   name        String
-  description String
+  description String // short description, shown on the catalog cards
+  longDescription String @default("") // full description, shown on the detail page
   slug        String  @unique
   weightGrams Int
   category    String // CARNE | POLLO | CERDO | VEGANO

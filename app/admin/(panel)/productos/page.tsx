@@ -62,6 +62,7 @@ export default async function AdminProductsPage() {
             id: p.id,
             name: p.name,
             description: p.description,
+            longDescription: p.longDescription ?? "",
             category: p.category,
             weightGrams: p.weightGrams,
             costPerKg: p.costPerKg,

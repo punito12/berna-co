@@ -38,8 +38,9 @@ export default function ProductDetail({ product }: { product: ProductForUI }) {
           {formatWeight(product.weightGrams)}
         </p>
 
-        <p className="mt-6 font-serif text-lg leading-relaxed text-ink/80">
-          {product.description}
+        {/* Full description on the detail page; falls back to the short one. */}
+        <p className="mt-6 whitespace-pre-line font-serif text-lg leading-relaxed text-ink/80">
+          {product.longDescription?.trim() || product.description}
         </p>
 
         <AddToCartPanel

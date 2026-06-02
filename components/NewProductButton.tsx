@@ -6,6 +6,7 @@ import ProductForm, { type ProductFormValues } from "@/components/ProductForm";
 const EMPTY: ProductFormValues = {
   name: "",
   description: "",
+  longDescription: "",
   category: "CARNE",
   weightGrams: 1000,
   isNew: false,

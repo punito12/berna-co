@@ -199,6 +199,8 @@ export async function getBarrioReport(id: string) {
       net += subtotal;
       cOrders += 1;
       ordersCount += 1;
+      // Each web-order unit counts as 1 kg (every package is 1 kg for this).
+      for (const it of o.items) qtyKg += it.quantity;
     }
     // Manual sales.
     for (const s of c.sales) {

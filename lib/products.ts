@@ -14,7 +14,8 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
 export type ProductForUI = {
   id: string;
   name: string;
-  description: string;
+  description: string; // short, for cards
+  longDescription: string; // full, for the detail page
   slug: string;
   weightGrams: number;
   category: string;
@@ -34,6 +35,7 @@ type ProductRow = {
   id: string;
   name: string;
   description: string;
+  longDescription: string;
   slug: string;
   weightGrams: number;
   category: string;
@@ -59,6 +61,7 @@ function toProductForUI(p: ProductRow): ProductForUI {
     id: p.id,
     name: p.name,
     description: p.description,
+    longDescription: p.longDescription ?? "",
     slug: p.slug,
     weightGrams: p.weightGrams,
     category: p.category,
