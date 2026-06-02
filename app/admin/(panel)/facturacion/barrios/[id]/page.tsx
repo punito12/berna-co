@@ -22,7 +22,7 @@ export default async function BarrioDetailPage({
   return (
     <div>
       <Link
-        href="/admin/barrios"
+        href="/admin/facturacion/barrios"
         className="mb-4 inline-block font-bold uppercase tracking-widest text-xs text-muted hover:text-ink"
       >
         ‹ Volver a barrios

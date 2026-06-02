@@ -4,6 +4,12 @@ import {
   resolvePeriod,
   SALE_CHANNEL_LABELS,
 } from "@/lib/management";
+import SubTabs from "@/components/SubTabs";
+
+const FACT_TABS = [
+  { href: "/admin/facturacion", label: "Facturación" },
+  { href: "/admin/facturacion/barrios", label: "Barrios" },
+];
 
 function pesos(n: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -37,9 +43,10 @@ export default async function AdminBillingPage({
 
   return (
     <div>
-      <h1 className="mb-2 font-black uppercase tracking-tight text-3xl text-ink">
+      <h1 className="mb-4 font-black uppercase tracking-tight text-3xl text-ink">
         Facturación
       </h1>
+      <SubTabs tabs={FACT_TABS} />
       <p className="mb-6 text-sm text-muted">
         Período: <span className="font-bold text-ink">{label}</span>. Incluye
         ventas manuales y pedidos web.

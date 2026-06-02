@@ -5,6 +5,12 @@ import {
 } from "@/lib/management";
 import SaleForm from "@/components/SaleForm";
 import SaleRow from "@/components/SaleRow";
+import SubTabs from "@/components/SubTabs";
+
+const VENTAS_TABS = [
+  { href: "/admin/ventas", label: "Cargar venta" },
+  { href: "/admin/ventas/promociones", label: "Promociones" },
+];
 
 // Load a manual sale (not from the web) + recent sales list.
 export default async function AdminSalesPage() {
@@ -22,9 +28,13 @@ export default async function AdminSalesPage() {
 
   return (
     <div>
-      <h1 className="mb-2 font-black uppercase tracking-tight text-3xl text-ink">
-        Cargar venta
+      <h1 className="mb-4 font-black uppercase tracking-tight text-3xl text-ink">
+        Ventas
       </h1>
+      <SubTabs tabs={VENTAS_TABS} />
+      <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
+        Cargar venta
+      </h2>
       <p className="mb-6 text-sm text-muted">
         Registrá una venta que no vino de la web (WhatsApp, mayorista, kiosco).
         El precio se autocompleta con el del producto pero podés editarlo.

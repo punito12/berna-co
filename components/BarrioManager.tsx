@@ -87,7 +87,7 @@ export default function BarrioManager({ barrios }: { barrios: Barrio[] }) {
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-white px-4 py-3"
             >
               <Link
-                href={`/admin/barrios/${b.id}`}
+                href={`/admin/facturacion/barrios/${b.id}`}
                 className="font-bold uppercase tracking-tight text-ink hover:text-muted"
               >
                 {b.name}
