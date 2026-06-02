@@ -15,6 +15,8 @@ export async function GET(request: Request) {
       name: c.name,
       type: c.type,
       barrio: c.barrio?.name ?? null,
+      lot: c.lot ?? null,
+      defaultDiscount: c.defaultDiscount,
       phone: c.phone,
       orders: c._count.orders + c._count.sales,
     }))

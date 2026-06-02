@@ -1,6 +1,5 @@
 import {
   listProductsForSale,
-  searchCustomers,
   listManualSales,
   listBarrios,
 } from "@/lib/management";
@@ -9,9 +8,8 @@ import SaleRow from "@/components/SaleRow";
 
 // Load a manual sale (not from the web) + recent sales list.
 export default async function AdminSalesPage() {
-  const [products, customers, sales, barrios] = await Promise.all([
+  const [products, sales, barrios] = await Promise.all([
     listProductsForSale(),
-    searchCustomers(""),
     listManualSales(50),
     listBarrios(),
   ]);
@@ -34,12 +32,6 @@ export default async function AdminSalesPage() {
 
       <SaleForm
         products={products}
-        customers={customers.map((c) => ({
-          id: c.id,
-          name: c.name,
-          type: c.type,
-          defaultDiscount: c.defaultDiscount,
-        }))}
         barrios={barrios.map((b) => ({ id: b.id, name: b.name }))}
       />
 

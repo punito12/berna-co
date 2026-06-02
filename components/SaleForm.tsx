@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import CustomerForm, { type BarrioOption } from "@/components/CustomerForm";
 import { BREADCRUMB_LABELS } from "@/lib/products";
@@ -12,10 +12,12 @@ type ProductOption = {
   breadcrumbs: string[];
   prices: Record<string, number>;
 };
-type CustomerOption = {
+// A customer search result (from /api/admin/customers/search).
+type SearchResult = {
   id: string;
   name: string;
-  type: string;
+  barrio: string | null;
+  lot: string | null;
   defaultDiscount: number;
 };
 
@@ -50,11 +52,9 @@ function pesos(n: number): string {
 // totals. The server recomputes everything on save.
 export default function SaleForm({
   products,
-  customers,
   barrios,
 }: {
   products: ProductOption[];
-  customers: CustomerOption[];
   barrios: BarrioOption[];
 }) {
   const router = useRouter();
@@ -68,6 +68,12 @@ export default function SaleForm({
   );
   const [customerId, setCustomerId] = useState("");
   const [customerName, setCustomerName] = useState(""); // free text
+  // Live customer search (scales to thousands of customers).
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  // The chosen customer's label (name + barrio/lote) to show once picked.
+  const [chosenLabel, setChosenLabel] = useState<string | null>(null);
   const [discount, setDiscount] = useState("0");
   const [discountTouched, setDiscountTouched] = useState(false);
   const [notes, setNotes] = useState("");
@@ -78,12 +84,47 @@ export default function SaleForm({
   const [error, setError] = useState<string | null>(null);
   const [savedMsg, setSavedMsg] = useState(false);
 
-  function pickCustomer(id: string) {
-    setCustomerId(id);
-    if (id && !discountTouched) {
-      const c = customers.find((x) => x.id === id);
-      if (c) setDiscount(String(c.defaultDiscount));
+  // Debounced live search by name or barrio. Only runs while no customer is
+  // chosen yet and there's a query.
+  useEffect(() => {
+    if (customerId) return; // already picked one
+    const q = search.trim();
+    if (!q) {
+      setResults([]);
+      return;
     }
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/admin/customers/search?q=${encodeURIComponent(q)}`
+        );
+        if (res.ok) setResults(await res.json());
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [search, customerId]);
+
+  // Picks a customer from the search results.
+  function chooseCustomer(c: SearchResult) {
+    setCustomerId(c.id);
+    setCustomerName("");
+    const label =
+      c.name +
+      (c.barrio ? ` · ${c.barrio}${c.lot ? ` (lote ${c.lot})` : ""}` : "");
+    setChosenLabel(label);
+    setResults([]);
+    if (!discountTouched) setDiscount(String(c.defaultDiscount));
+  }
+
+  // Clears the chosen customer to search again.
+  function clearCustomer() {
+    setCustomerId("");
+    setChosenLabel(null);
+    setSearch("");
+    setResults([]);
   }
 
   function updateLine(i: number, patch: Partial<Line>) {
@@ -262,39 +303,84 @@ export default function SaleForm({
         </div>
       </div>
 
-      {/* Existing customer: pick from list or type a free name */}
+      {/* Existing customer: live search by name or barrio. */}
       {customerMode === "existing" && (
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-              Elegir cliente
-            </span>
-            <select
-              value={customerId}
-              onChange={(e) => pickCustomer(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">— Nombre libre —</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {!customerId && (
-            <label className="block">
-              <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-                Nombre libre
-              </span>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className={inputClass}
-                placeholder="Ej: Juan (WhatsApp)"
-              />
-            </label>
+        <div className="mt-3">
+          {customerId && chosenLabel ? (
+            // A customer is chosen — show it with an option to change.
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-cream/40 px-4 py-3">
+              <span className="font-bold text-ink">{chosenLabel}</span>
+              <button
+                type="button"
+                onClick={clearCustomer}
+                className="font-bold uppercase tracking-widest text-[11px] text-muted hover:text-ink"
+              >
+                Cambiar
+              </button>
+            </div>
+          ) : (
+            <div>
+              <label className="block">
+                <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+                  Buscar cliente (nombre o barrio)
+                </span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className={inputClass}
+                  placeholder="Empezá a escribir el nombre…"
+                  autoComplete="off"
+                />
+              </label>
+
+              {/* Results */}
+              {search.trim() && (
+                <div className="mt-2 overflow-hidden rounded-lg border border-line">
+                  {searching && results.length === 0 ? (
+                    <p className="px-4 py-3 text-sm text-muted">Buscando…</p>
+                  ) : results.length === 0 ? (
+                    <p className="px-4 py-3 text-sm text-muted">
+                      Sin resultados. Probá con otro nombre o creá un cliente
+                      nuevo.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-line">
+                      {results.map((c) => (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            onClick={() => chooseCustomer(c)}
+                            className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors hover:bg-cream"
+                          >
+                            <span className="font-bold text-ink">{c.name}</span>
+                            <span className="text-xs text-muted">
+                              {c.barrio
+                                ? `${c.barrio}${c.lot ? ` · lote ${c.lot}` : ""}`
+                                : "Sin barrio"}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {/* Free-text fallback (no customer record) */}
+              <label className="mt-3 block">
+                <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+                  …o nombre libre (sin ficha)
+                </span>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className={inputClass}
+                  placeholder="Ej: Juan (WhatsApp)"
+                />
+              </label>
+            </div>
           )}
         </div>
       )}
