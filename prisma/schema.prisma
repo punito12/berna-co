@@ -77,7 +77,10 @@ model Order {
   total         Int
   mpPaymentId   String? // null when paying cash
   notes         String?
-  neighborhood  String? // barrio assigned manually by the admin (for billing)
+
+  // Web orders are linked to a Customer (auto-created/reused by name+phone).
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   items OrderItem[]
 }
@@ -139,17 +142,33 @@ model Zone {
 
 // A wholesale/retail customer for manual sales. type drives the default
 // discount, which can still be overridden per sale.
+// A barrio (closed neighborhood). Created by the admin, then assigned to
+// customers from a dropdown.
+model Barrio {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  customers Customer[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
 model Customer {
   id              String  @id @default(cuid())
   name            String
-  type            String // MINORISTA | MAYORISTA | KIOSCO
+  type            String  @default("MINORISTA") // MINORISTA | MAYORISTA | KIOSCO
   defaultDiscount Int     @default(0) // percent (0..100)
   phone           String?
+  email           String?
   notes           String?
-  neighborhood    String? // barrio (cerrado), for grouping
-  lot             String? // lote within the neighborhood
+  lot             String? // lote within the barrio
+  // Source: WEB (auto-created from a web order) or MANUAL (loaded by the admin).
+  source          String  @default("MANUAL")
 
-  sales ManualSale[]
+  barrioId String?
+  barrio   Barrio? @relation(fields: [barrioId], references: [id], onDelete: SetNull)
+
+  sales  ManualSale[]
+  orders Order[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -4,6 +4,7 @@ import {
   OrderValidationError,
   type CreateOrderInput,
 } from "@/lib/orders";
+import { linkOrderToCustomer } from "@/lib/management";
 
 // Creates a PENDING order. Pricing/validation happen server-side in createOrder.
 export async function POST(request: Request) {
@@ -19,6 +20,12 @@ export async function POST(request: Request) {
 
   try {
     const result = await createOrder(body);
+    // Auto-create/reuse the customer and link this order to it (best-effort).
+    try {
+      await linkOrderToCustomer(result.id);
+    } catch (e) {
+      console.error("linkOrderToCustomer failed:", e);
+    }
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     // Expected validation problems → 400 with a clear message for the customer.

@@ -1,6 +1,6 @@
 import {
   listProductsForSale,
-  listCustomers,
+  searchCustomers,
   listManualSales,
 } from "@/lib/management";
 import SaleForm from "@/components/SaleForm";
@@ -10,7 +10,7 @@ import SaleRow from "@/components/SaleRow";
 export default async function AdminSalesPage() {
   const [products, customers, sales] = await Promise.all([
     listProductsForSale(),
-    listCustomers(),
+    searchCustomers(""),
     listManualSales(50),
   ]);
 

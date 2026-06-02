@@ -46,7 +46,10 @@ export async function listOrders(filters: {
   return prisma.order.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: { items: { include: { product: true } } },
+    include: {
+      items: { include: { product: true } },
+      customer: { include: { barrio: true } },
+    },
   });
 }
 

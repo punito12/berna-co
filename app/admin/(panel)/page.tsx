@@ -6,9 +6,7 @@ import {
 } from "@/lib/admin";
 import { formatPrice, BREADCRUMB_LABELS } from "@/lib/products";
 import { formatLongDate, deliveryTypeLabel } from "@/lib/format";
-import { listNeighborhoods } from "@/lib/management";
 import OrderStatusControl from "@/components/OrderStatusControl";
-import OrderNeighborhood from "@/components/OrderNeighborhood";
 
 // Orders list with status + date filters (driven by the URL query string).
 export default async function AdminOrdersPage({
@@ -16,7 +14,6 @@ export default async function AdminOrdersPage({
 }: {
   searchParams: { status?: string; date?: string };
 }) {
-  const neighborhoods = await listNeighborhoods();
   const orders = await listOrders({
     status: searchParams.status,
     date: searchParams.date,
@@ -98,12 +95,17 @@ export default async function AdminOrdersPage({
                   {order.deliveryType === "DELIVERY" && order.address && (
                     <p className="text-sm text-muted">📍 {order.address}</p>
                   )}
-                  {order.deliveryType === "DELIVERY" && (
-                    <OrderNeighborhood
-                      orderId={order.id}
-                      initial={order.neighborhood ?? ""}
-                      neighborhoods={neighborhoods}
-                    />
+                  {order.customerId && (
+                    <Link
+                      href={`/admin/clientes/${order.customerId}`}
+                      className="mt-1 inline-block font-bold uppercase tracking-widest text-[11px] text-ink underline-offset-4 hover:underline"
+                    >
+                      Ver ficha del cliente
+                      {order.customer?.barrio
+                        ? ` · ${order.customer.barrio.name}`
+                        : ""}{" "}
+                      ›
+                    </Link>
                   )}
                 </div>
                 <div className="text-right">

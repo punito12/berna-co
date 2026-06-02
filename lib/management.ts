@@ -28,7 +28,7 @@ export type CustomerInput = {
   defaultDiscount: number;
   phone?: string;
   notes?: string;
-  neighborhood?: string;
+  barrioId?: string | null;
   lot?: string;
 };
 
@@ -48,57 +48,186 @@ function cleanCustomer(input: CustomerInput) {
     defaultDiscount: discount,
     phone: input.phone?.trim() || null,
     notes: input.notes?.trim() || null,
-    neighborhood: input.neighborhood?.trim() || null,
+    barrioId: input.barrioId || null,
     lot: input.lot?.trim() || null,
   };
 }
 
-export async function listCustomers() {
-  return prisma.customer.findMany({ orderBy: { name: "asc" } });
+// Searches customers by name OR barrio name. Empty query returns the most
+// recent ones. Includes barrio + a count of linked web orders.
+export async function searchCustomers(query: string) {
+  const q = query.trim();
+  return prisma.customer.findMany({
+    where: q
+      ? {
+          OR: [
+            { name: { contains: q } },
+            { barrio: { name: { contains: q } } },
+          ],
+        }
+      : undefined,
+    include: { barrio: true, _count: { select: { orders: true, sales: true } } },
+    orderBy: { name: "asc" },
+    take: q ? 50 : 30,
+  });
 }
 
-// Distinct neighborhoods already used (by customers OR assigned to orders),
-// for the picker datalist. De-duplicated and sorted.
-export async function listNeighborhoods(): Promise<string[]> {
-  const [fromCustomers, fromOrders] = await Promise.all([
-    prisma.customer.findMany({
-      where: { neighborhood: { not: null } },
-      select: { neighborhood: true },
-      distinct: ["neighborhood"],
-    }),
-    prisma.order.findMany({
-      where: { neighborhood: { not: null } },
-      select: { neighborhood: true },
-      distinct: ["neighborhood"],
-    }),
-  ]);
-  const set = new Set<string>();
-  for (const r of [...fromCustomers, ...fromOrders]) {
-    if (r.neighborhood) set.add(r.neighborhood);
-  }
-  return [...set].sort((a, b) => a.localeCompare(b, "es"));
-}
-
-// Assigns (or clears) the neighborhood of a web order, for billing breakdown.
-export async function setOrderNeighborhood(id: string, neighborhood: string) {
-  await prisma.order.update({
+// Full customer file: data + web orders + manual sales.
+export async function getCustomerFile(id: string) {
+  return prisma.customer.findUnique({
     where: { id },
-    data: { neighborhood: neighborhood.trim() || null },
+    include: {
+      barrio: true,
+      orders: {
+        orderBy: { createdAt: "desc" },
+        include: { items: { include: { product: true } } },
+      },
+      sales: {
+        orderBy: { soldAt: "desc" },
+        include: { items: true },
+      },
+    },
   });
 }
 
 export async function createCustomer(input: CustomerInput) {
-  await prisma.customer.create({ data: cleanCustomer(input) });
+  await prisma.customer.create({ data: { ...cleanCustomer(input), source: "MANUAL" } });
 }
 
 export async function updateCustomer(id: string, input: CustomerInput) {
   await prisma.customer.update({ where: { id }, data: cleanCustomer(input) });
 }
 
-// Deletes a customer. Their past sales stay (customerId is set to null), so
-// history/billing is never lost.
+// Deletes a customer. Their orders/sales stay (customerId set to null).
 export async function deleteCustomer(id: string) {
   await prisma.customer.delete({ where: { id } });
+}
+
+// Finds (or creates) the customer for a web order, by name + phone. Called
+// after an order is saved so the order shows up in the customer's file.
+export async function linkOrderToCustomer(orderId: string) {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) return;
+
+  const name = order.customerName.trim();
+  const phone = order.customerPhone.trim();
+
+  // Match an existing customer by phone first (most reliable), else by name.
+  let customer =
+    (phone
+      ? await prisma.customer.findFirst({ where: { phone } })
+      : null) ??
+    (await prisma.customer.findFirst({ where: { name } }));
+
+  if (!customer) {
+    customer = await prisma.customer.create({
+      data: {
+        name,
+        phone: phone || null,
+        email: order.customerEmail || null,
+        type: "MINORISTA",
+        defaultDiscount: 0,
+        source: "WEB",
+      },
+    });
+  }
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { customerId: customer.id },
+  });
+}
+
+// ---- Barrios ----
+
+export async function listBarrios() {
+  return prisma.barrio.findMany({
+    include: { _count: { select: { customers: true } } },
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function createBarrio(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("El barrio necesita un nombre.");
+  const existing = await prisma.barrio.findUnique({ where: { name: trimmed } });
+  if (existing) throw new Error("Ya existe un barrio con ese nombre.");
+  await prisma.barrio.create({ data: { name: trimmed } });
+}
+
+export async function updateBarrio(id: string, name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("El barrio necesita un nombre.");
+  await prisma.barrio.update({ where: { id }, data: { name: trimmed } });
+}
+
+// Deletes a barrio; its customers keep existing (barrioId set to null).
+export async function deleteBarrio(id: string) {
+  await prisma.barrio.delete({ where: { id } });
+}
+
+// Aggregated view of one barrio: its customers + their orders/sales totals.
+export async function getBarrioReport(id: string) {
+  const barrio = await prisma.barrio.findUnique({
+    where: { id },
+    include: {
+      customers: {
+        include: {
+          orders: { include: { items: true } },
+          sales: { include: { items: true } },
+        },
+        orderBy: { name: "asc" },
+      },
+    },
+  });
+  if (!barrio) return null;
+
+  let ordersCount = 0;
+  let qtyKg = 0;
+  let gross = 0;
+  let net = 0;
+
+  const customers = barrio.customers.map((c) => {
+    let cNet = 0;
+    let cOrders = 0;
+    // Web orders: bill on products subtotal (exclude shipping).
+    for (const o of c.orders) {
+      if (o.status === "CANCELLED") continue;
+      const subtotal = o.total - (o.shippingCost ?? 0);
+      cNet += subtotal;
+      gross += subtotal;
+      net += subtotal;
+      cOrders += 1;
+      ordersCount += 1;
+    }
+    // Manual sales.
+    for (const s of c.sales) {
+      cNet += s.net;
+      gross += s.gross;
+      net += s.net;
+      cOrders += 1;
+      ordersCount += 1;
+      for (const it of s.items) qtyKg += it.qtyKg;
+    }
+    return {
+      id: c.id,
+      name: c.name,
+      type: c.type,
+      orders: cOrders,
+      net: cNet,
+    };
+  });
+
+  return {
+    id: barrio.id,
+    name: barrio.name,
+    customersCount: barrio.customers.length,
+    ordersCount,
+    qtyKg,
+    gross,
+    net,
+    customers,
+  };
 }
 
 // ---- Manual sales ----
@@ -184,8 +313,6 @@ export async function createManualSale(input: SaleInput) {
       channel: input.channel,
       customerId: customer?.id ?? null,
       customerName,
-      // Snapshot the chosen customer's neighborhood for the billing breakdown.
-      neighborhood: customer?.neighborhood ?? null,
       discountPct: pct,
       gross,
       discountAmount,
@@ -258,14 +385,17 @@ export async function getBillingReport(
   const [sales, orders] = await Promise.all([
     prisma.manualSale.findMany({
       where: { soldAt: { gte: from, lt: to } },
-      include: { items: true },
+      include: { items: true, customer: { include: { barrio: true } } },
     }),
     prisma.order.findMany({
       where: {
         createdAt: { gte: from, lt: to },
         status: { not: "CANCELLED" },
       },
-      include: { items: { include: { product: true } } },
+      include: {
+        items: { include: { product: true } },
+        customer: { include: { barrio: true } },
+      },
     }),
   ]);
 
@@ -347,7 +477,7 @@ export async function getBillingReport(
       addProduct(it.productName, it.qtyKg, 0, Math.round(share));
       saleKg += it.qtyKg;
     }
-    addNeighborhood(s.neighborhood, saleKg, 0, s.gross, s.net);
+    addNeighborhood(s.customer?.barrio?.name, saleKg, 0, s.gross, s.net);
   }
 
   // Web orders (channel WEB; no discount; quantities are units).
@@ -374,8 +504,14 @@ export async function getBillingReport(
       );
       orderUnits += it.quantity;
     }
-    // Web order's neighborhood is the one the admin assigned (if any).
-    addNeighborhood(o.neighborhood, 0, orderUnits, productsTotal, productsTotal);
+    // The web order's barrio comes from its linked customer (if any).
+    addNeighborhood(
+      o.customer?.barrio?.name,
+      0,
+      orderUnits,
+      productsTotal,
+      productsTotal
+    );
   }
 
   return {

@@ -7,11 +7,11 @@ const LINKS = [
   { href: "/admin", label: "Pedidos" },
   { href: "/admin/productos", label: "Productos" },
   { href: "/admin/clientes", label: "Clientes" },
+  { href: "/admin/barrios", label: "Barrios" },
   { href: "/admin/ventas", label: "Ventas" },
   { href: "/admin/facturacion", label: "Facturación" },
   { href: "/admin/rentabilidad", label: "Rentabilidad" },
   { href: "/admin/entregas", label: "Entregas" },
-  { href: "/admin/zonas", label: "Zonas" },
   { href: "/admin/newsletter", label: "Newsletter" },
 ];
 

@@ -1,53 +1,34 @@
-import { listCustomers, listNeighborhoods } from "@/lib/management";
-import CustomerRow from "@/components/CustomerRow";
-import NewCustomerButton from "@/components/NewCustomerButton";
+import { searchCustomers, listBarrios } from "@/lib/management";
+import CustomerSearch from "@/components/CustomerSearch";
 
-// Customer database: create, edit, delete clients for manual sales.
+// Customer database with a search box (by name or barrio).
 export default async function AdminCustomersPage() {
-  const [customers, neighborhoods] = await Promise.all([
-    listCustomers(),
-    listNeighborhoods(),
+  const [customers, barrios] = await Promise.all([
+    searchCustomers(""),
+    listBarrios(),
   ]);
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-black uppercase tracking-tight text-3xl text-ink">
-          Clientes
-        </h1>
-        <NewCustomerButton neighborhoods={neighborhoods} />
-      </div>
+      <h1 className="mb-2 font-black uppercase tracking-tight text-3xl text-ink">
+        Clientes
+      </h1>
       <p className="mb-6 text-sm text-muted">
-        Tu base de clientes para las ventas manuales. El tipo define el
-        descuento sugerido (Minorista 10%, Mayorista 25%, Kiosco 30%), que
-        siempre podés ajustar por cliente o por venta. Cargá barrio y lote para
-        ver la facturación por barrio.
+        Buscá por nombre o barrio y entrá a la ficha de cada cliente para ver su
+        historial. Los pedidos web crean (o reusan) su cliente automáticamente.
       </p>
 
-      {customers.length === 0 ? (
-        <p className="rounded-lg border border-line bg-white px-4 py-12 text-center font-bold uppercase tracking-wide text-muted">
-          Todavía no hay clientes. Creá el primero arriba.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {customers.map((c) => (
-            <CustomerRow
-              key={c.id}
-              neighborhoods={neighborhoods}
-              customer={{
-                id: c.id,
-                name: c.name,
-                type: c.type,
-                defaultDiscount: c.defaultDiscount,
-                phone: c.phone ?? "",
-                notes: c.notes ?? "",
-                neighborhood: c.neighborhood ?? "",
-                lot: c.lot ?? "",
-              }}
-            />
-          ))}
-        </div>
-      )}
+      <CustomerSearch
+        barrios={barrios.map((b) => ({ id: b.id, name: b.name }))}
+        initial={customers.map((c) => ({
+          id: c.id,
+          name: c.name,
+          type: c.type,
+          barrio: c.barrio?.name ?? null,
+          phone: c.phone,
+          orders: c._count.orders + c._count.sales,
+        }))}
+      />
     </div>
   );
 }

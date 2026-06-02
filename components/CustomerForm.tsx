@@ -9,6 +9,8 @@ const TYPES = [
   { value: "KIOSCO", label: "Kiosco", discount: 30 },
 ];
 
+export type BarrioOption = { id: string; name: string };
+
 export type CustomerValues = {
   id?: string;
   name: string;
@@ -16,25 +18,24 @@ export type CustomerValues = {
   defaultDiscount: number;
   phone: string;
   notes: string;
-  neighborhood: string;
+  barrioId: string; // "" = sin barrio
   lot: string;
 };
 
 const inputClass =
   "w-full rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black";
 
-// Create/edit form for a customer. The discount auto-fills from the type but
-// stays editable.
+// Create/edit form for a customer. Barrio is picked from the list of barrios.
 export default function CustomerForm({
   initial,
   mode,
+  barrios,
   onDone,
-  neighborhoods = [],
 }: {
   initial: CustomerValues;
   mode: "create" | "edit";
+  barrios: BarrioOption[];
   onDone?: () => void;
-  neighborhoods?: string[]; // existing barrios, for the picker datalist
 }) {
   const router = useRouter();
   const [name, setName] = useState(initial.name);
@@ -42,9 +43,8 @@ export default function CustomerForm({
   const [discount, setDiscount] = useState(String(initial.defaultDiscount));
   const [phone, setPhone] = useState(initial.phone);
   const [notes, setNotes] = useState(initial.notes);
-  const [neighborhood, setNeighborhood] = useState(initial.neighborhood);
+  const [barrioId, setBarrioId] = useState(initial.barrioId);
   const [lot, setLot] = useState(initial.lot);
-  // Track whether the user manually edited the discount; if not, follow type.
   const [discountTouched, setDiscountTouched] = useState(mode === "edit");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export default function CustomerForm({
         defaultDiscount: Number(discount),
         phone,
         notes,
-        neighborhood,
+        barrioId: barrioId || null,
         lot,
       };
       const url =
@@ -93,7 +93,7 @@ export default function CustomerForm({
 
   async function remove() {
     if (!initial.id) return;
-    if (!confirm(`¿Eliminar a "${initial.name}"? Sus ventas se conservan.`))
+    if (!confirm(`¿Eliminar a "${initial.name}"? Sus pedidos se conservan.`))
       return;
     setSaving(true);
     setError(null);
@@ -123,7 +123,7 @@ export default function CustomerForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={inputClass}
-            placeholder="Ej: Kiosco La Esquina"
+            placeholder="Ej: Juan Pérez"
           />
         </label>
         <label className="block">
@@ -163,7 +163,7 @@ export default function CustomerForm({
         </label>
         <label className="block">
           <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-            Teléfono (opcional)
+            Teléfono
           </span>
           <input
             type="tel"
@@ -175,25 +175,24 @@ export default function CustomerForm({
         </label>
       </div>
 
-      {/* Barrio + lote */}
+      {/* Barrio (dropdown) + lote */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block">
           <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
             Barrio
           </span>
-          <input
-            type="text"
-            list="barrios-list"
-            value={neighborhood}
-            onChange={(e) => setNeighborhood(e.target.value)}
+          <select
+            value={barrioId}
+            onChange={(e) => setBarrioId(e.target.value)}
             className={inputClass}
-            placeholder="Ej: Nordelta"
-          />
-          <datalist id="barrios-list">
-            {neighborhoods.map((b) => (
-              <option key={b} value={b} />
+          >
+            <option value="">— Sin barrio —</option>
+            {barrios.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
             ))}
-          </datalist>
+          </select>
         </label>
         <label className="block">
           <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
@@ -218,7 +217,6 @@ export default function CustomerForm({
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
           className={inputClass}
-          placeholder="Ej: entrega los martes, paga a 15 días"
         />
       </label>
 
