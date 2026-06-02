@@ -53,6 +53,50 @@ export async function listOrders(filters: {
   });
 }
 
+// ---- Dashboard ----
+
+// Orders scheduled for delivery TODAY (any non-cancelled status).
+export async function getTodayOrders() {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return prisma.order.findMany({
+    where: {
+      scheduledDate: { gte: start, lt: end },
+      status: { not: "CANCELLED" },
+    },
+    orderBy: { scheduledSlot: "asc" },
+    include: {
+      items: { include: { product: true } },
+      customer: { include: { barrio: true } },
+    },
+  });
+}
+
+// Per-empanado stock for every product (for the dashboard stock table).
+export async function getStockOverview() {
+  const products = await prisma.product.findMany({ orderBy: { name: "asc" } });
+  return products.map((p) => {
+    let breadcrumbs: string[] = [];
+    let stocks: Record<string, number> = {};
+    try {
+      const b = JSON.parse(p.availableBreadcrumbs);
+      breadcrumbs = Array.isArray(b) ? b : [];
+    } catch {}
+    try {
+      const s = JSON.parse(p.stocks);
+      if (s && typeof s === "object") stocks = s;
+    } catch {}
+    return {
+      id: p.id,
+      name: p.name,
+      available: p.available,
+      breadcrumbs: breadcrumbs.map((b) => ({ code: b, stock: stocks[b] ?? 0 })),
+    };
+  });
+}
+
 export async function getOrder(id: string) {
   return prisma.order.findUnique({
     where: { id },
