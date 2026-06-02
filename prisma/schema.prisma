@@ -47,6 +47,13 @@ model Product {
   // Current cost per kg (pesos), loaded by the admin. Used for margin/profit.
   costPerKg Int @default(0)
 
+  // --- Automatic per-product promotions (web store) ---
+  // Percent off the unit price (0 = no discount). Shown as a struck-through
+  // price on the catalog card.
+  promoPercent Int @default(0)
+  // Quantity promo: "" = none, "2x1", "3x2". Applied in the cart.
+  promoType String @default("")
+
   orderItems OrderItem[]
   saleItems  SaleItem[]
 
@@ -75,6 +82,8 @@ model Order {
 
   paymentMethod String // MERCADOPAGO | CASH
   shippingCost  Int     @default(0) // delivery fee included in `total`
+  discountCode  String? // code applied (if any)
+  discountAmount Int    @default(0) // total discount in pesos (promos + code)
   total         Int
   mpPaymentId   String? // null when paying cash
   notes         String?
@@ -216,4 +225,20 @@ model SaleItem {
   qtyKg        Float // kilograms sold
   unitPrice    Int // price per kg at sale time (pesos)
   lineSubtotal Int // qtyKg * unitPrice, before the sale discount (pesos)
+}
+
+// A discount code the customer types at checkout. Percent OR fixed amount.
+model DiscountCode {
+  id        String  @id @default(cuid())
+  code      String  @unique // stored uppercase, e.g. "BERNA10"
+  kind      String // PERCENT | FIXED
+  value     Int // percent (0..100) when PERCENT; pesos when FIXED
+  active    Boolean @default(true)
+  expiresAt DateTime? // optional validity end
+  maxUses   Int       @default(0) // 0 = unlimited
+  usedCount Int       @default(0)
+  minTotal  Int       @default(0) // minimum products subtotal (pesos) to apply
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

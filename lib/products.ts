@@ -28,6 +28,8 @@ export type ProductForUI = {
   stock: number; // legacy/fallback total
   stocksByBreadcrumb: Record<string, number>; // stock per empanado
   breadcrumbs: string[];
+  promoPercent: number; // % off (0 = none)
+  promoType: string; // "" | "2x1" | "3x2"
 };
 
 // The raw Prisma row fields we care about (kept loose to avoid import churn).
@@ -49,6 +51,8 @@ type ProductRow = {
   stocks: string;
   availableBreadcrumbs: string;
   disabledBreadcrumbs: string;
+  promoPercent: number;
+  promoType: string;
 };
 
 // Maps a database row into the UI shape (parsing the JSON columns). The
@@ -74,7 +78,22 @@ function toProductForUI(p: ProductRow): ProductForUI {
     stock: p.stock,
     stocksByBreadcrumb: safeParseStocks(p.stocks),
     breadcrumbs: visible,
+    promoPercent: p.promoPercent ?? 0,
+    promoType: p.promoType ?? "",
   };
+}
+
+// Price for an empanado AFTER the product's % promo (rounded). Use this for the
+// price the customer pays; `priceFor` keeps the original (for struck-through).
+export function promoPriceFor(
+  product: ProductForUI,
+  breadcrumb: string
+): number {
+  const base = priceFor(product, breadcrumb);
+  if (product.promoPercent > 0) {
+    return Math.round((base * (100 - product.promoPercent)) / 100);
+  }
+  return base;
 }
 
 // The price for a given empanado: the specific price if set (> 0), otherwise

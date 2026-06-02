@@ -621,3 +621,71 @@ export function resolvePeriod(
   });
   return { from, to, label: monthName };
 }
+
+// ---- Discount codes (admin CRUD) ----
+
+export type DiscountCodeInput = {
+  code: string;
+  kind: string; // PERCENT | FIXED
+  value: number;
+  active: boolean;
+  expiresAt?: string | null; // yyyy-mm-dd or null
+  maxUses: number;
+  minTotal: number;
+};
+
+function cleanDiscountCode(input: DiscountCodeInput) {
+  const code = input.code.trim().toUpperCase().replace(/\s+/g, "");
+  if (!code) throw new Error("El código necesita un texto (ej: BERNA10).");
+  if (input.kind !== "PERCENT" && input.kind !== "FIXED") {
+    throw new Error("Tipo de descuento inválido.");
+  }
+  const value = Math.round(Number(input.value));
+  if (!Number.isFinite(value) || value < 0) throw new Error("Valor inválido.");
+  if (input.kind === "PERCENT" && value > 100) {
+    throw new Error("El porcentaje no puede superar 100.");
+  }
+  const maxUses = Math.max(0, Math.round(Number(input.maxUses) || 0));
+  const minTotal = Math.max(0, Math.round(Number(input.minTotal) || 0));
+  const expiresAt = input.expiresAt
+    ? new Date(`${input.expiresAt}T23:59:59`)
+    : null;
+  return {
+    code,
+    kind: input.kind,
+    value,
+    active: Boolean(input.active),
+    maxUses,
+    minTotal,
+    expiresAt,
+  };
+}
+
+export async function listDiscountCodes() {
+  return prisma.discountCode.findMany({ orderBy: { createdAt: "desc" } });
+}
+
+export async function createDiscountCode(input: DiscountCodeInput) {
+  const data = cleanDiscountCode(input);
+  const existing = await prisma.discountCode.findUnique({
+    where: { code: data.code },
+  });
+  if (existing) throw new Error("Ya existe un código con ese texto.");
+  await prisma.discountCode.create({ data });
+}
+
+export async function updateDiscountCode(id: string, input: DiscountCodeInput) {
+  const data = cleanDiscountCode(input);
+  // Allow keeping the same code on the same record; block clashing with others.
+  const clash = await prisma.discountCode.findUnique({
+    where: { code: data.code },
+  });
+  if (clash && clash.id !== id) {
+    throw new Error("Ya existe otro código con ese texto.");
+  }
+  await prisma.discountCode.update({ where: { id }, data });
+}
+
+export async function deleteDiscountCode(id: string) {
+  await prisma.discountCode.delete({ where: { id } });
+}

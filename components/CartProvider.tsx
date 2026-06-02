@@ -11,7 +11,8 @@ import {
   useMemo,
   useState,
 } from "react";
-import { priceFor, type ProductForUI } from "@/lib/products";
+import { promoPriceFor, type ProductForUI } from "@/lib/products";
+import { quantityPromoDiscount } from "@/lib/discounts";
 
 // One line in the cart. Same product with a different empanado = separate line.
 export type CartLine = {
@@ -19,14 +20,17 @@ export type CartLine = {
   productId: string;
   name: string;
   breadcrumbType: string;
-  price: number;
+  price: number; // unit price already with the product's % promo applied
+  promoType: string; // "" | "2x1" | "3x2" for the quantity promo
   quantity: number;
 };
 
 type CartContextValue = {
   lines: CartLine[];
   totalItems: number;
-  totalPrice: number;
+  subtotal: number; // sum of price*qty, before quantity promos
+  promoDiscount: number; // savings from 2x1/3x2 quantity promos
+  totalPrice: number; // subtotal - promoDiscount
   // false until the saved cart has been read from localStorage. Lets pages
   // avoid flashing an "empty cart" message before hydration finishes.
   hydrated: boolean;
@@ -86,7 +90,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             productId: product.id,
             name: product.name,
             breadcrumbType,
-            price: priceFor(product, breadcrumbType),
+            price: promoPriceFor(product, breadcrumbType),
+            promoType: product.promoType ?? "",
             quantity: 1,
           },
         ];
@@ -113,22 +118,47 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     () => lines.reduce((sum, line) => sum + line.quantity, 0),
     [lines]
   );
-  const totalPrice = useMemo(
+  // Subtotal before quantity promos (unit prices already include the % promo).
+  const subtotal = useMemo(
     () => lines.reduce((sum, line) => sum + line.price * line.quantity, 0),
     [lines]
   );
+  // Savings from 2x1 / 3x2 quantity promos.
+  const promoDiscount = useMemo(
+    () =>
+      lines.reduce(
+        (sum, line) =>
+          sum +
+          quantityPromoDiscount(line.quantity, line.price, line.promoType ?? ""),
+        0
+      ),
+    [lines]
+  );
+  const totalPrice = subtotal - promoDiscount;
 
   const value = useMemo(
     () => ({
       lines,
       totalItems,
+      subtotal,
+      promoDiscount,
       totalPrice,
       hydrated,
       addToCart,
       changeQuantity,
       clearCart,
     }),
-    [lines, totalItems, totalPrice, hydrated, addToCart, changeQuantity, clearCart]
+    [
+      lines,
+      totalItems,
+      subtotal,
+      promoDiscount,
+      totalPrice,
+      hydrated,
+      addToCart,
+      changeQuantity,
+      clearCart,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

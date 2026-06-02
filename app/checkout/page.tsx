@@ -13,7 +13,8 @@ type DeliveryType = "DELIVERY" | "PICKUP";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { lines, totalPrice, hydrated, clearCart } = useCart();
+  const { lines, subtotal, promoDiscount, totalPrice, hydrated, clearCart } =
+    useCart();
 
   // --- form state ---
   const [name, setName] = useState("");
@@ -44,16 +45,63 @@ export default function CheckoutPage() {
   const [shippingCost, setShippingCost] = useState(0);
   const [freeShippingFrom, setFreeShippingFrom] = useState(0);
 
+  // --- discount code state ---
+  const [code, setCode] = useState("");
+  const [codeApplied, setCodeApplied] = useState<{
+    code: string;
+    amount: number;
+    label: string;
+  } | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [checkingCode, setCheckingCode] = useState(false);
+
   // --- submission state ---
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const covered = Boolean(options);
 
-  // Delivery fee: free when the zone has a threshold and the subtotal reaches it.
+  // Code discount (validated against the cart total).
+  const codeDiscount = codeApplied?.amount ?? 0;
+  const afterDiscounts = Math.max(0, totalPrice - codeDiscount);
+
+  // Delivery fee: free when the zone has a threshold and the (discounted) total
+  // reaches it.
   const shipping =
-    freeShippingFrom > 0 && totalPrice >= freeShippingFrom ? 0 : shippingCost;
-  const grandTotal = totalPrice + shipping;
+    freeShippingFrom > 0 && afterDiscounts >= freeShippingFrom
+      ? 0
+      : shippingCost;
+  const grandTotal = afterDiscounts + shipping;
+
+  async function applyCode() {
+    setCodeError(null);
+    if (!code.trim()) return;
+    setCheckingCode(true);
+    try {
+      const res = await fetch("/api/discount/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotal: totalPrice }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setCodeApplied({ code: data.code, amount: data.amount, label: data.label });
+      } else {
+        setCodeApplied(null);
+        setCodeError(data.error ?? "Código inválido.");
+      }
+    } catch {
+      setCodeError("No pudimos validar el código. Probá de nuevo.");
+    } finally {
+      setCheckingCode(false);
+    }
+  }
+
+  function clearCode() {
+    setCode("");
+    setCodeApplied(null);
+    setCodeError(null);
+  }
 
   // Resets everything tied to a verified address / zone.
   function resetZone() {
@@ -149,6 +197,7 @@ export default function CheckoutPage() {
           scheduledDate: `${dateIso}T12:00:00`,
           scheduledSlot: slot,
           paymentMethod,
+          discountCode: codeApplied?.code || undefined,
           items: lines.map((l) => ({
             productId: l.productId,
             breadcrumbType: l.breadcrumbType,
@@ -473,12 +522,74 @@ export default function CheckoutPage() {
             ))}
           </ul>
 
-          {/* Subtotal + shipping (when a delivery zone is confirmed) */}
-          <div className="mt-3 space-y-1 border-t border-line pt-3 text-sm">
+          {/* Discount code */}
+          <div className="mt-4 border-t border-line pt-4">
+            {codeApplied ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-cream/40 px-3 py-2">
+                <span className="text-sm font-bold text-ink">
+                  Código {codeApplied.code} · {codeApplied.label}
+                </span>
+                <button
+                  type="button"
+                  onClick={clearCode}
+                  className="font-bold uppercase tracking-widest text-[11px] text-muted hover:text-ink"
+                >
+                  Quitar
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p className="mb-1 font-bold uppercase tracking-wide text-[11px] text-muted">
+                  ¿Tenés un código de descuento?
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        applyCode();
+                      }
+                    }}
+                    className={inputClass}
+                    placeholder="Ej: BERNA10"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyCode}
+                    disabled={checkingCode || !code.trim()}
+                    className="shrink-0 border border-black px-4 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:bg-black hover:text-white disabled:opacity-40"
+                  >
+                    {checkingCode ? "…" : "Aplicar"}
+                  </button>
+                </div>
+                {codeError && (
+                  <p className="mt-1 text-sm font-bold text-ink">{codeError}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Totals breakdown */}
+          <div className="mt-4 space-y-1 border-t border-line pt-4 text-sm">
             <div className="flex items-center justify-between text-muted">
-              <span>Productos</span>
-              <span>{formatPrice(totalPrice)}</span>
+              <span>Subtotal</span>
+              <span>{formatPrice(subtotal)}</span>
             </div>
+            {promoDiscount > 0 && (
+              <div className="flex items-center justify-between text-muted">
+                <span>Promos (2x1 / 3x2)</span>
+                <span>− {formatPrice(promoDiscount)}</span>
+              </div>
+            )}
+            {codeApplied && (
+              <div className="flex items-center justify-between text-muted">
+                <span>Código {codeApplied.code}</span>
+                <span>− {formatPrice(codeDiscount)}</span>
+              </div>
+            )}
             {deliveryType === "DELIVERY" && covered && (
               <div className="flex items-center justify-between text-muted">
                 <span>Envío{zoneName ? ` (${zoneName})` : ""}</span>
@@ -492,7 +603,9 @@ export default function CheckoutPage() {
               Total
             </span>
             <span className="font-black text-2xl text-ink">
-              {formatPrice(deliveryType === "DELIVERY" ? grandTotal : totalPrice)}
+              {formatPrice(
+                deliveryType === "DELIVERY" ? grandTotal : afterDiscounts
+              )}
             </span>
           </div>
         </Section>

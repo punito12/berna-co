@@ -10,6 +10,11 @@ import {
   formatAddress,
   shippingFor,
 } from "@/lib/zones";
+import {
+  quantityPromoDiscount,
+  validateDiscountCode,
+  consumeDiscountCode,
+} from "@/lib/discounts";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -28,7 +33,8 @@ export type CreateOrderInput = {
   floor?: string;
   scheduledDate: string; // ISO date string
   scheduledSlot: string;
-  paymentMethod: string; // CASH (MERCADOPAGO arrives in Paso 4)
+  paymentMethod: string; // CASH | MERCADOPAGO
+  discountCode?: string; // optional code typed at checkout
   items: { productId: string; breadcrumbType: string; quantity: number }[];
 };
 
@@ -145,7 +151,9 @@ export async function createOrder(
   });
   const byId = new Map(products.map((p) => [p.id, p]));
 
-  let total = 0;
+  // Products subtotal (with per-product % promos) and quantity-promo savings.
+  let productsSubtotal = 0;
+  let quantityPromo = 0;
   const itemsToCreate = input.items.map((item) => {
     const product = byId.get(item.productId);
     if (!product) {
@@ -164,9 +172,14 @@ export async function createOrder(
         `El empanado elegido no está disponible para ${product.name}.`
       );
     }
-    // Price of the chosen empanado, falling back to the product default.
-    const unitPrice = priceForBreadcrumb(product, item.breadcrumbType);
-    total += unitPrice * qty;
+    // Unit price = empanado price with the product's % promo applied.
+    let unitPrice = priceForBreadcrumb(product, item.breadcrumbType);
+    if (product.promoPercent > 0) {
+      unitPrice = Math.round((unitPrice * (100 - product.promoPercent)) / 100);
+    }
+    productsSubtotal += unitPrice * qty;
+    // 2x1 / 3x2 savings for this line.
+    quantityPromo += quantityPromoDiscount(qty, unitPrice, product.promoType);
     return {
       productId: product.id,
       quantity: qty,
@@ -174,6 +187,20 @@ export async function createOrder(
       breadcrumbType: item.breadcrumbType,
     };
   });
+
+  // Subtotal after quantity promos.
+  let total = productsSubtotal - quantityPromo;
+
+  // Discount code (validated against the post-quantity-promo subtotal).
+  let appliedCode: string | null = null;
+  let codeDiscount = 0;
+  if (input.discountCode?.trim()) {
+    const v = await validateDiscountCode(input.discountCode, total);
+    if (!v.ok) throw new OrderValidationError(v.error);
+    codeDiscount = v.amount;
+    appliedCode = v.code;
+    total -= codeDiscount;
+  }
 
   // Add the delivery fee for the zone (free if the subtotal hits the threshold).
   const shipping = deliveryZone ? shippingFor(deliveryZone, total) : 0;
@@ -221,6 +248,8 @@ export async function createOrder(
         scheduledSlot: input.scheduledSlot,
         paymentMethod: input.paymentMethod,
         shippingCost: shipping,
+        discountCode: appliedCode,
+        discountAmount: quantityPromo + codeDiscount,
         total,
         mpPaymentId: null,
         items: { create: itemsToCreate },
@@ -266,6 +295,17 @@ export async function createOrder(
 
     return created;
   });
+
+  // Count one use of the discount code AFTER the order transaction commits
+  // (SQLite has a single writer; doing it inside would lengthen the tx). The
+  // single-query guarded update is idempotent enough for this.
+  if (appliedCode) {
+    try {
+      await consumeDiscountCode(appliedCode);
+    } catch (e) {
+      console.error("consumeDiscountCode failed:", e);
+    }
+  }
 
   return { id: order.id };
 }

@@ -8,6 +8,7 @@ import {
   formatPrice,
   formatWeight,
   priceFor,
+  promoPriceFor,
   stockFor,
   isProductOutOfStock,
   type ProductForUI,
@@ -128,9 +129,35 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
 
         {/* Price + add button pinned to the bottom of the card */}
         <div className="mt-auto pt-5">
-          <p className="font-black text-2xl text-black">
-            {formatPrice(priceFor(product, selected))}
-          </p>
+          {/* Promo badges (2x1/3x2 or % off) */}
+          {(product.promoType || product.promoPercent > 0) && (
+            <div className="mb-2 flex flex-wrap gap-1">
+              {product.promoType && (
+                <span className="bg-ink px-2 py-0.5 font-bold uppercase tracking-widest text-[10px] text-white">
+                  {product.promoType}
+                </span>
+              )}
+              {product.promoPercent > 0 && (
+                <span className="bg-ink px-2 py-0.5 font-bold uppercase tracking-widest text-[10px] text-white">
+                  -{product.promoPercent}%
+                </span>
+              )}
+            </div>
+          )}
+          {product.promoPercent > 0 ? (
+            <p className="flex items-baseline gap-2">
+              <span className="font-black text-2xl text-black">
+                {formatPrice(promoPriceFor(product, selected))}
+              </span>
+              <span className="text-sm text-muted line-through">
+                {formatPrice(priceFor(product, selected))}
+              </span>
+            </p>
+          ) : (
+            <p className="font-black text-2xl text-black">
+              {formatPrice(priceFor(product, selected))}
+            </p>
+          )}
           <button
             type="button"
             onClick={handleAdd}
