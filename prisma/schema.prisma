@@ -291,15 +291,89 @@ model CashMovement {
   accrualDate DateTime? // real money_release_date for MP; null = immediate
 
   // Links back to the origin so movements are idempotent (one per payment/order).
-  paymentId String? @unique // MP payment id
-  orderId   String? // web order that generated this movement
-  saleId    String? // manual sale that generated this movement
+  paymentId  String? @unique // MP payment id
+  orderId    String? // web order that generated this movement
+  saleId     String? // manual sale that generated this movement
+  purchaseId String? // supplier purchase that generated this expense
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([date])
   @@index([status, accrualDate])
+}
+
+// A supplier (proveedor) the business buys from.
+model Supplier {
+  id              String  @id @default(cuid())
+  name            String
+  type            String  @default("OTROS") // CARNE | HUEVOS | PACKAGING | SERVICIOS | OTROS
+  contact         String? // phone / email / contact name
+  notes           String?
+  defaultDueDays  Int     @default(30) // credit term used by default for purchases
+
+  purchases Purchase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A purchase (compra / orden de compra) made to a supplier. Totals in pesos.
+model Purchase {
+  id         String   @id @default(cuid())
+  date       DateTime // purchase date (admin chooses it)
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // gross = Σ item subtotals; discountAmount; total = gross − discountAmount.
+  gross          Int
+  discountAmount Int @default(0)
+  total          Int
+
+  // Cuenta por pagar: PAID por defecto si se carga ya pagada; PENDING si queda
+  // a deber (con vencimiento). Recalculado desde la suma de pagos.
+  paymentStatus String    @default("PENDING") // PAID | PARTIAL | PENDING
+  dueDate       DateTime?
+
+  notes String?
+
+  items    PurchaseItem[]
+  payments SupplierPayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+}
+
+// One line within a purchase. Quantities are free-form (kg, units, etc.).
+model PurchaseItem {
+  id         String   @id @default(cuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  description String
+  quantity    Float // amount bought
+  unit        String  @default("unidades") // kg | unidades | cajas | ...
+  unitPrice   Int // pesos per unit
+  subtotal    Int // quantity * unitPrice (pesos)
+}
+
+// A payment made to a supplier against a purchase. Each one creates a
+// CashMovement of type EXPENSE. A purchase may have many (partial) payments.
+model SupplierPayment {
+  id     String   @id @default(cuid())
+  date   DateTime @default(now())
+  amount Int // pesos, positive
+  method String // EFECTIVO | MERCADO_PAGO | TRANSFERENCIA
+  notes  String?
+
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([purchaseId])
 }
 
 // A discount code the customer types at checkout. Percent OR fixed amount.
