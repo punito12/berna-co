@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BREADCRUMB_LABELS } from "@/lib/products";
+import RichTextEditor from "@/components/RichTextEditor";
 
 const CATEGORIES = [
   { value: "CARNE", label: "Carne" },
@@ -20,8 +21,8 @@ export type ProductFormValues = {
   category: string;
   weightGrams: number;
   costPerKg?: number;
-  promoPercent?: number;
-  promoType?: string;
+  promoPercents?: Record<string, number>;
+  promoTypes?: Record<string, string>;
   isNew: boolean;
   available: boolean;
   breadcrumbs: string[];
@@ -54,10 +55,17 @@ export default function ProductForm({
   const [category, setCategory] = useState(initial.category || "CARNE");
   const [weight, setWeight] = useState(String(initial.weightGrams || 1000));
   const [costPerKg, setCostPerKg] = useState(String(initial.costPerKg ?? 0));
-  const [promoPercent, setPromoPercent] = useState(
-    String(initial.promoPercent ?? 0)
+  // Promos per empanado.
+  const [promoPercents, setPromoPercents] = useState<Record<string, string>>(
+    Object.fromEntries(
+      BREADCRUMBS.map((b) => [b, String(initial.promoPercents?.[b] ?? 0)])
+    )
   );
-  const [promoType, setPromoType] = useState(initial.promoType ?? "");
+  const [promoTypes, setPromoTypes] = useState<Record<string, string>>(
+    Object.fromEntries(
+      BREADCRUMBS.map((b) => [b, initial.promoTypes?.[b] ?? ""])
+    )
+  );
   const [isNew, setIsNew] = useState(initial.isNew);
   const [available, setAvailable] = useState(initial.available);
   const [breadcrumbs, setBreadcrumbs] = useState<string[]>(initial.breadcrumbs);
@@ -135,8 +143,12 @@ export default function ProductForm({
         category,
         weightGrams: Number(weight),
         costPerKg: Number(costPerKg),
-        promoPercent: Number(promoPercent) || 0,
-        promoType,
+        promoPercents: Object.fromEntries(
+          breadcrumbs.map((b) => [b, Number(promoPercents[b]) || 0])
+        ),
+        promoTypes: Object.fromEntries(
+          breadcrumbs.map((b) => [b, promoTypes[b] || ""])
+        ),
         isNew,
         available,
         breadcrumbs,
@@ -245,12 +257,12 @@ export default function ProductForm({
         <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
           Descripción larga (página del producto)
         </span>
-        <textarea
+        <RichTextEditor
           value={longDescription}
-          onChange={(e) => setLongDescription(e.target.value)}
+          onChange={setLongDescription}
           rows={4}
-          className={inputClass}
-          placeholder="Descripción completa que aparece al entrar al producto: detalle del corte, empanados, recomendaciones…"
+          className="w-full resize-y rounded-b bg-white px-3 py-2 text-ink outline-none"
+          placeholder="Descripción completa que aparece al entrar al producto: detalle del corte, empanados, recomendaciones… Usá B / I / • para destacar."
         />
       </label>
 
@@ -280,34 +292,6 @@ export default function ProductForm({
             className="w-32 rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black"
             placeholder="0"
           />
-        </label>
-        <label className="block">
-          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-            Promo % off
-          </span>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={promoPercent}
-            onChange={(e) => setPromoPercent(e.target.value)}
-            className="w-28 rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black"
-            placeholder="0"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-            Promo cantidad
-          </span>
-          <select
-            value={promoType}
-            onChange={(e) => setPromoType(e.target.value)}
-            className="rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black"
-          >
-            <option value="">Ninguna</option>
-            <option value="2x1">2x1</option>
-            <option value="3x2">3x2</option>
-          </select>
         </label>
         <label className="flex items-center gap-2">
           <input
@@ -422,6 +406,38 @@ export default function ProductForm({
                   }
                   className="w-20 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
                 />
+              </label>
+              <label className="block">
+                <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+                  Promo % off
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={promoPercents[b] ?? "0"}
+                  onChange={(e) =>
+                    setPromoPercents((p) => ({ ...p, [b]: e.target.value }))
+                  }
+                  className="w-20 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
+                  placeholder="0"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+                  Promo cant.
+                </span>
+                <select
+                  value={promoTypes[b] ?? ""}
+                  onChange={(e) =>
+                    setPromoTypes((p) => ({ ...p, [b]: e.target.value }))
+                  }
+                  className="rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
+                >
+                  <option value="">Ninguna</option>
+                  <option value="2x1">2x1</option>
+                  <option value="3x2">3x2</option>
+                </select>
               </label>
               {/* Two photo slots per empanado */}
               {PHOTO_SLOTS.map((slot) => {

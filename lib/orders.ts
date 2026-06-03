@@ -172,14 +172,16 @@ export async function createOrder(
         `El empanado elegido no está disponible para ${product.name}.`
       );
     }
-    // Unit price = empanado price with the product's % promo applied.
-    let unitPrice = priceForBreadcrumb(product, item.breadcrumbType);
-    if (product.promoPercent > 0) {
-      unitPrice = Math.round((unitPrice * (100 - product.promoPercent)) / 100);
-    }
+    // Unit price = empanado price with its % promo applied (per-empanado,
+    // falling back to the product-wide promo).
+    const bc = item.breadcrumbType;
+    const pct = promoPercentForOrder(product, bc);
+    const qpromo = promoTypeForOrder(product, bc);
+    let unitPrice = priceForBreadcrumb(product, bc);
+    if (pct > 0) unitPrice = Math.round((unitPrice * (100 - pct)) / 100);
     productsSubtotal += unitPrice * qty;
     // 2x1 / 3x2 savings for this line.
-    quantityPromo += quantityPromoDiscount(qty, unitPrice, product.promoType);
+    quantityPromo += quantityPromoDiscount(qty, unitPrice, qpromo);
     return {
       productId: product.id,
       quantity: qty,
@@ -360,4 +362,30 @@ function priceForBreadcrumb(
     // fall through to default
   }
   return product.price ?? 0;
+}
+
+// % off for an empanado (per-empanado map, else product-wide promoPercent).
+function promoPercentForOrder(
+  product: { promoPercent: number; promoPercents: string },
+  breadcrumb: string
+): number {
+  try {
+    const map = JSON.parse(product.promoPercents);
+    const v = map?.[breadcrumb];
+    if (typeof v === "number" && v > 0) return v;
+  } catch {}
+  return product.promoPercent ?? 0;
+}
+
+// Quantity promo for an empanado (per-empanado map, else product-wide promoType).
+function promoTypeForOrder(
+  product: { promoType: string; promoTypes: string },
+  breadcrumb: string
+): string {
+  try {
+    const map = JSON.parse(product.promoTypes);
+    const v = map?.[breadcrumb];
+    if (v === "2x1" || v === "3x2") return v;
+  } catch {}
+  return product.promoType ?? "";
 }

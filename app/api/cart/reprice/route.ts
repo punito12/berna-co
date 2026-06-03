@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { priceFor, type ProductForUI } from "@/lib/products";
+import {
+  promoPriceFor,
+  promoTypeFor,
+  type ProductForUI,
+} from "@/lib/products";
 
 // Public: given cart lines (productId + empanado), returns the CURRENT unit
 // price (with the product's % promo) and promoType, so the checkout always
@@ -33,21 +37,37 @@ export async function POST(request: Request) {
       prices[key] = { unitPrice: 0, promoType: "", available: false };
       continue;
     }
-    // Reuse the storefront mapping for promo-aware pricing.
+    // Build a promo-aware UI shape and reuse the storefront helpers so the
+    // per-empanado promos are honored.
     const ui = {
       price: p.price,
       pricesByBreadcrumb: safeMap(p.prices),
       promoPercent: p.promoPercent,
+      promoType: p.promoType,
+      promoPercentByBreadcrumb: safeMap(p.promoPercents),
+      promoTypeByBreadcrumb: safeStrMap(p.promoTypes),
     } as unknown as ProductForUI;
-    const base = priceFor(ui, line.breadcrumbType);
-    const unitPrice =
-      p.promoPercent > 0
-        ? Math.round((base * (100 - p.promoPercent)) / 100)
-        : base;
-    prices[key] = { unitPrice, promoType: p.promoType ?? "", available: true };
+    prices[key] = {
+      unitPrice: promoPriceFor(ui, line.breadcrumbType),
+      promoType: promoTypeFor(ui, line.breadcrumbType),
+      available: true,
+    };
   }
 
   return NextResponse.json({ prices });
+}
+
+function safeStrMap(raw: string): Record<string, string> {
+  try {
+    const v = JSON.parse(raw);
+    if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+    const out: Record<string, string> = {};
+    for (const [k, val] of Object.entries(v))
+      if (typeof val === "string") out[k] = val;
+    return out;
+  } catch {
+    return {};
+  }
 }
 
 function safeMap(raw: string): Record<string, number> {

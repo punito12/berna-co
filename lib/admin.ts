@@ -134,8 +134,9 @@ export type ProductInput = {
   breadcrumbs: string[]; // which empanados the product offers
   disabledBreadcrumbs?: string[]; // empanados temporarily turned off
   costPerKg?: number; // cost per kg (pesos), for profitability
-  promoPercent?: number; // % off (0 = none)
-  promoType?: string; // "" | "2x1" | "3x2"
+  // Promos per empanado: { breadcrumb: percent } and { breadcrumb: "2x1"|"3x2" }.
+  promoPercents?: Record<string, number>;
+  promoTypes?: Record<string, string>;
   prices: Record<string, number>; // pesos, by empanado
   stocks: Record<string, number>; // units, by empanado
   images: Record<string, string[]>; // up to 2 photo paths, by empanado
@@ -230,13 +231,17 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
 
   const costPerKg = Math.max(0, Math.round(Number(input.costPerKg ?? 0)));
 
-  // Per-product promos.
-  let promoPercent = Math.round(Number(input.promoPercent ?? 0));
-  if (!Number.isFinite(promoPercent) || promoPercent < 0) promoPercent = 0;
-  if (promoPercent > 100) promoPercent = 100;
-  const promoType = ["2x1", "3x2"].includes(input.promoType ?? "")
-    ? (input.promoType as string)
-    : "";
+  // Promos per empanado (only for offered breadcrumbs).
+  const promoPercents: Record<string, number> = {};
+  const promoTypes: Record<string, string> = {};
+  for (const b of breadcrumbs) {
+    let pct = Math.round(Number(input.promoPercents?.[b] ?? 0));
+    if (!Number.isFinite(pct) || pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    if (pct > 0) promoPercents[b] = pct;
+    const t = input.promoTypes?.[b] ?? "";
+    if (t === "2x1" || t === "3x2") promoTypes[b] = t;
+  }
 
   return {
     name,
@@ -247,8 +252,11 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
     isNew: Boolean(input.isNew),
     available: Boolean(input.available),
     costPerKg,
-    promoPercent,
-    promoType,
+    // Clear the legacy product-wide promo; per-empanado is the source of truth.
+    promoPercent: 0,
+    promoType: "",
+    promoPercents: JSON.stringify(promoPercents),
+    promoTypes: JSON.stringify(promoTypes),
     availableBreadcrumbs: JSON.stringify(breadcrumbs),
     disabledBreadcrumbs: JSON.stringify(disabledBreadcrumbs),
     prices: JSON.stringify(prices),

@@ -9,6 +9,8 @@ import {
   formatWeight,
   priceFor,
   promoPriceFor,
+  promoPercentFor,
+  promoTypeFor,
   stockFor,
   isProductOutOfStock,
   type ProductForUI,
@@ -31,6 +33,10 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
   const selectedOutOfStock = stockFor(product, selected) <= 0;
   // The whole product is out only when every empanado is at 0.
   const allOutOfStock = isProductOutOfStock(product);
+
+  // Promos for the selected empanado.
+  const selPromoPercent = promoPercentFor(product, selected);
+  const selPromoType = promoTypeFor(product, selected);
 
   function handleAdd() {
     if (selectedOutOfStock) return;
@@ -65,14 +71,14 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
 
         {/* Top-left badges: promos stand out the most (red), then New / stock. */}
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
-          {!allOutOfStock && product.promoType && (
+          {!allOutOfStock && selPromoType && (
             <span className="bg-[#c0392b] px-3 py-1.5 font-black uppercase tracking-widest text-sm text-white shadow-md">
-              {product.promoType}
+              {selPromoType}
             </span>
           )}
-          {!allOutOfStock && product.promoPercent > 0 && (
+          {!allOutOfStock && selPromoPercent > 0 && (
             <span className="bg-[#c0392b] px-3 py-1.5 font-black uppercase tracking-widest text-sm text-white shadow-md">
-              -{product.promoPercent}%
+              -{selPromoPercent}%
             </span>
           )}
           {product.isNew && !allOutOfStock && (
@@ -143,7 +149,7 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
             badges live over the photo (top-left); here we only show the price,
             with the original struck through when there's a % promo. */}
         <div className="mt-auto pt-5">
-          {product.promoPercent > 0 ? (
+          {selPromoPercent > 0 ? (
             <p className="flex items-baseline gap-2">
               <span className="font-black text-2xl text-[#c0392b]">
                 {formatPrice(promoPriceFor(product, selected))}

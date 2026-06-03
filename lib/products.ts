@@ -28,8 +28,10 @@ export type ProductForUI = {
   stock: number; // legacy/fallback total
   stocksByBreadcrumb: Record<string, number>; // stock per empanado
   breadcrumbs: string[];
-  promoPercent: number; // % off (0 = none)
-  promoType: string; // "" | "2x1" | "3x2"
+  promoPercent: number; // product-wide % off fallback (0 = none)
+  promoType: string; // product-wide quantity promo fallback
+  promoPercentByBreadcrumb: Record<string, number>; // per-empanado % off
+  promoTypeByBreadcrumb: Record<string, string>; // per-empanado 2x1/3x2
 };
 
 // The raw Prisma row fields we care about (kept loose to avoid import churn).
@@ -53,6 +55,8 @@ type ProductRow = {
   disabledBreadcrumbs: string;
   promoPercent: number;
   promoType: string;
+  promoPercents: string;
+  promoTypes: string;
 };
 
 // Maps a database row into the UI shape (parsing the JSON columns). The
@@ -80,20 +84,56 @@ function toProductForUI(p: ProductRow): ProductForUI {
     breadcrumbs: visible,
     promoPercent: p.promoPercent ?? 0,
     promoType: p.promoType ?? "",
+    promoPercentByBreadcrumb: safeParseNumberMap(p.promoPercents),
+    promoTypeByBreadcrumb: safeParseStringMap(p.promoTypes),
   };
 }
 
-// Price for an empanado AFTER the product's % promo (rounded). Use this for the
-// price the customer pays; `priceFor` keeps the original (for struck-through).
+// % off for an empanado: the per-empanado value if set, else the product-wide.
+export function promoPercentFor(
+  product: ProductForUI,
+  breadcrumb: string
+): number {
+  const specific = product.promoPercentByBreadcrumb[breadcrumb];
+  if (typeof specific === "number" && specific > 0) return specific;
+  return product.promoPercent ?? 0;
+}
+
+// Quantity promo ("2x1"/"3x2"/"") for an empanado, per-empanado else product-wide.
+export function promoTypeFor(
+  product: ProductForUI,
+  breadcrumb: string
+): string {
+  const specific = product.promoTypeByBreadcrumb[breadcrumb];
+  if (specific === "2x1" || specific === "3x2") return specific;
+  return product.promoType ?? "";
+}
+
+// Price for an empanado AFTER its % promo (rounded). Use this for the price the
+// customer pays; `priceFor` keeps the original (for struck-through).
 export function promoPriceFor(
   product: ProductForUI,
   breadcrumb: string
 ): number {
   const base = priceFor(product, breadcrumb);
-  if (product.promoPercent > 0) {
-    return Math.round((base * (100 - product.promoPercent)) / 100);
-  }
+  const pct = promoPercentFor(product, breadcrumb);
+  if (pct > 0) return Math.round((base * (100 - pct)) / 100);
   return base;
+}
+
+function safeParseStringMap(raw: string): Record<string, string> {
+  try {
+    const v = JSON.parse(raw);
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      const out: Record<string, string> = {};
+      for (const [k, val] of Object.entries(v))
+        if (typeof val === "string") out[k] = val;
+      return out;
+    }
+    return {};
+  } catch {
+    return {};
+  }
 }
 
 // The price for a given empanado: the specific price if set (> 0), otherwise

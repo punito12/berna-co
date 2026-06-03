@@ -20,6 +20,18 @@ function safeNumberMap(raw: string): Record<string, number> {
     return {};
   }
 }
+function safeStringMap(raw: string): Record<string, string> {
+  try {
+    const v = JSON.parse(raw);
+    if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+    const out: Record<string, string> = {};
+    for (const [k, val] of Object.entries(v))
+      if (typeof val === "string") out[k] = val;
+    return out;
+  } catch {
+    return {};
+  }
+}
 // images column is { breadcrumb: string[] }; pass through the photo arrays.
 function safeImagesMap(raw: string): Record<string, string[]> {
   try {
@@ -66,8 +78,8 @@ export default async function AdminProductsPage() {
             category: p.category,
             weightGrams: p.weightGrams,
             costPerKg: p.costPerKg,
-            promoPercent: p.promoPercent,
-            promoType: p.promoType,
+            promoPercents: safeNumberMap(p.promoPercents),
+            promoTypes: safeStringMap(p.promoTypes),
             isNew: p.isNew,
             available: p.available,
             breadcrumbs: safeArray(p.availableBreadcrumbs),

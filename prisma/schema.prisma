@@ -48,11 +48,14 @@ model Product {
   costPerKg Int @default(0)
 
   // --- Automatic per-product promotions (web store) ---
-  // Percent off the unit price (0 = no discount). Shown as a struck-through
-  // price on the catalog card.
+  // Legacy product-wide promo (kept for back-compat / fallback).
   promoPercent Int @default(0)
-  // Quantity promo: "" = none, "2x1", "3x2". Applied in the cart.
   promoType String @default("")
+  // Per-empanado promos (override the product-wide ones when present):
+  // promoPercents JSON {empanado: percent}, e.g. {"KETO":20}
+  // promoTypes   JSON {empanado: "2x1"|"3x2"}, e.g. {"KETO":"2x1"}
+  promoPercents String @default("{}")
+  promoTypes    String @default("{}")
 
   orderItems OrderItem[]
   saleItems  SaleItem[]

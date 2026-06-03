@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ProductGallery from "@/components/ProductGallery";
 import AddToCartPanel from "@/components/AddToCartPanel";
+import RichText from "@/components/RichText";
 import { formatWeight, type ProductForUI } from "@/lib/products";
 
 // Two-column product detail. Holds the selected empanado so the gallery (left)
@@ -38,10 +39,12 @@ export default function ProductDetail({ product }: { product: ProductForUI }) {
           {formatWeight(product.weightGrams)}
         </p>
 
-        {/* Full description on the detail page; falls back to the short one. */}
-        <p className="mt-6 whitespace-pre-line font-serif text-lg leading-relaxed text-ink/80">
-          {product.longDescription?.trim() || product.description}
-        </p>
+        {/* Full description on the detail page; falls back to the short one.
+            Rendered with RichText so **bold**, *italic* and "- " bullets show. */}
+        <RichText
+          text={product.longDescription?.trim() || product.description}
+          className="mt-6 font-serif text-lg leading-relaxed text-ink/80 [&_p]:mt-2 first:[&_p]:mt-0"
+        />
 
         <AddToCartPanel
           product={product}

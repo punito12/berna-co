@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { promoPriceFor, type ProductForUI } from "@/lib/products";
+import { promoPriceFor, promoTypeFor, type ProductForUI } from "@/lib/products";
 import { quantityPromoDiscount } from "@/lib/discounts";
 
 // One line in the cart. Same product with a different empanado = separate line.
@@ -99,7 +99,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             name: product.name,
             breadcrumbType,
             price: promoPriceFor(product, breadcrumbType),
-            promoType: product.promoType ?? "",
+            promoType: promoTypeFor(product, breadcrumbType),
             quantity: 1,
           },
         ];
