@@ -4,6 +4,7 @@
 
 import { prisma } from "@/lib/db";
 import { recordManualSaleIncome } from "@/lib/cash";
+import { DEFAULT_DUE_DAYS } from "@/lib/payments";
 
 // ---- Customers ----
 
@@ -313,6 +314,14 @@ export async function createManualSale(input: SaleInput) {
   const customerName =
     customer?.name ?? input.customerName?.trim() ?? null;
 
+  // Cuenta corriente: wholesale customers default to credit (PENDING + due date
+  // in 30 days) and DON'T auto-collect into Caja — the income is recorded when
+  // a payment is registered. Everyone else is PAID and auto-collects as before.
+  const onCredit = customer?.type === "MAYORISTA";
+  const dueDate = onCredit
+    ? new Date(soldAt.getTime() + DEFAULT_DUE_DAYS * 86400000)
+    : null;
+
   const sale = await prisma.manualSale.create({
     data: {
       soldAt,
@@ -324,6 +333,8 @@ export async function createManualSale(input: SaleInput) {
       discountAmount,
       net,
       notes: input.notes?.trim() || null,
+      paymentStatus: onCredit ? "PENDING" : "PAID",
+      dueDate,
       items: {
         create: lines.map((l) => ({
           productId: l.productId || null,
@@ -337,16 +348,19 @@ export async function createManualSale(input: SaleInput) {
     select: { id: true, net: true, soldAt: true },
   });
 
-  // Mirror the sale into Caja as an income (deduped by saleId).
-  try {
-    await recordManualSaleIncome({
-      id: sale.id,
-      net: sale.net,
-      soldAt: sale.soldAt,
-      label: customerName ?? SALE_CHANNEL_LABELS[input.channel] ?? "Venta",
-    });
-  } catch (e) {
-    console.error("recordManualSaleIncome failed:", e);
+  // Contado: mirror the sale into Caja as income (deduped by saleId). Credit
+  // sales wait for a Payment to create the income.
+  if (!onCredit) {
+    try {
+      await recordManualSaleIncome({
+        id: sale.id,
+        net: sale.net,
+        soldAt: sale.soldAt,
+        label: customerName ?? SALE_CHANNEL_LABELS[input.channel] ?? "Venta",
+      });
+    } catch (e) {
+      console.error("recordManualSaleIncome failed:", e);
+    }
   }
 }
 

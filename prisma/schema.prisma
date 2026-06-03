@@ -95,7 +95,13 @@ model Order {
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
-  items OrderItem[]
+  // Cuenta corriente: PAID = saldado, PARTIAL = pago parcial, PENDING = a deber.
+  // Web orders are PAID (MP webhook / cash on confirm); CxC is mainly for sales.
+  paymentStatus String    @default("PAID") // PAID | PARTIAL | PENDING
+  dueDate       DateTime? // vencimiento (cuenta corriente)
+
+  items    OrderItem[]
+  payments Payment[]
 }
 
 model OrderItem {
@@ -209,10 +215,37 @@ model ManualSale {
 
   notes String?
 
-  items SaleItem[]
+  // Cuenta corriente: PAID por defecto; los mayoristas nacen PENDING a 30 días.
+  paymentStatus String    @default("PAID") // PAID | PARTIAL | PENDING
+  dueDate       DateTime? // vencimiento (cuenta corriente)
+
+  items    SaleItem[]
+  payments Payment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// A payment received against a sale or order (cuenta corriente). Each payment
+// creates a CashMovement of type INCOME. A sale/order may have many payments
+// (partial). paymentStatus on the sale is recomputed from the sum of payments.
+model Payment {
+  id     String   @id @default(cuid())
+  date   DateTime @default(now())
+  amount Int // pesos, positive
+  method String // EFECTIVO | MERCADO_PAGO | TRANSFERENCIA
+  notes  String?
+
+  // Linked to at most one of these.
+  orderId String?
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  saleId  String?
+  sale    ManualSale? @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([saleId])
 }
 
 // One product line within a manual sale. Quantities are in kg.
