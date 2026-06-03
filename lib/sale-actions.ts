@@ -196,6 +196,194 @@ export async function deleteSaleOrOrder(
   });
 }
 
+// ---- Edit (Part 3b) ---------------------------------------------------------
+//
+// Replaces items + editable fields and reconciles stock by the DIFFERENCE
+// between the old and new item sets (per product+empanado): if the new quantity
+// is higher we discount the extra, if lower we restock, logging an ADJUSTMENT
+// movement for the net change. Totals are recomputed. All in one transaction.
+
+export type EditItemInput = {
+  productId?: string | null;
+  productName: string;
+  breadcrumbType?: string | null;
+  quantity: number;
+  unitPrice: number;
+};
+
+export type EditSaleInput = {
+  items: EditItemInput[];
+  notes?: string | null;
+  // Order-only fields
+  customerName?: string;
+  customerPhone?: string;
+  address?: string | null;
+  scheduledDate?: string | null; // yyyy-mm-dd
+  scheduledSlot?: string | null;
+};
+
+// Build a map "productId__breadcrumb" -> units from a set of lines.
+function unitsByVariant(
+  lines: { productId?: string | null; breadcrumbType?: string | null; quantity: number }[]
+): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const l of lines) {
+    if (!l.productId || !l.breadcrumbType || l.quantity <= 0) continue;
+    const key = `${l.productId}__${l.breadcrumbType}`;
+    m.set(key, (m.get(key) ?? 0) + l.quantity);
+  }
+  return m;
+}
+
+export async function editSale(
+  kind: SaleKind,
+  id: string,
+  input: EditSaleInput
+): Promise<void> {
+  if (!Array.isArray(input.items) || input.items.length === 0)
+    throw new Error("El pedido necesita al menos un producto.");
+  for (const it of input.items) {
+    if (!it.productName?.trim()) throw new Error("Falta el nombre de un producto.");
+    if (!Number.isFinite(Number(it.quantity)) || Number(it.quantity) <= 0)
+      throw new Error(`Cantidad inválida para ${it.productName}.`);
+    if (!Number.isFinite(Number(it.unitPrice)) || Number(it.unitPrice) < 0)
+      throw new Error(`Precio inválido para ${it.productName}.`);
+  }
+
+  const newLines = input.items.map((it) => ({
+    productId: it.productId || null,
+    productName: it.productName.trim(),
+    breadcrumbType: it.breadcrumbType || null,
+    quantity: Math.round(Number(it.quantity)),
+    unitPrice: Math.round(Number(it.unitPrice)),
+    lineSubtotal: Math.round(Number(it.quantity)) * Math.round(Number(it.unitPrice)),
+  }));
+  const shortId = id.slice(-6).toUpperCase();
+
+  if (kind === "ORDER") {
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!order) throw new Error("Pedido no encontrado.");
+    if (order.status === "CANCELLED")
+      throw new Error("Un pedido cancelado no se puede editar.");
+
+    const oldUnits = unitsByVariant(order.items);
+    const newUnits = unitsByVariant(newLines);
+    const productsTotal = newLines.reduce((a, l) => a + l.lineSubtotal, 0);
+    const newTotal = productsTotal + (order.shippingCost ?? 0) - order.discountAmount;
+
+    await prisma.$transaction(async (tx) => {
+      await applyStockDiff(tx, oldUnits, newUnits, "ORDER", id, shortId);
+      await tx.orderItem.deleteMany({ where: { orderId: id } });
+      await tx.order.update({
+        where: { id },
+        data: {
+          customerName: input.customerName?.trim() || order.customerName,
+          customerPhone: input.customerPhone?.trim() || order.customerPhone,
+          address: input.address !== undefined ? input.address : order.address,
+          scheduledDate: input.scheduledDate
+            ? new Date(`${input.scheduledDate}T12:00:00`)
+            : order.scheduledDate,
+          scheduledSlot: input.scheduledSlot ?? order.scheduledSlot,
+          notes: input.notes !== undefined ? input.notes : order.notes,
+          total: Math.max(0, newTotal),
+          items: {
+            create: newLines.map((l) => ({
+              productId: l.productId as string,
+              quantity: l.quantity,
+              priceAtTime: l.unitPrice,
+              breadcrumbType: l.breadcrumbType ?? "TRADITIONAL",
+            })),
+          },
+        },
+      });
+    });
+  } else {
+    const sale = await prisma.manualSale.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!sale) throw new Error("Venta no encontrada.");
+    if (sale.deliveryStatus === "CANCELLED")
+      throw new Error("Una venta cancelada no se puede editar.");
+
+    const oldUnits = unitsByVariant(sale.items);
+    const newUnits = unitsByVariant(newLines);
+    const gross = newLines.reduce((a, l) => a + l.lineSubtotal, 0);
+    const discountAmount = Math.round((gross * sale.discountPct) / 100);
+    const net = gross - discountAmount;
+
+    await prisma.$transaction(async (tx) => {
+      await applyStockDiff(tx, oldUnits, newUnits, "MANUAL_SALE", id, shortId);
+      await tx.saleItem.deleteMany({ where: { saleId: id } });
+      await tx.manualSale.update({
+        where: { id },
+        data: {
+          notes: input.notes !== undefined ? input.notes : sale.notes,
+          gross,
+          discountAmount,
+          net,
+          items: {
+            create: newLines.map((l) => ({
+              productId: l.productId,
+              productName: l.productName,
+              breadcrumbType: l.breadcrumbType,
+              quantity: l.quantity,
+              unitPrice: l.unitPrice,
+              lineSubtotal: l.lineSubtotal,
+            })),
+          },
+        },
+      });
+    });
+  }
+}
+
+// Reconcile stock by the net difference per variant, logging one ADJUSTMENT per
+// changed variant. delta = new − old: positive means MORE was sold (discount
+// stock, negative movement); negative means LESS (restock, positive movement).
+async function applyStockDiff(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  oldUnits: Map<string, number>,
+  newUnits: Map<string, number>,
+  referenceType: "ORDER" | "MANUAL_SALE",
+  refId: string,
+  shortId: string
+): Promise<void> {
+  const keys = new Set([...oldUnits.keys(), ...newUnits.keys()]);
+  for (const key of keys) {
+    const [productId, bc] = key.split("__");
+    const delta = (newUnits.get(key) ?? 0) - (oldUnits.get(key) ?? 0);
+    if (delta === 0) continue;
+    const product = await tx.product.findUnique({
+      where: { id: productId },
+      select: { stocks: true },
+    });
+    if (!product) continue;
+    const stocks = parseMap(product.stocks);
+    // stock change is the opposite of the sold-units change.
+    stocks[bc] = Math.max(0, (stocks[bc] ?? 0) - delta);
+    const total = Object.values(stocks).reduce((a, b) => a + b, 0);
+    await tx.product.update({
+      where: { id: productId },
+      data: { stocks: JSON.stringify(stocks), stock: total },
+    });
+    await tx.stockMovement.create({
+      data: {
+        productId,
+        breadcrumbType: bc,
+        quantity: -delta, // sold more → stock down; sold less → stock up
+        type: "ADJUSTMENT",
+        referenceType,
+        referenceId: refId,
+        notes: `Ajuste por edición de pedido #${shortId}`,
+      },
+    });
+  }
+}
+
 function parseMap(raw: string): Record<string, number> {
   try {
     const v = JSON.parse(raw);
