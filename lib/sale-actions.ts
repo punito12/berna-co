@@ -8,6 +8,7 @@
 import { prisma } from "@/lib/db";
 import type { SaleKind } from "@/lib/sales-detail";
 import { recordCashOrderIncome } from "@/lib/cash";
+import { deleteManualSale } from "@/lib/management";
 
 export const ACTIVE_STATUSES = ["CONFIRMED", "DELIVERED", "CANCELLED"] as const;
 
@@ -134,6 +135,65 @@ async function cancelSale(kind: SaleKind, id: string): Promise<void> {
       referenceType: "MANUAL_SALE",
     });
   }
+}
+
+// ---- Hard delete (Part 3: "Borrar definitivamente") ------------------------
+//
+// Removes the record entirely. Reverts stock and Caja just like a cancellation,
+// then deletes. Only for load errors — cancelling is the normal path.
+export async function deleteSaleOrOrder(
+  kind: SaleKind,
+  id: string
+): Promise<void> {
+  if (kind === "MANUAL") {
+    // deleteManualSale already restocks + clears the sale's Caja movements.
+    await deleteManualSale(id);
+    return;
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { items: true },
+  });
+  if (!order) throw new Error("Pedido no encontrado.");
+  const wasCancelled = order.status === "CANCELLED";
+
+  await prisma.$transaction(async (tx) => {
+    // Restock only if it wasn't already cancelled (a cancelled order already
+    // returned its stock).
+    if (!wasCancelled) {
+      const byProduct = new Map<string, Map<string, number>>();
+      for (const it of order.items) {
+        if (!it.productId || !it.breadcrumbType) continue;
+        if (!byProduct.has(it.productId)) byProduct.set(it.productId, new Map());
+        const m = byProduct.get(it.productId)!;
+        m.set(it.breadcrumbType, (m.get(it.breadcrumbType) ?? 0) + it.quantity);
+      }
+      for (const [productId, perBreadcrumb] of byProduct) {
+        const product = await tx.product.findUnique({
+          where: { id: productId },
+          select: { stocks: true },
+        });
+        if (!product) continue;
+        const stocks = parseMap(product.stocks);
+        for (const [bc, qty] of perBreadcrumb)
+          stocks[bc] = (stocks[bc] ?? 0) + qty;
+        const total = Object.values(stocks).reduce((a, b) => a + b, 0);
+        await tx.product.update({
+          where: { id: productId },
+          data: { stocks: JSON.stringify(stocks), stock: total },
+        });
+      }
+    }
+    // Remove the order's Caja movements and its stock movements (audit rows for
+    // a record that no longer exists would be orphaned).
+    await tx.cashMovement.deleteMany({ where: { orderId: id } });
+    await tx.stockMovement.deleteMany({
+      where: { referenceType: "ORDER", referenceId: id },
+    });
+    // Payments + order items cascade-delete with the order.
+    await tx.order.delete({ where: { id } });
+  });
 }
 
 function parseMap(raw: string): Record<string, number> {

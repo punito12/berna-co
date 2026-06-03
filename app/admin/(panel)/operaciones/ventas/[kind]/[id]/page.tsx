@@ -48,6 +48,12 @@ export default async function SaleDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl">
+      {/* Print-only business header (comprobante) */}
+      <div className="mb-4 hidden border-b border-black pb-3 print:block">
+        <p className="font-black uppercase tracking-tight text-2xl">Berna&co</p>
+        <p className="text-xs">Comprobante de pedido · #{sale.shortId}</p>
+      </div>
+
       <Link
         href="/admin/operaciones/ventas"
         className="mb-4 inline-block font-bold uppercase tracking-widest text-xs text-muted hover:text-ink print:hidden"
@@ -87,8 +93,13 @@ export default async function SaleDetailPage({
         shortId={sale.shortId}
         status={sale.status}
         balance={sale.balance}
+        total={sale.total}
         customerName={sale.customerName}
         customerPhone={sale.customerPhone}
+        itemsText={sale.items
+          .map((it) => `${it.quantity}x ${it.productName} (${it.breadcrumbLabel})`)
+          .join(", ")}
+        totalText={pesos(sale.total)}
       />
 
       {/* Data grid */}
