@@ -2,16 +2,11 @@ import {
   getCashDashboard,
   getMonthlySummary,
   EXPENSE_CATEGORIES,
+  CAJA_TABS,
 } from "@/lib/cash";
 import { resolvePeriod } from "@/lib/management";
 import SubTabs from "@/components/SubTabs";
 import ExpensePie from "@/components/ExpensePie";
-
-export const CAJA_TABS = [
-  { href: "/admin/caja", label: "Resumen" },
-  { href: "/admin/caja/movimientos", label: "Movimientos" },
-  { href: "/admin/caja/cargar", label: "Cargar" },
-];
 
 function pesos(n: number): string {
   return new Intl.NumberFormat("es-AR", {

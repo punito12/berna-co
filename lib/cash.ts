@@ -7,6 +7,15 @@
 
 import { prisma } from "@/lib/db";
 
+// Sub-tabs for the Caja section (shared by the three Caja pages). Lives here
+// (not in a page file) because Next.js forbids arbitrary named exports from
+// route files.
+export const CAJA_TABS = [
+  { href: "/admin/caja", label: "Resumen" },
+  { href: "/admin/caja/movimientos", label: "Movimientos" },
+  { href: "/admin/caja/cargar", label: "Cargar" },
+];
+
 export const EXPENSE_CATEGORIES = [
   "Materia Prima",
   "Packaging",

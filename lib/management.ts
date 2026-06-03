@@ -362,6 +362,82 @@ export async function deleteManualSale(id: string) {
   await prisma.manualSale.delete({ where: { id } });
 }
 
+// Unified sales feed: web orders (origin WEB) + manual sales (their channel),
+// normalized into one row shape and sorted by date. Read-only view for the
+// "Pedidos y ventas" operations screen. `origin` filters across both sources.
+export type UnifiedSale = {
+  id: string;
+  kind: "ORDER" | "MANUAL"; // which table it came from
+  origin: string; // WEB | WHATSAPP | MAYORISTA | KIOSCO
+  date: Date;
+  customerName: string;
+  total: number;
+  status: string; // order status, or "—" for manual sales
+  itemsCount: number;
+  href: string; // where to open the detail
+};
+
+export async function listSalesUnified(filters: {
+  origin?: string;
+  limit?: number;
+}): Promise<UnifiedSale[]> {
+  const limit = filters.limit ?? 200;
+  const origin = filters.origin;
+
+  // Web orders count as origin WEB; include them unless a non-WEB origin filter
+  // is set.
+  const includeOrders = !origin || origin === "WEB";
+  // Manual sales: filter by their channel if a specific origin is requested.
+  const manualWhere = origin && origin !== "WEB" ? { channel: origin } : {};
+
+  const [orders, sales] = await Promise.all([
+    includeOrders
+      ? prisma.order.findMany({
+          orderBy: { createdAt: "desc" },
+          take: limit,
+          include: { items: { select: { id: true } } },
+        })
+      : Promise.resolve([]),
+    prisma.manualSale.findMany({
+      where: manualWhere,
+      orderBy: { soldAt: "desc" },
+      take: limit,
+      include: { items: { select: { id: true } } },
+    }),
+  ]);
+
+  const rows: UnifiedSale[] = [];
+  for (const o of orders) {
+    rows.push({
+      id: o.id,
+      kind: "ORDER",
+      origin: "WEB",
+      date: o.createdAt,
+      customerName: o.customerName,
+      total: o.total,
+      status: o.status,
+      itemsCount: o.items.length,
+      href: `/admin/pedidos?focus=${o.id}`,
+    });
+  }
+  for (const s of sales) {
+    rows.push({
+      id: s.id,
+      kind: "MANUAL",
+      origin: s.channel,
+      date: s.soldAt,
+      customerName: s.customerName ?? "Sin nombre",
+      total: s.net,
+      status: "—",
+      itemsCount: s.items.length,
+      href: `/admin/ventas`,
+    });
+  }
+
+  rows.sort((a, b) => b.date.getTime() - a.date.getTime());
+  return rows.slice(0, limit);
+}
+
 // Products for the sale form: name + current price (the tradicional/default).
 export async function listProductsForSale() {
   const products = await prisma.product.findMany({ orderBy: { name: "asc" } });

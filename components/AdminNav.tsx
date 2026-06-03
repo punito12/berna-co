@@ -5,18 +5,72 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import BernaLogo from "@/components/BernaLogo";
 
-// Top-level admin sections. Sub-tabs (Ventas, Facturación) live inside each page.
-const LINKS = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/caja", label: "Caja" },
-  { href: "/admin/pedidos", label: "Pedidos" },
-  { href: "/admin/ventas", label: "Ventas" },
-  { href: "/admin/productos", label: "Productos" },
-  { href: "/admin/facturacion", label: "Facturación" },
-  { href: "/admin/clientes", label: "Clientes" },
-  { href: "/admin/rentabilidad", label: "Rentabilidad" },
-  { href: "/admin/entregas", label: "Entregas" },
-  { href: "/admin/newsletter", label: "Newsletter" },
+// Admin navigation, grouped into sections with headers. Each link points at an
+// existing route or a placeholder page; the data logic is untouched (Fase 1).
+const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = [
+  {
+    title: "Inicio",
+    links: [{ href: "/admin", label: "Dashboard" }],
+  },
+  {
+    title: "Operaciones",
+    links: [
+      { href: "/admin/operaciones/ventas", label: "Pedidos y ventas" },
+      { href: "/admin/entregas", label: "Entregas" },
+      { href: "/admin/ventas", label: "Cargar venta manual" },
+    ],
+  },
+  {
+    title: "Finanzas",
+    links: [
+      { href: "/admin/caja", label: "Caja" },
+      { href: "/admin/finanzas/cobrar", label: "Cuentas por cobrar" },
+      { href: "/admin/finanzas/pagar", label: "Cuentas por pagar" },
+      { href: "/admin/rentabilidad", label: "Rentabilidad" },
+    ],
+  },
+  {
+    title: "Stock",
+    links: [
+      { href: "/admin/stock", label: "Inventario actual" },
+      { href: "/admin/stock/movimientos", label: "Movimientos" },
+      { href: "/admin/stock/produccion", label: "Producción" },
+    ],
+  },
+  {
+    title: "Compras",
+    links: [
+      { href: "/admin/compras", label: "Órdenes de compra" },
+      { href: "/admin/compras/proveedores", label: "Proveedores" },
+    ],
+  },
+  {
+    title: "Clientes",
+    links: [
+      { href: "/admin/clientes", label: "Lista de clientes" },
+      { href: "/admin/facturacion/barrios", label: "Barrios" },
+    ],
+  },
+  {
+    title: "Catálogo",
+    links: [
+      { href: "/admin/productos", label: "Productos" },
+      { href: "/admin/ventas/promociones", label: "Promociones" },
+      { href: "/admin/catalogo/codigos", label: "Códigos de descuento" },
+    ],
+  },
+  {
+    title: "Marketing",
+    links: [{ href: "/admin/newsletter", label: "Suscriptores" }],
+  },
+  {
+    title: "Configuración",
+    links: [
+      { href: "/admin/config/zonas", label: "Zonas" },
+      { href: "/admin/config/horarios", label: "Días y horarios" },
+      { href: "/admin/config/negocio", label: "Datos del negocio" },
+    ],
+  },
 ];
 
 export default function AdminNav() {
@@ -43,12 +97,21 @@ export default function AdminNav() {
     router.refresh();
   }
 
+  // Active when the path matches this link AND no other (longer) link is a
+  // better match — so /admin/ventas/promociones lights "Promociones", not
+  // "Cargar venta manual" (/admin/ventas).
+  const ALL_HREFS = SECTIONS.flatMap((s) => s.links.map((l) => l.href));
   function isActive(href: string) {
     if (href === "/admin") return pathname === "/admin";
-    // Facturación owns the Barrios sub-route.
-    if (href === "/admin/facturacion")
-      return pathname.startsWith("/admin/facturacion") || pathname.startsWith("/admin/barrios");
-    return pathname.startsWith(href);
+    if (!(pathname === href || pathname.startsWith(href + "/"))) return false;
+    // Reject if a more specific sibling link matches the path better.
+    const better = ALL_HREFS.some(
+      (h) =>
+        h !== href &&
+        h.length > href.length &&
+        (pathname === h || pathname.startsWith(h + "/"))
+    );
+    return !better;
   }
 
   return (
@@ -109,18 +172,25 @@ export default function AdminNav() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto py-2">
-              {LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`block px-5 py-3 font-bold uppercase tracking-wide text-sm transition-colors ${
-                    isActive(link.href)
-                      ? "bg-white text-ink"
-                      : "text-white hover:bg-white/10"
-                  }`}
-                >
-                  {link.label}
-                </Link>
+              {SECTIONS.map((section) => (
+                <div key={section.title} className="mb-1">
+                  <p className="px-5 pb-1 pt-3 font-bold uppercase tracking-widest text-[10px] text-cream/60">
+                    {section.title}
+                  </p>
+                  {section.links.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`block px-5 py-2.5 font-bold uppercase tracking-wide text-[13px] transition-colors ${
+                        isActive(link.href)
+                          ? "bg-white text-ink"
+                          : "text-white hover:bg-white/10"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
               ))}
             </div>
             <button

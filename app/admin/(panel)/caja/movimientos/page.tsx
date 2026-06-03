@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { listMovements, INCOME_SOURCE_LABELS } from "@/lib/cash";
+import { listMovements, INCOME_SOURCE_LABELS, CAJA_TABS } from "@/lib/cash";
 import { resolvePeriod } from "@/lib/management";
 import SubTabs from "@/components/SubTabs";
-import { CAJA_TABS } from "../page";
 import CashDeleteButton from "@/components/CashDeleteButton";
 
 function pesos(n: number): string {

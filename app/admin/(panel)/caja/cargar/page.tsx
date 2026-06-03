@@ -1,7 +1,6 @@
 import SubTabs from "@/components/SubTabs";
-import { CAJA_TABS } from "../page";
 import CashForms from "@/components/CashForms";
-import { EXPENSE_CATEGORIES, INCOME_SOURCES } from "@/lib/cash";
+import { EXPENSE_CATEGORIES, INCOME_SOURCES, CAJA_TABS } from "@/lib/cash";
 
 // Caja — Cargar: forms to add a manual income or an expense.
 export default function CajaCargarPage() {
