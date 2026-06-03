@@ -3,6 +3,7 @@
 // storefront logic. API routes call these after checking isAuthenticated().
 
 import { prisma } from "@/lib/db";
+import { recordManualSaleIncome } from "@/lib/cash";
 
 // ---- Customers ----
 
@@ -312,7 +313,7 @@ export async function createManualSale(input: SaleInput) {
   const customerName =
     customer?.name ?? input.customerName?.trim() ?? null;
 
-  await prisma.manualSale.create({
+  const sale = await prisma.manualSale.create({
     data: {
       soldAt,
       channel: input.channel,
@@ -333,7 +334,20 @@ export async function createManualSale(input: SaleInput) {
         })),
       },
     },
+    select: { id: true, net: true, soldAt: true },
   });
+
+  // Mirror the sale into Caja as an income (deduped by saleId).
+  try {
+    await recordManualSaleIncome({
+      id: sale.id,
+      net: sale.net,
+      soldAt: sale.soldAt,
+      label: customerName ?? SALE_CHANNEL_LABELS[input.channel] ?? "Venta",
+    });
+  } catch (e) {
+    console.error("recordManualSaleIncome failed:", e);
+  }
 }
 
 export async function listManualSales(limit = 100) {
@@ -600,6 +614,13 @@ export function resolvePeriod(
   toStr?: string
 ): { from: Date; to: Date; label: string } {
   const now = new Date();
+  if (preset === "today") {
+    const from = new Date(now);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(from);
+    to.setDate(to.getDate() + 1);
+    return { from, to, label: "Hoy" };
+  }
   if (preset === "week") {
     const from = new Date(now);
     from.setDate(from.getDate() - 7);

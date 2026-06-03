@@ -230,6 +230,39 @@ model SaleItem {
   lineSubtotal Int // qtyKg * unitPrice, before the sale discount (pesos)
 }
 
+// Cash box (Caja) movement: an income or expense, manual or auto-generated from
+// a web order / manual sale. MP incomes carry the real accrual date so the box
+// can separate money available today from money pending release.
+model CashMovement {
+  id   String   @id @default(cuid())
+  date DateTime // when the movement happened (income earned / expense paid)
+
+  type   String // INCOME | EXPENSE
+  amount Int // pesos, always positive; `type` gives the sign
+
+  description String
+  category    String // expense categories or income label (see lib/cash.ts)
+
+  // INCOME source channel. EXPENSE rows leave this empty.
+  source String @default("") // EFECTIVO | MERCADO_PAGO | TRANSFERENCIA
+
+  // AVAILABLE = counted in today's balance. PENDING = money not released yet
+  // (MP), counted in "a acreditar" until `accrualDate` passes.
+  status      String    @default("AVAILABLE")
+  accrualDate DateTime? // real money_release_date for MP; null = immediate
+
+  // Links back to the origin so movements are idempotent (one per payment/order).
+  paymentId String? @unique // MP payment id
+  orderId   String? // web order that generated this movement
+  saleId    String? // manual sale that generated this movement
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([status, accrualDate])
+}
+
 // A discount code the customer types at checkout. Percent OR fixed amount.
 model DiscountCode {
   id        String  @id @default(cuid())

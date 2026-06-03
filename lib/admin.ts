@@ -3,6 +3,7 @@
 // call these first check isAuthenticated().
 
 import { prisma } from "@/lib/db";
+import { recordCashOrderIncome } from "@/lib/cash";
 
 // ---- Orders ----
 
@@ -108,7 +109,29 @@ export async function updateOrderStatus(id: string, status: string) {
   if (!ORDER_STATUSES.includes(status as OrderStatus)) {
     throw new Error("Estado inválido.");
   }
-  await prisma.order.update({ where: { id }, data: { status } });
+  const order = await prisma.order.update({
+    where: { id },
+    data: { status },
+    select: {
+      id: true,
+      status: true,
+      total: true,
+      paymentMethod: true,
+      customerName: true,
+      createdAt: true,
+    },
+  });
+
+  // A cash web order entering CONFIRMED is real money collected: record it in
+  // Caja (deduped by orderId, so re-confirming won't double-count). MP orders
+  // are handled by the payment webhook, not here.
+  if (order.status === "CONFIRMED" && order.paymentMethod === "CASH") {
+    try {
+      await recordCashOrderIncome(order);
+    } catch (e) {
+      console.error("recordCashOrderIncome failed:", e);
+    }
+  }
 }
 
 // ---- Products ----

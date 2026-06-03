@@ -8,6 +8,7 @@ import BernaLogo from "@/components/BernaLogo";
 // Top-level admin sections. Sub-tabs (Ventas, Facturación) live inside each page.
 const LINKS = [
   { href: "/admin", label: "Dashboard" },
+  { href: "/admin/caja", label: "Caja" },
   { href: "/admin/pedidos", label: "Pedidos" },
   { href: "/admin/ventas", label: "Ventas" },
   { href: "/admin/productos", label: "Productos" },

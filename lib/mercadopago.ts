@@ -5,6 +5,7 @@
 import { MercadoPagoConfig, Preference, Payment } from "mercadopago";
 import { prisma } from "@/lib/db";
 import { BREADCRUMB_LABELS } from "@/lib/products";
+import { recordMpPaymentIncome } from "@/lib/cash";
 
 export function isMpConfigured(): boolean {
   return Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN);
@@ -110,6 +111,8 @@ export async function syncPaymentToOrder(paymentId: string): Promise<void> {
   else if (payment.status === "rejected" || payment.status === "cancelled")
     status = "CANCELLED";
 
+  const isApproved = payment.status === "approved";
+
   // If this newly cancels the order, give the reserved stock back (once).
   const newlyCancelled = status === "CANCELLED" && order.status !== "CANCELLED";
 
@@ -153,4 +156,31 @@ export async function syncPaymentToOrder(paymentId: string): Promise<void> {
       }
     }
   });
+
+  // Record the income in Caja once the payment is approved. We read MP's real
+  // money_release_date so the box can mark it PENDING until the money is
+  // actually released. Deduped by paymentId, so safe across webhook retries.
+  if (isApproved) {
+    const releaseRaw = (payment as { money_release_date?: string })
+      .money_release_date;
+    const releaseDate = releaseRaw ? new Date(releaseRaw) : null;
+    const approvedRaw =
+      (payment as { date_approved?: string }).date_approved || undefined;
+    const approvedAt = approvedRaw ? new Date(approvedRaw) : new Date();
+    const amount = Math.round(
+      Number(payment.transaction_amount ?? order.total)
+    );
+    try {
+      await recordMpPaymentIncome({
+        paymentId: String(payment.id),
+        orderId,
+        amount,
+        customerName: order.customerName,
+        approvedAt,
+        releaseDate,
+      });
+    } catch (e) {
+      console.error("recordMpPaymentIncome failed:", e);
+    }
+  }
 }
