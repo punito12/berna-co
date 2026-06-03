@@ -57,11 +57,40 @@ model Product {
   promoPercents String @default("{}")
   promoTypes    String @default("{}")
 
-  orderItems OrderItem[]
-  saleItems  SaleItem[]
+  orderItems     OrderItem[]
+  saleItems      SaleItem[]
+  stockMovements StockMovement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// A single change to a product's per-empanado stock, with its cause. Quantity
+// is signed: positive adds stock (producción, ajuste +), negative removes it
+// (venta, merma, ajuste −). The reference links to the sale/order/purchase that
+// originated it (when applicable), so the history is auditable.
+model StockMovement {
+  id   String   @id @default(cuid())
+  date DateTime @default(now())
+
+  productId      String
+  product        Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  breadcrumbType String // TRADITIONAL | INTEGRAL | KETO
+
+  quantity Int // signed units (+ adds, − removes)
+  type     String // PRODUCTION | SALE | ADJUSTMENT | WASTE | PURCHASE
+
+  // What originated the movement (for the audit trail + linking back).
+  referenceType String? // ORDER | MANUAL_SALE | PURCHASE | MANUAL
+  referenceId   String?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([date])
+  @@index([type])
 }
 
 model Order {

@@ -309,6 +309,31 @@ export async function createOrder(
     }
   }
 
+  // Record the SALE stock movements for the audit trail. The stock numbers were
+  // already adjusted inside the transaction above; here we only log the history.
+  try {
+    const moves = [...unitsByVariant.entries()]
+      .map(([key, units]) => {
+        const [productId, breadcrumbType] = key.split("__");
+        return { productId, breadcrumbType, quantity: -units };
+      })
+      .filter((m) => m.productId && m.breadcrumbType && m.quantity !== 0);
+    if (moves.length > 0) {
+      await prisma.stockMovement.createMany({
+        data: moves.map((m) => ({
+          productId: m.productId,
+          breadcrumbType: m.breadcrumbType,
+          quantity: m.quantity,
+          type: "SALE",
+          referenceType: "ORDER",
+          referenceId: order.id,
+        })),
+      });
+    }
+  } catch (e) {
+    console.error("stock movement (web order) failed:", e);
+  }
+
   return { id: order.id };
 }
 

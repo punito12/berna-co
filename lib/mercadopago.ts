@@ -153,6 +153,20 @@ export async function syncPaymentToOrder(paymentId: string): Promise<void> {
           where: { id: productId },
           data: { stocks: JSON.stringify(stocks), stock: total },
         });
+        // Audit: log the restock as an ADJUSTMENT linked to this order.
+        for (const [breadcrumb, qty] of perBreadcrumb) {
+          await tx.stockMovement.create({
+            data: {
+              productId,
+              breadcrumbType: breadcrumb,
+              quantity: qty, // positive: stock returns
+              type: "ADJUSTMENT",
+              referenceType: "ORDER",
+              referenceId: orderId,
+              notes: "Reintegro por cancelación de pedido",
+            },
+          });
+        }
       }
     }
   });

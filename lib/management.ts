@@ -352,7 +352,11 @@ export async function createManualSale(input: SaleInput) {
   // Discount stock for the lines that track a product + empanado (free-text
   // lines are skipped). Cancelling the sale later restocks the same amount.
   try {
-    await adjustStockForLines(lines, -1);
+    await adjustStockForLines(lines, -1, {
+      type: "SALE",
+      referenceType: "MANUAL_SALE",
+      referenceId: sale.id,
+    });
   } catch (e) {
     console.error("adjustStockForLines (sale create) failed:", e);
   }
@@ -392,7 +396,12 @@ async function reverseSaleEffects(saleId: string) {
   if (!sale) return;
   // Restock (only lines that tracked product + empanado).
   try {
-    await adjustStockForLines(sale.items, 1);
+    await adjustStockForLines(sale.items, 1, {
+      type: "ADJUSTMENT",
+      referenceType: "MANUAL_SALE",
+      referenceId: saleId,
+      notes: "Reintegro por cancelación/eliminación de venta",
+    });
   } catch (e) {
     console.error("restock on reverse failed:", e);
   }
@@ -443,7 +452,12 @@ export async function setSaleDeliveryStatus(id: string, status: string) {
     // Re-activating a cancelled sale: discount stock again. (Caja income is not
     // auto-recreated — re-register the payment/cobro if it applied.)
     try {
-      await adjustStockForLines(sale.items, -1);
+      await adjustStockForLines(sale.items, -1, {
+        type: "SALE",
+        referenceType: "MANUAL_SALE",
+        referenceId: id,
+        notes: "Reactivación de venta",
+      });
     } catch (e) {
       console.error("re-discount on un-cancel failed:", e);
     }
