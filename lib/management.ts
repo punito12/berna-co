@@ -484,50 +484,93 @@ export async function markSalePaid(id: string, method = "EFECTIVO") {
 }
 
 // Unified sales feed: web orders (origin WEB) + manual sales (their channel),
-// normalized into one row shape and sorted by date. Read-only view for the
-// "Pedidos y ventas" operations screen. `origin` filters across both sources.
+// normalized into one row shape and sorted by date. Backs the "Pedidos y
+// ventas" screen. Filters (all combinable): origin, customer type, status,
+// date range. Status is normalized to the 3-state cycle CONFIRMED / DELIVERED
+// / CANCELLED (legacy PENDING/READY collapse to CONFIRMED).
 export type UnifiedSale = {
   id: string;
   kind: "ORDER" | "MANUAL"; // which table it came from
   origin: string; // WEB | WHATSAPP | MAYORISTA | KIOSCO
   date: Date;
   customerName: string;
+  customerType: string | null; // MINORISTA | MAYORISTA | KIOSCO
   total: number;
-  status: string; // order status, or "—" for manual sales
+  status: string; // CONFIRMED | DELIVERED | CANCELLED
+  paymentLabel: string; // short payment hint for the row
   itemsCount: number;
-  href: string; // where to open the detail
+  href: string; // detail page
 };
 
-export async function listSalesUnified(filters: {
-  origin?: string;
+export type UnifiedFilters = {
+  origin?: string; // WEB | WHATSAPP | MAYORISTA | KIOSCO
+  customerType?: string; // MINORISTA | MAYORISTA | KIOSCO
+  status?: string; // CONFIRMED | DELIVERED | CANCELLED
+  from?: Date;
+  to?: Date;
   limit?: number;
-}): Promise<UnifiedSale[]> {
-  const limit = filters.limit ?? 200;
-  const origin = filters.origin;
+};
 
-  // Web orders count as origin WEB; include them unless a non-WEB origin filter
-  // is set.
+// Collapse any legacy/granular status into the 3-state cycle.
+function normalizeStatus(raw: string): string {
+  if (raw === "CANCELLED") return "CANCELLED";
+  if (raw === "DELIVERED") return "DELIVERED";
+  return "CONFIRMED"; // PENDING/READY/CONFIRMED all show as confirmed
+}
+
+function detailHref(kind: "ORDER" | "MANUAL", id: string): string {
+  return `/admin/operaciones/ventas/${kind === "ORDER" ? "order" : "sale"}/${id}`;
+}
+
+export async function listSalesUnified(
+  filters: UnifiedFilters
+): Promise<UnifiedSale[]> {
+  const limit = filters.limit ?? 500;
+  const origin = filters.origin;
+  const wantType = filters.customerType;
+
   const includeOrders = !origin || origin === "WEB";
-  // Manual sales: filter by their channel if a specific origin is requested.
-  const manualWhere = origin && origin !== "WEB" ? { channel: origin } : {};
+  const dateRange =
+    filters.from || filters.to
+      ? {
+          ...(filters.from ? { gte: filters.from } : {}),
+          ...(filters.to ? { lt: filters.to } : {}),
+        }
+      : undefined;
+
+  const orderWhere: Record<string, unknown> = {};
+  if (dateRange) orderWhere.createdAt = dateRange;
+  if (wantType) orderWhere.customer = { type: wantType };
+
+  const saleWhere: Record<string, unknown> = {};
+  if (origin && origin !== "WEB") saleWhere.channel = origin;
+  if (dateRange) saleWhere.soldAt = dateRange;
+  if (wantType) saleWhere.customer = { type: wantType };
 
   const [orders, sales] = await Promise.all([
     includeOrders
       ? prisma.order.findMany({
+          where: orderWhere,
           orderBy: { createdAt: "desc" },
           take: limit,
-          include: { items: { select: { id: true } } },
+          include: {
+            items: { select: { id: true } },
+            customer: { select: { type: true } },
+          },
         })
       : Promise.resolve([]),
     prisma.manualSale.findMany({
-      where: manualWhere,
+      where: saleWhere,
       orderBy: { soldAt: "desc" },
       take: limit,
-      include: { items: { select: { id: true } } },
+      include: {
+        items: { select: { id: true } },
+        customer: { select: { type: true } },
+      },
     }),
   ]);
 
-  const rows: UnifiedSale[] = [];
+  let rows: UnifiedSale[] = [];
   for (const o of orders) {
     rows.push({
       id: o.id,
@@ -535,10 +578,13 @@ export async function listSalesUnified(filters: {
       origin: "WEB",
       date: o.createdAt,
       customerName: o.customerName,
+      customerType: o.customer?.type ?? null,
       total: o.total,
-      status: o.status,
+      status: normalizeStatus(o.status),
+      paymentLabel:
+        o.paymentMethod === "MERCADOPAGO" ? "MP pagado" : "Efectivo al recibir",
       itemsCount: o.items.length,
-      href: `/admin/pedidos?focus=${o.id}`,
+      href: detailHref("ORDER", o.id),
     });
   }
   for (const s of sales) {
@@ -548,21 +594,36 @@ export async function listSalesUnified(filters: {
       origin: s.channel,
       date: s.soldAt,
       customerName: s.customerName ?? "Sin nombre",
+      customerType: s.customer?.type ?? null,
       total: s.net,
-      // Reuse the order-status vocabulary so the unified table can label it.
-      status:
-        s.deliveryStatus === "CANCELLED"
-          ? "CANCELLED"
-          : s.deliveryStatus === "DELIVERED"
-          ? "DELIVERED"
-          : "PENDING",
+      status: normalizeStatus(s.deliveryStatus),
+      paymentLabel: s.paymentStatus === "PAID" ? "Cobrada" : "Cta. corriente",
       itemsCount: s.items.length,
-      href: `/admin/ventas`,
+      href: detailHref("MANUAL", s.id),
     });
   }
 
+  // Status filter applies AFTER normalization.
+  if (filters.status) rows = rows.filter((r) => r.status === filters.status);
+
   rows.sort((a, b) => b.date.getTime() - a.date.getTime());
   return rows.slice(0, limit);
+}
+
+// Counts per status for the current filters (ignoring the status filter itself),
+// so the filter buttons can show "(N)". Returns all 3 + total non-cancelled.
+export async function countSalesByStatus(
+  filters: Omit<UnifiedFilters, "status" | "limit">
+): Promise<{ CONFIRMED: number; DELIVERED: number; CANCELLED: number; activos: number }> {
+  const all = await listSalesUnified({ ...filters, limit: 5000 });
+  const out = { CONFIRMED: 0, DELIVERED: 0, CANCELLED: 0, activos: 0 };
+  for (const r of all) {
+    if (r.status === "CONFIRMED") out.CONFIRMED += 1;
+    else if (r.status === "DELIVERED") out.DELIVERED += 1;
+    else if (r.status === "CANCELLED") out.CANCELLED += 1;
+  }
+  out.activos = out.CONFIRMED + out.DELIVERED;
+  return out;
 }
 
 // Products for the sale form: name + current price (the tradicional/default).

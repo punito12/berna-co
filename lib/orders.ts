@@ -237,7 +237,9 @@ export async function createOrder(
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
       data: {
-        status: "PENDING",
+        // Web orders are auto-confirmed; the admin only moves them to DELIVERED
+        // or CANCELLED afterwards.
+        status: "CONFIRMED",
         customerName: name,
         customerPhone: phone,
         customerEmail: input.customerEmail?.trim() || null,

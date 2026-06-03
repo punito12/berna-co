@@ -7,6 +7,12 @@ import { recordCashOrderIncome } from "@/lib/cash";
 
 // ---- Orders ----
 
+// The unified status cycle for both web orders and manual sales. Web orders are
+// born CONFIRMED; the admin moves them to DELIVERED or CANCELLED by hand.
+export const SALE_STATUSES = ["CONFIRMED", "DELIVERED", "CANCELLED"] as const;
+export type SaleStatus = (typeof SALE_STATUSES)[number];
+
+// Kept as the validation set + back-compat with any legacy PENDING/READY rows.
 export const ORDER_STATUSES = [
   "PENDING",
   "CONFIRMED",
@@ -122,10 +128,10 @@ export async function updateOrderStatus(id: string, status: string) {
     },
   });
 
-  // A cash web order entering CONFIRMED is real money collected: record it in
-  // Caja (deduped by orderId, so re-confirming won't double-count). MP orders
-  // are handled by the payment webhook, not here.
-  if (order.status === "CONFIRMED" && order.paymentMethod === "CASH") {
+  // A cash web order is "paga en efectivo al recibir": the money is collected
+  // when it's DELIVERED, so that's when it hits Caja (deduped by orderId). MP
+  // orders are handled by the payment webhook, not here.
+  if (order.status === "DELIVERED" && order.paymentMethod === "CASH") {
     try {
       await recordCashOrderIncome(order);
     } catch (e) {

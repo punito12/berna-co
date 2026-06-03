@@ -18,9 +18,8 @@ function shortDate(d: Date): string {
   return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
 }
 
-// Operaciones → Pedidos y ventas: unified feed of web orders + manual sales,
-// filterable by origin (WEB/WHATSAPP/MAYORISTA/KIOSCO). Read-only (Fase 1);
-// rows link to the existing detail screens.
+// Operaciones → Pedidos y ventas: unified feed of web orders + manual sales.
+// Each row opens the unified detail. (Part 1 — full filters land in Part 2.)
 export default async function PedidosYVentasPage({
   searchParams,
 }: {
@@ -32,7 +31,10 @@ export default async function PedidosYVentasPage({
     ? searchParams.origin
     : undefined;
 
-  const rows = await listSalesUnified({ origin });
+  // Default view hides cancelled (they appear only under that status filter).
+  const rows = (await listSalesUnified({ origin })).filter(
+    (r) => r.status !== "CANCELLED"
+  );
 
   const FILTERS = [
     { key: "", label: "Todos" },
@@ -97,29 +99,30 @@ export default async function PedidosYVentasPage({
             </thead>
             <tbody className="divide-y divide-line">
               {rows.map((r) => (
-                <tr key={`${r.kind}-${r.id}`} className="hover:bg-cream/30">
-                  <td className="whitespace-nowrap px-3 py-2.5 text-ink">
-                    <Link href={r.href} className="block">
-                      {shortDate(r.date)}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2.5">
+                <tr
+                  key={`${r.kind}-${r.id}`}
+                  className="cursor-pointer transition-colors hover:bg-cream/40"
+                >
+                  <Cell href={r.href}>{shortDate(r.date)}</Cell>
+                  <Cell href={r.href}>
                     <span className="rounded bg-cream px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
                       {SALE_CHANNEL_LABELS[r.origin] ?? r.origin}
                     </span>
-                  </td>
-                  <td className="px-3 py-2.5 text-ink">{r.customerName}</td>
-                  <td className="px-3 py-2.5 text-right text-muted">
-                    {r.itemsCount}
-                  </td>
-                  <td className="px-3 py-2.5 text-right text-muted">
-                    {r.status === "—"
-                      ? "—"
-                      : ORDER_STATUS_LABELS[r.status] ?? r.status}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-right font-bold text-ink">
-                    {pesos(r.total)}
-                  </td>
+                  </Cell>
+                  <Cell href={r.href}>
+                    <span className="text-ink">{r.customerName}</span>
+                  </Cell>
+                  <Cell href={r.href} align="right">
+                    <span className="text-muted">{r.itemsCount}</span>
+                  </Cell>
+                  <Cell href={r.href} align="right">
+                    <span className="text-muted">
+                      {ORDER_STATUS_LABELS[r.status] ?? r.status}
+                    </span>
+                  </Cell>
+                  <Cell href={r.href} align="right">
+                    <span className="font-bold text-ink">{pesos(r.total)}</span>
+                  </Cell>
                 </tr>
               ))}
             </tbody>
@@ -127,5 +130,27 @@ export default async function PedidosYVentasPage({
         </div>
       )}
     </div>
+  );
+}
+
+// A table cell that links to the detail (whole cell is the click target).
+function Cell({
+  href,
+  align,
+  children,
+}: {
+  href: string;
+  align?: "right";
+  children: React.ReactNode;
+}) {
+  return (
+    <td className="p-0">
+      <Link
+        href={href}
+        className={`block px-3 py-2.5 ${align === "right" ? "text-right" : ""}`}
+      >
+        {children}
+      </Link>
+    </td>
   );
 }
