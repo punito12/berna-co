@@ -4,7 +4,8 @@
 
 import { prisma } from "@/lib/db";
 import { recordManualSaleIncome } from "@/lib/cash";
-import { DEFAULT_DUE_DAYS } from "@/lib/payments";
+import { DEFAULT_DUE_DAYS, createPayment } from "@/lib/payments";
+import { adjustStockForLines } from "@/lib/stock";
 
 // ---- Customers ----
 
@@ -187,7 +188,7 @@ export async function getBarrioReport(id: string) {
   if (!barrio) return null;
 
   let ordersCount = 0;
-  let qtyKg = 0;
+  let units = 0;
   let gross = 0;
   let net = 0;
 
@@ -203,8 +204,7 @@ export async function getBarrioReport(id: string) {
       net += subtotal;
       cOrders += 1;
       ordersCount += 1;
-      // Each web-order unit counts as 1 kg (every package is 1 kg for this).
-      for (const it of o.items) qtyKg += it.quantity;
+      for (const it of o.items) units += it.quantity;
     }
     // Manual sales.
     for (const s of c.sales) {
@@ -213,7 +213,7 @@ export async function getBarrioReport(id: string) {
       net += s.net;
       cOrders += 1;
       ordersCount += 1;
-      for (const it of s.items) qtyKg += it.qtyKg;
+      for (const it of s.items) units += it.quantity;
     }
     return {
       id: c.id,
@@ -229,7 +229,7 @@ export async function getBarrioReport(id: string) {
     name: barrio.name,
     customersCount: barrio.customers.length,
     ordersCount,
-    qtyKg,
+    units,
     gross,
     net,
     customers,
@@ -249,9 +249,9 @@ export const SALE_CHANNEL_LABELS: Record<string, string> = {
 export type SaleItemInput = {
   productId?: string; // optional: a free-text item has none
   productName: string; // already includes the empanado label when applicable
-  breadcrumbType?: string; // chosen empanado (informational)
-  qtyKg: number;
-  unitPrice: number; // pesos per kg
+  breadcrumbType?: string; // chosen empanado (used to discount stock)
+  quantity: number; // units sold
+  unitPrice: number; // pesos per unit
 };
 
 export type SaleInput = {
@@ -265,15 +265,15 @@ export type SaleInput = {
 };
 
 // Computes gross/discount/net for a set of items + a discount percentage.
-// gross = Σ(qtyKg × unitPrice), rounded per line; net = gross − discount.
+// gross = Σ(quantity × unitPrice), rounded per line; net = gross − discount.
 export function computeSaleTotals(items: SaleItemInput[], discountPct: number) {
   let gross = 0;
   const lines = items.map((it) => {
-    const qty = Number(it.qtyKg);
+    const qty = Math.round(Number(it.quantity));
     const price = Math.round(Number(it.unitPrice));
     const lineSubtotal = Math.round(qty * price);
     gross += lineSubtotal;
-    return { ...it, qtyKg: qty, unitPrice: price, lineSubtotal };
+    return { ...it, quantity: qty, unitPrice: price, lineSubtotal };
   });
   const pct = Math.min(100, Math.max(0, Math.round(discountPct)));
   const discountAmount = Math.round((gross * pct) / 100);
@@ -294,7 +294,7 @@ export async function createManualSale(input: SaleInput) {
   // Validate each item.
   for (const it of input.items) {
     if (!it.productName?.trim()) throw new Error("Falta el nombre de un producto.");
-    if (!Number.isFinite(Number(it.qtyKg)) || Number(it.qtyKg) <= 0) {
+    if (!Number.isFinite(Number(it.quantity)) || Number(it.quantity) <= 0) {
       throw new Error(`Cantidad inválida para ${it.productName}.`);
     }
     if (!Number.isFinite(Number(it.unitPrice)) || Number(it.unitPrice) < 0) {
@@ -339,7 +339,8 @@ export async function createManualSale(input: SaleInput) {
         create: lines.map((l) => ({
           productId: l.productId || null,
           productName: l.productName.trim(),
-          qtyKg: l.qtyKg,
+          breadcrumbType: l.breadcrumbType || null,
+          quantity: l.quantity,
           unitPrice: l.unitPrice,
           lineSubtotal: l.lineSubtotal,
         })),
@@ -347,6 +348,14 @@ export async function createManualSale(input: SaleInput) {
     },
     select: { id: true, net: true, soldAt: true },
   });
+
+  // Discount stock for the lines that track a product + empanado (free-text
+  // lines are skipped). Cancelling the sale later restocks the same amount.
+  try {
+    await adjustStockForLines(lines, -1);
+  } catch (e) {
+    console.error("adjustStockForLines (sale create) failed:", e);
+  }
 
   // Contado: mirror the sale into Caja as income (deduped by saleId). Credit
   // sales wait for a Payment to create the income.
@@ -372,8 +381,92 @@ export async function listManualSales(limit = 100) {
   });
 }
 
+// Reverse everything a manual sale put into the system: restock its items and
+// remove the Caja movements it generated (auto-income + payment incomes). Used
+// by both cancel and delete.
+async function reverseSaleEffects(saleId: string) {
+  const sale = await prisma.manualSale.findUnique({
+    where: { id: saleId },
+    include: { items: true },
+  });
+  if (!sale) return;
+  // Restock (only lines that tracked product + empanado).
+  try {
+    await adjustStockForLines(sale.items, 1);
+  } catch (e) {
+    console.error("restock on reverse failed:", e);
+  }
+  // Remove the Caja income(s) tied to this sale (auto-income and any payment
+  // incomes share the saleId on the CashMovement).
+  try {
+    await prisma.cashMovement.deleteMany({ where: { saleId } });
+  } catch (e) {
+    console.error("cash reversal on sale failed:", e);
+  }
+}
+
 export async function deleteManualSale(id: string) {
+  // Reverse stock + Caja first, then delete (payments cascade-delete with it).
+  await reverseSaleEffects(id);
   await prisma.manualSale.delete({ where: { id } });
+}
+
+export const SALE_DELIVERY_STATUSES = [
+  "PENDING",
+  "DELIVERED",
+  "CANCELLED",
+] as const;
+
+// Set the logistic status of a manual sale. Cancelling restocks and reverses
+// its Caja movements (once). Moving OUT of cancelled re-discounts the stock.
+export async function setSaleDeliveryStatus(id: string, status: string) {
+  if (
+    !SALE_DELIVERY_STATUSES.includes(
+      status as (typeof SALE_DELIVERY_STATUSES)[number]
+    )
+  )
+    throw new Error("Estado inválido.");
+
+  const sale = await prisma.manualSale.findUnique({
+    where: { id },
+    include: { items: true },
+  });
+  if (!sale) throw new Error("Venta no encontrada.");
+  if (sale.deliveryStatus === status) return;
+
+  const wasCancelled = sale.deliveryStatus === "CANCELLED";
+  const willCancel = status === "CANCELLED";
+
+  if (willCancel && !wasCancelled) {
+    await reverseSaleEffects(id);
+  } else if (wasCancelled && !willCancel) {
+    // Re-activating a cancelled sale: discount stock again. (Caja income is not
+    // auto-recreated — re-register the payment/cobro if it applied.)
+    try {
+      await adjustStockForLines(sale.items, -1);
+    } catch (e) {
+      console.error("re-discount on un-cancel failed:", e);
+    }
+  }
+
+  await prisma.manualSale.update({
+    where: { id },
+    data: { deliveryStatus: status },
+  });
+}
+
+// "Marcar pagado": register a payment for the outstanding balance, so it flows
+// through Caja and cuenta corriente like any other cobro. No-op if already paid.
+export async function markSalePaid(id: string, method = "EFECTIVO") {
+  const sale = await prisma.manualSale.findUnique({
+    where: { id },
+    include: { payments: { select: { amount: true } } },
+  });
+  if (!sale) throw new Error("Venta no encontrada.");
+  const paid = sale.payments.reduce((a, p) => a + p.amount, 0);
+  const balance = sale.net - paid;
+  if (balance <= 0) return; // already settled (e.g. contado auto-income)
+  await createPayment({ amount: balance, method, saleId: id });
 }
 
 // Unified sales feed: web orders (origin WEB) + manual sales (their channel),
@@ -442,7 +535,13 @@ export async function listSalesUnified(filters: {
       date: s.soldAt,
       customerName: s.customerName ?? "Sin nombre",
       total: s.net,
-      status: "—",
+      // Reuse the order-status vocabulary so the unified table can label it.
+      status:
+        s.deliveryStatus === "CANCELLED"
+          ? "CANCELLED"
+          : s.deliveryStatus === "DELIVERED"
+          ? "DELIVERED"
+          : "PENDING",
       itemsCount: s.items.length,
       href: `/admin/ventas`,
     });
@@ -493,12 +592,11 @@ export type BillingTotals = {
 
 export type BillingReport = {
   totals: BillingTotals;
-  byProduct: { name: string; qtyKg: number; units: number; net: number }[];
+  byProduct: { name: string; units: number; net: number }[];
   byCustomer: { name: string; net: number; salesCount: number }[];
   byChannel: { channel: string; net: number; gross: number }[];
   byNeighborhood: {
     neighborhood: string;
-    qtyKg: number;
     units: number;
     gross: number;
     net: number;
@@ -533,19 +631,18 @@ export async function getBillingReport(
   let net = 0;
   const byProduct = new Map<
     string,
-    { name: string; qtyKg: number; units: number; net: number }
+    { name: string; units: number; net: number }
   >();
   const byCustomer = new Map<string, { net: number; salesCount: number }>();
   const byChannel = new Map<string, { net: number; gross: number }>();
   // Keyed by neighborhood; only real neighborhoods are added (no "sin barrio").
   const byNeighborhood = new Map<
     string,
-    { qtyKg: number; units: number; gross: number; net: number }
+    { units: number; gross: number; net: number }
   >();
 
   function addNeighborhood(
     name: string | null | undefined,
-    qtyKg: number,
     units: number,
     g: number,
     n: number
@@ -553,26 +650,18 @@ export async function getBillingReport(
     const key = name?.trim();
     if (!key) return; // sales without a neighborhood are left out of this table
     const cur = byNeighborhood.get(key) ?? {
-      qtyKg: 0,
       units: 0,
       gross: 0,
       net: 0,
     };
-    cur.qtyKg += qtyKg;
     cur.units += units;
     cur.gross += g;
     cur.net += n;
     byNeighborhood.set(key, cur);
   }
 
-  function addProduct(
-    name: string,
-    qtyKg: number,
-    units: number,
-    netAmount: number
-  ) {
-    const cur = byProduct.get(name) ?? { name, qtyKg: 0, units: 0, net: 0 };
-    cur.qtyKg += qtyKg;
+  function addProduct(name: string, units: number, netAmount: number) {
+    const cur = byProduct.get(name) ?? { name, units: 0, net: 0 };
     cur.units += units;
     cur.net += netAmount;
     byProduct.set(name, cur);
@@ -600,13 +689,13 @@ export async function getBillingReport(
     // Distribute the sale's net across items proportionally to their subtotal,
     // so per-product net reflects the discount.
     const saleGross = s.gross || 1;
-    let saleKg = 0;
+    let saleUnits = 0;
     for (const it of s.items) {
       const share = s.net * (it.lineSubtotal / saleGross);
-      addProduct(it.productName, it.qtyKg, 0, Math.round(share));
-      saleKg += it.qtyKg;
+      addProduct(it.productName, it.quantity, Math.round(share));
+      saleUnits += it.quantity;
     }
-    addNeighborhood(s.customer?.barrio?.name, saleKg, 0, s.gross, s.net);
+    addNeighborhood(s.customer?.barrio?.name, saleUnits, s.gross, s.net);
   }
 
   // Web orders (channel WEB; no discount; quantities are units).
@@ -627,7 +716,6 @@ export async function getBillingReport(
     for (const it of o.items) {
       addProduct(
         it.product?.name ?? "Producto",
-        0,
         it.quantity,
         it.priceAtTime * it.quantity
       );
@@ -636,7 +724,6 @@ export async function getBillingReport(
     // The web order's barrio comes from its linked customer (if any).
     addNeighborhood(
       o.customer?.barrio?.name,
-      0,
       orderUnits,
       productsTotal,
       productsTotal

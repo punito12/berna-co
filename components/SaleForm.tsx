@@ -25,8 +25,8 @@ type Line = {
   productId: string; // "" = free text
   productName: string;
   breadcrumbType: string; // chosen empanado ("" when product has none/free)
-  qtyKg: string;
-  unitPrice: string;
+  quantity: string; // units
+  unitPrice: string; // pesos per unit
 };
 
 const CHANNELS = [
@@ -48,7 +48,7 @@ function pesos(n: number): string {
 }
 
 // Form to load a manual sale: date, customer (list or free text), channel,
-// multiple product lines (kg × unit price), an editable discount, and live
+// multiple product lines (units × unit price), an editable discount, and live
 // totals. The server recomputes everything on save.
 export default function SaleForm({
   products,
@@ -78,7 +78,7 @@ export default function SaleForm({
   const [discountTouched, setDiscountTouched] = useState(false);
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([
-    { productId: "", productName: "", breadcrumbType: "", qtyKg: "", unitPrice: "" },
+    { productId: "", productName: "", breadcrumbType: "", quantity: "", unitPrice: "" },
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,7 +166,7 @@ export default function SaleForm({
   function addLine() {
     setLines((prev) => [
       ...prev,
-      { productId: "", productName: "", breadcrumbType: "", qtyKg: "", unitPrice: "" },
+      { productId: "", productName: "", breadcrumbType: "", quantity: "", unitPrice: "" },
     ]);
   }
   function removeLine(i: number) {
@@ -177,7 +177,7 @@ export default function SaleForm({
   const totals = useMemo(() => {
     let gross = 0;
     for (const l of lines) {
-      const qty = Number(l.qtyKg) || 0;
+      const qty = Number(l.quantity) || 0;
       const price = Number(l.unitPrice) || 0;
       gross += Math.round(qty * price);
     }
@@ -190,7 +190,7 @@ export default function SaleForm({
     setError(null);
     setSavedMsg(false);
     const items = lines
-      .filter((l) => l.productName.trim() && Number(l.qtyKg) > 0)
+      .filter((l) => l.productName.trim() && Number(l.quantity) > 0)
       .map((l) => ({
         productId: l.productId || undefined,
         productName:
@@ -198,7 +198,7 @@ export default function SaleForm({
             ? `${l.productName.trim()} (${BREADCRUMB_LABELS[l.breadcrumbType]})`
             : l.productName.trim(),
         breadcrumbType: l.breadcrumbType || undefined,
-        qtyKg: Number(l.qtyKg),
+        quantity: Number(l.quantity),
         unitPrice: Number(l.unitPrice) || 0,
       }));
     if (items.length === 0)
@@ -225,7 +225,7 @@ export default function SaleForm({
       if (!res.ok) throw new Error(data?.error ?? "No se pudo guardar.");
       // Reset for the next sale.
       setLines([
-        { productId: "", productName: "", breadcrumbType: "", qtyKg: "", unitPrice: "" },
+        { productId: "", productName: "", breadcrumbType: "", quantity: "", unitPrice: "" },
       ]);
       setCustomerId("");
       setCustomerName("");
@@ -423,7 +423,7 @@ export default function SaleForm({
         <div className="space-y-2">
           {lines.map((line, i) => {
             const subtotal =
-              (Number(line.qtyKg) || 0) * (Number(line.unitPrice) || 0);
+              (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0);
             return (
               <div
                 key={i}
@@ -477,20 +477,20 @@ export default function SaleForm({
                 </label>
                 <label className="block">
                   <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
-                    Kg
+                    Cantidad
                   </span>
                   <input
                     type="number"
                     min={0}
-                    step="0.1"
-                    value={line.qtyKg}
-                    onChange={(e) => updateLine(i, { qtyKg: e.target.value })}
+                    step="1"
+                    value={line.quantity}
+                    onChange={(e) => updateLine(i, { quantity: e.target.value })}
                     className="w-full rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
                   />
                 </label>
                 <label className="block">
                   <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
-                    Precio/kg
+                    Precio/u
                   </span>
                   <input
                     type="number"

@@ -23,8 +23,8 @@ export default async function AdminProfitabilityPage() {
       <p className="mb-6 text-sm text-muted">
         Margen por producto y canal. El precio mayorista aplica −25% y el de
         kiosco −30% sobre el precio público. Cargá el{" "}
-        <span className="font-bold text-ink">costo x kg</span> de cada producto
-        en{" "}
+        <span className="font-bold text-ink">costo x unidad</span> de cada
+        producto en{" "}
         <Link href="/admin/productos" className="underline">
           Productos
         </Link>
@@ -34,7 +34,7 @@ export default async function AdminProfitabilityPage() {
       {!anyCost && (
         <p className="mb-6 rounded-lg border border-black bg-white px-4 py-3 text-sm font-bold text-ink">
           Todavía no cargaste costos. Los márgenes van a aparecer cuando
-          completes el costo x kg de los productos.
+          completes el costo x unidad de los productos.
         </p>
       )}
 
@@ -46,7 +46,7 @@ export default async function AdminProfitabilityPage() {
                 Producto
               </th>
               <th className="px-4 py-3 text-right font-bold uppercase tracking-wide text-[10px] text-muted">
-                Costo/kg
+                Costo/u
               </th>
               <ChannelHead label="Minorista" />
               <ChannelHead label="Mayorista −25%" />

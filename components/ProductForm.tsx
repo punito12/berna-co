@@ -282,7 +282,7 @@ export default function ProductForm({
         </label>
         <label className="block">
           <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-            Costo x kg $
+            Costo x unidad $
           </span>
           <input
             type="number"

@@ -66,6 +66,8 @@ export default async function AdminSalesPage() {
                 gross: s.gross,
                 discountAmount: s.discountAmount,
                 net: s.net,
+                paymentStatus: s.paymentStatus,
+                deliveryStatus: s.deliveryStatus,
               }}
             />
           ))}

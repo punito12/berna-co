@@ -219,6 +219,10 @@ model ManualSale {
   paymentStatus String    @default("PAID") // PAID | PARTIAL | PENDING
   dueDate       DateTime? // vencimiento (cuenta corriente)
 
+  // Estado logístico de la venta, separado del pago. Al cancelar se reintegra
+  // el stock descontado al cargarla.
+  deliveryStatus String @default("PENDING") // PENDING | DELIVERED | CANCELLED
+
   items    SaleItem[]
   payments Payment[]
 
@@ -248,7 +252,7 @@ model Payment {
   @@index([saleId])
 }
 
-// One product line within a manual sale. Quantities are in kg.
+// One product line within a manual sale. Quantities are in units.
 model SaleItem {
   id        String @id @default(cuid())
   saleId    String
@@ -257,10 +261,12 @@ model SaleItem {
   product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   // Snapshot of the product name (so it survives product deletion / free items).
   productName String
+  // Chosen empanado (breadcrumb) — used to discount the right stock bucket.
+  breadcrumbType String?
 
-  qtyKg        Float // kilograms sold
-  unitPrice    Int // price per kg at sale time (pesos)
-  lineSubtotal Int // qtyKg * unitPrice, before the sale discount (pesos)
+  quantity     Int // units sold
+  unitPrice    Int // price per unit at sale time (pesos)
+  lineSubtotal Int // quantity * unitPrice, before the sale discount (pesos)
 }
 
 // Cash box (Caja) movement: an income or expense, manual or auto-generated from

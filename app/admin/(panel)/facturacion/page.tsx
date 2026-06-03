@@ -122,10 +122,9 @@ export default async function AdminBillingPage({
             <Empty />
           ) : (
             <Table
-              head={["Producto", "Kg", "Unid.", "Neto"]}
+              head={["Producto", "Unidades", "Neto"]}
               rows={report.byProduct.map((p) => [
                 p.name,
-                p.qtyKg ? p.qtyKg.toFixed(1) : "—",
                 p.units ? String(p.units) : "—",
                 pesos(p.net),
               ])}
@@ -171,10 +170,10 @@ export default async function AdminBillingPage({
             </p>
           ) : (
             <Table
-              head={["Barrio", "Kg", "Bruto", "Neto"]}
+              head={["Barrio", "Unidades", "Bruto", "Neto"]}
               rows={report.byNeighborhood.map((b) => [
                 b.neighborhood,
-                b.qtyKg ? b.qtyKg.toFixed(1) : "—",
+                b.units ? String(b.units) : "—",
                 pesos(b.gross),
                 pesos(b.net),
               ])}

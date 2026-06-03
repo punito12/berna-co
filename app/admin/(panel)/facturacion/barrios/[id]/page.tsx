@@ -37,8 +37,8 @@ export default async function BarrioDetailPage({
         <Stat label="Clientes" value={String(report.customersCount)} />
         <Stat label="Pedidos" value={String(report.ordersCount)} />
         <Stat
-          label="Kg vendidos"
-          value={report.qtyKg ? report.qtyKg.toFixed(1) : "—"}
+          label="Unidades vendidas"
+          value={report.units ? String(report.units) : "—"}
         />
         <Stat label="Facturación neta" value={pesos(report.net)} strong />
       </div>
