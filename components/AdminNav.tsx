@@ -26,7 +26,6 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
       { href: "/admin/caja", label: "Caja" },
       { href: "/admin/finanzas/cobrar", label: "Cuentas por cobrar" },
       { href: "/admin/finanzas/pagar", label: "Cuentas por pagar" },
-      { href: "/admin/rentabilidad", label: "Rentabilidad" },
     ],
   },
   {
@@ -55,6 +54,7 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
     title: "Catálogo",
     links: [
       { href: "/admin/productos", label: "Productos" },
+      { href: "/admin/catalogo/costos", label: "Costos y Precios" },
       { href: "/admin/ventas/promociones", label: "Promociones" },
       { href: "/admin/catalogo/codigos", label: "Códigos de descuento" },
     ],

@@ -47,6 +47,10 @@ model Product {
   // Current cost per kg (pesos), loaded by the admin. Used for margin/profit.
   costPerKg Int @default(0)
 
+  // Per-empanado cost (pesos per kg), JSON like `prices`, e.g.
+  // {"TRADITIONAL":16048,"KETO":18048}. Source of truth for Costos y Precios.
+  costs String @default("{}")
+
   // --- Automatic per-product promotions (web store) ---
   // Legacy product-wide promo (kept for back-compat / fallback).
   promoPercent Int @default(0)
@@ -60,6 +64,9 @@ model Product {
   orderItems     OrderItem[]
   saleItems      SaleItem[]
   stockMovements StockMovement[]
+  recipes        Recipe[]
+  costHistory    CostHistory[]
+  priceHistory   PriceHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -419,4 +426,86 @@ model DiscountCode {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---- Costos y Precios (Catálogo) ----
+
+// Global pricing parameters. Singleton: exactly one row (id = "singleton").
+model PricingConfig {
+  id                       String @id @default("singleton")
+  sueldoPercent            Int    @default(15)
+  utilidadPercent          Int    @default(50)
+  descuentoMayoristaPercent Int   @default(25)
+  descuentoKioscoPercent   Int    @default(30)
+
+  updatedAt DateTime @updatedAt
+}
+
+// A recipe for one product+empanado: ingredients + packaging → computed cost.
+model Recipe {
+  id             String  @id @default(cuid())
+  productId      String
+  product        Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  breadcrumbType String // TRADITIONAL | INTEGRAL | KETO
+
+  yieldKg          Float // kg produced per batch
+  packagingPerKg   Int    @default(0) // bag + label cost per kg (pesos)
+  active           Boolean @default(false) // if true, drives Product.costs
+  computedCostPerKg Int    @default(0) // last computed cost (pesos/kg)
+
+  ingredients RecipeIngredient[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, breadcrumbType])
+}
+
+// One ingredient line within a recipe.
+model RecipeIngredient {
+  id        String @id @default(cuid())
+  recipeId  String
+  recipe    Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  name      String
+  quantity  Float
+  unit      String // KG | G | UNIDAD | L | ML
+  unitPrice Int // pesos per unit
+  subtotal  Int // quantity * unitPrice (normalized), pesos
+}
+
+// A competitor's price for a (free-text) product, per kg.
+model CompetitorPrice {
+  id         String  @id @default(cuid())
+  productName String // free text (may match one of our products)
+  competitor String
+  pricePerKg Int
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+// Cost change log — one row each time a product+empanado cost changes.
+model CostHistory {
+  id             String  @id @default(cuid())
+  productId      String
+  product        Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  breadcrumbType String
+  costPerKg      Int
+  changedAt      DateTime @default(now())
+
+  @@index([productId, breadcrumbType])
+}
+
+// Price change log — one row each time a product+empanado channel price changes.
+model PriceHistory {
+  id             String  @id @default(cuid())
+  productId      String
+  product        Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  breadcrumbType String
+  channel        String // PUBLICO | MAYORISTA | KIOSCO
+  price          Int
+  changedAt      DateTime @default(now())
+
+  @@index([productId, breadcrumbType])
 }
