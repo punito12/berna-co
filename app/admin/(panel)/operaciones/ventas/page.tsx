@@ -1,8 +1,10 @@
 import Link from "next/link";
 import {
   listSalesUnified,
+  countSalesByStatus,
   SALE_CHANNELS,
   SALE_CHANNEL_LABELS,
+  type UnifiedFilters,
 } from "@/lib/management";
 import { ORDER_STATUS_LABELS } from "@/lib/admin";
 
@@ -13,33 +15,98 @@ function pesos(n: number): string {
     maximumFractionDigits: 0,
   }).format(n);
 }
-
 function shortDate(d: Date): string {
   return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
 }
 
-// Operaciones → Pedidos y ventas: unified feed of web orders + manual sales.
-// Each row opens the unified detail. (Part 1 — full filters land in Part 2.)
+const CUSTOMER_TYPES = [
+  { key: "", label: "Todos" },
+  { key: "MINORISTA", label: "Minorista" },
+  { key: "MAYORISTA", label: "Mayorista" },
+  { key: "KIOSCO", label: "Kiosco" },
+];
+const STATUS_FILTERS = [
+  { key: "", label: "Activos" }, // default: confirmados + entregados
+  { key: "CONFIRMED", label: "Confirmados" },
+  { key: "DELIVERED", label: "Entregados" },
+  { key: "CANCELLED", label: "Cancelados" },
+];
+
+// Operaciones → Pedidos y ventas: unified feed with combinable filters (origin,
+// customer type, status, date range). Default view hides cancelled; counts per
+// status are shown on the status buttons.
 export default async function PedidosYVentasPage({
   searchParams,
 }: {
-  searchParams: { origin?: string };
+  searchParams: {
+    origin?: string;
+    type?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+  };
 }) {
   const origin = SALE_CHANNELS.includes(
     (searchParams.origin ?? "") as (typeof SALE_CHANNELS)[number]
   )
     ? searchParams.origin
     : undefined;
+  const customerType = ["MINORISTA", "MAYORISTA", "KIOSCO"].includes(
+    searchParams.type ?? ""
+  )
+    ? searchParams.type
+    : undefined;
+  const statusFilter = ["CONFIRMED", "DELIVERED", "CANCELLED"].includes(
+    searchParams.status ?? ""
+  )
+    ? searchParams.status
+    : undefined;
 
-  // Default view hides cancelled (they appear only under that status filter).
-  const rows = (await listSalesUnified({ origin })).filter(
-    (r) => r.status !== "CANCELLED"
-  );
+  const from = searchParams.from
+    ? new Date(`${searchParams.from}T00:00:00`)
+    : undefined;
+  const to = searchParams.to
+    ? (() => {
+        const d = new Date(`${searchParams.to}T00:00:00`);
+        d.setDate(d.getDate() + 1); // inclusive of the end day
+        return d;
+      })()
+    : undefined;
 
-  const FILTERS = [
-    { key: "", label: "Todos" },
-    ...SALE_CHANNELS.map((c) => ({ key: c, label: SALE_CHANNEL_LABELS[c] })),
-  ];
+  const baseFilters: UnifiedFilters = { origin, customerType, from, to };
+
+  const [allRows, counts] = await Promise.all([
+    listSalesUnified({ ...baseFilters, status: statusFilter }),
+    countSalesByStatus(baseFilters),
+  ]);
+
+  // Default (no status filter): show only non-cancelled (activos).
+  const rows = statusFilter
+    ? allRows
+    : allRows.filter((r) => r.status !== "CANCELLED");
+
+  // Helper to build a URL preserving the other filters.
+  function hrefWith(patch: Partial<typeof searchParams>): string {
+    const sp = new URLSearchParams();
+    const merged = {
+      origin: searchParams.origin,
+      type: searchParams.type,
+      status: searchParams.status,
+      from: searchParams.from,
+      to: searchParams.to,
+      ...patch,
+    };
+    for (const [k, v] of Object.entries(merged)) if (v) sp.set(k, v);
+    const qs = sp.toString();
+    return `/admin/operaciones/ventas${qs ? `?${qs}` : ""}`;
+  }
+
+  const statusCount: Record<string, number> = {
+    "": counts.activos,
+    CONFIRMED: counts.CONFIRMED,
+    DELIVERED: counts.DELIVERED,
+    CANCELLED: counts.CANCELLED,
+  };
 
   return (
     <div>
@@ -47,48 +114,106 @@ export default async function PedidosYVentasPage({
         Pedidos y ventas
       </h1>
       <p className="mb-5 text-sm text-muted">
-        Pedidos web y ventas manuales en un solo lugar, filtrables por origen.
+        Pedidos web y ventas manuales en un solo lugar. Tocá una fila para ver
+        el detalle.
       </p>
 
-      {/* Origin filter */}
-      <div className="mb-6 flex flex-wrap gap-1">
-        {FILTERS.map((f) => {
-          const active = (origin ?? "") === f.key;
-          return (
-            <Link
-              key={f.key || "all"}
-              href={
-                f.key
-                  ? `/admin/operaciones/ventas?origin=${f.key}`
-                  : "/admin/operaciones/ventas"
-              }
-              className={`px-3 py-2 font-bold uppercase tracking-wide text-xs transition-colors ${
-                active
-                  ? "bg-black text-white"
-                  : "border border-line text-ink hover:border-black"
-              }`}
+      {/* Filters */}
+      <div className="mb-6 space-y-3 rounded-lg border border-line bg-white p-4">
+        <FilterRow label="Origen">
+          <Chip href={hrefWith({ origin: undefined })} active={!origin}>
+            Todos
+          </Chip>
+          {SALE_CHANNELS.map((c) => (
+            <Chip
+              key={c}
+              href={hrefWith({ origin: c })}
+              active={origin === c}
             >
-              {f.label}
-            </Link>
-          );
-        })}
+              {SALE_CHANNEL_LABELS[c]}
+            </Chip>
+          ))}
+        </FilterRow>
+
+        <FilterRow label="Cliente">
+          {CUSTOMER_TYPES.map((t) => (
+            <Chip
+              key={t.key || "all"}
+              href={hrefWith({ type: t.key || undefined })}
+              active={(customerType ?? "") === t.key}
+            >
+              {t.label}
+            </Chip>
+          ))}
+        </FilterRow>
+
+        <FilterRow label="Estado">
+          {STATUS_FILTERS.map((s) => (
+            <Chip
+              key={s.key || "all"}
+              href={hrefWith({ status: s.key || undefined })}
+              active={(statusFilter ?? "") === s.key}
+            >
+              {s.label} ({statusCount[s.key] ?? 0})
+            </Chip>
+          ))}
+        </FilterRow>
+
+        <FilterRow label="Fechas">
+          <form method="get" className="flex flex-wrap items-center gap-2">
+            {origin && <input type="hidden" name="origin" value={origin} />}
+            {customerType && (
+              <input type="hidden" name="type" value={customerType} />
+            )}
+            {statusFilter && (
+              <input type="hidden" name="status" value={statusFilter} />
+            )}
+            <input
+              type="date"
+              name="from"
+              defaultValue={searchParams.from}
+              className="rounded border border-line bg-white px-2 py-1.5 text-sm text-ink"
+            />
+            <span className="text-muted">a</span>
+            <input
+              type="date"
+              name="to"
+              defaultValue={searchParams.to}
+              className="rounded border border-line bg-white px-2 py-1.5 text-sm text-ink"
+            />
+            <button
+              type="submit"
+              className="bg-black px-3 py-1.5 font-bold uppercase tracking-widest text-[11px] text-white"
+            >
+              Aplicar
+            </button>
+            {(searchParams.from || searchParams.to) && (
+              <Link
+                href={hrefWith({ from: undefined, to: undefined })}
+                className="text-[11px] font-bold uppercase tracking-widest text-muted hover:text-ink"
+              >
+                Limpiar
+              </Link>
+            )}
+          </form>
+        </FilterRow>
       </div>
 
       {rows.length === 0 ? (
         <p className="rounded-lg border border-line bg-white px-4 py-10 text-center font-bold uppercase tracking-wide text-muted">
-          No hay ventas para este filtro.
+          No hay pedidos para este filtro.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-line bg-white">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-line bg-cream/40">
               <tr>
-                {["Fecha", "Origen", "Cliente", "Ítems", "Estado", "Total"].map(
+                {["Fecha", "Origen", "Cliente", "Pago", "Estado", "Total"].map(
                   (h, i) => (
                     <th
                       key={h}
                       className={`px-3 py-2 font-bold uppercase tracking-wide text-[10px] text-muted ${
-                        i >= 3 ? "text-right" : ""
+                        i >= 5 ? "text-right" : ""
                       }`}
                     >
                       {h}
@@ -101,7 +226,9 @@ export default async function PedidosYVentasPage({
               {rows.map((r) => (
                 <tr
                   key={`${r.kind}-${r.id}`}
-                  className="cursor-pointer transition-colors hover:bg-cream/40"
+                  className={`cursor-pointer transition-colors hover:bg-cream/40 ${
+                    r.status === "CANCELLED" ? "opacity-60" : ""
+                  }`}
                 >
                   <Cell href={r.href}>{shortDate(r.date)}</Cell>
                   <Cell href={r.href}>
@@ -111,11 +238,16 @@ export default async function PedidosYVentasPage({
                   </Cell>
                   <Cell href={r.href}>
                     <span className="text-ink">{r.customerName}</span>
+                    {r.customerType && (
+                      <span className="ml-1 text-[10px] uppercase text-muted">
+                        · {r.customerType}
+                      </span>
+                    )}
                   </Cell>
-                  <Cell href={r.href} align="right">
-                    <span className="text-muted">{r.itemsCount}</span>
+                  <Cell href={r.href}>
+                    <span className="text-xs text-muted">{r.paymentLabel}</span>
                   </Cell>
-                  <Cell href={r.href} align="right">
+                  <Cell href={r.href}>
                     <span className="text-muted">
                       {ORDER_STATUS_LABELS[r.status] ?? r.status}
                     </span>
@@ -130,6 +262,46 @@ export default async function PedidosYVentasPage({
         </div>
       )}
     </div>
+  );
+}
+
+function FilterRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="w-16 shrink-0 font-bold uppercase tracking-wide text-[10px] text-muted">
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-1">{children}</div>
+    </div>
+  );
+}
+
+function Chip({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded px-3 py-1.5 font-bold uppercase tracking-wide text-[11px] transition-colors ${
+        active
+          ? "bg-black text-white"
+          : "border border-line text-ink hover:border-black"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
 
