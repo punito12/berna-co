@@ -64,7 +64,7 @@ model Product {
   orderItems     OrderItem[]
   saleItems      SaleItem[]
   stockMovements StockMovement[]
-  recipes        Recipe[]
+  costSheets     CostSheet[]
   costHistory    CostHistory[]
   priceHistory   PriceHistory[]
 
@@ -441,37 +441,48 @@ model PricingConfig {
   updatedAt DateTime @updatedAt
 }
 
-// A recipe for one product+empanado: ingredients + packaging → computed cost.
-model Recipe {
-  id             String  @id @default(cuid())
+// A cost sheet (planilla de costos) for one product+empanado — a flat replica
+// of the user's Excel. Only CANTIDAD and PRECIO UNIT fields are stored; every
+// total (subtotal, costo1xKg, costo2xKg, sueldo, utilidades, precioFinal) is
+// computed in lib/cost-sheets.ts. Many sheets can exist per product+empanado.
+model CostSheet {
+  id             String   @id @default(cuid())
   productId      String
-  product        Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   breadcrumbType String // TRADITIONAL | INTEGRAL | KETO
+  fecha          DateTime @default(now())
+  notas          String?
 
-  yieldKg          Float // kg produced per batch
-  packagingPerKg   Int    @default(0) // bag + label cost per kg (pesos)
-  active           Boolean @default(false) // if true, drives Product.costs
-  computedCostPerKg Int    @default(0) // last computed cost (pesos/kg)
+  // Materia prima
+  compraKg         Float @default(0)
+  compraPrecioUnit Int   @default(0) // price per kg
+  limpioKg         Float @default(0) // net kg after cleaning (desperdicio = compra − limpio)
 
-  ingredients RecipeIngredient[]
+  // Otros ítems fijos (todos opcionales)
+  huevosCantidad      Int   @default(0)
+  huevosPrecioUnit    Int   @default(0)
+  integralKg          Float @default(0)
+  integralPrecioUnit  Int   @default(0)
+  tradicionalKg       Float @default(0)
+  tradicionalPrecioUnit Int @default(0)
+  marinadaCantidad    Float @default(0)
+  marinadaPrecioUnit  Int   @default(0)
+
+  // Producto final
+  prodFinalKg       Float @default(0)
+  bolsaCantidad     Int   @default(0)
+  bolsaPrecioUnit   Int   @default(0)
+  etiquetaCantidad  Int   @default(0)
+  etiquetaPrecioUnit Int  @default(0)
+
+  // Parámetros (snapshot al guardar)
+  sueldoPercent     Int @default(15)
+  utilidadesPercent Int @default(50)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([productId, breadcrumbType])
-}
-
-// One ingredient line within a recipe.
-model RecipeIngredient {
-  id        String @id @default(cuid())
-  recipeId  String
-  recipe    Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-
-  name      String
-  quantity  Float
-  unit      String // KG | G | UNIDAD | L | ML
-  unitPrice Int // pesos per unit
-  subtotal  Int // quantity * unitPrice (normalized), pesos
+  @@index([productId, breadcrumbType])
 }
 
 // A competitor's price for a (free-text) product, per kg.

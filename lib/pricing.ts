@@ -12,8 +12,8 @@ export const PRICING_SINGLETON_ID = "singleton";
 // (not in a page file) because Next.js forbids arbitrary named exports there.
 export const COSTOS_TABS = [
   { href: "/admin/catalogo/costos", label: "Costos y Precios" },
+  { href: "/admin/catalogo/costos/precios", label: "Precios" },
   { href: "/admin/catalogo/costos/parametros", label: "Parámetros" },
-  { href: "/admin/catalogo/costos/recetas", label: "Recetas" },
   { href: "/admin/catalogo/costos/competencia", label: "Competencia" },
   { href: "/admin/catalogo/costos/historico", label: "Histórico" },
 ];
@@ -73,7 +73,6 @@ export type PricingRow = {
   breadcrumbType: string;
   breadcrumbLabel: string;
   cost: number; // cost per kg (pesos)
-  costFromRecipe: boolean; // true → cost is driven by an active recipe (read-only)
   suggestedPrice: number; // cost × (1 + sueldo% + utilidad%)
   publicPrice: number; // editable
   mayoristaPrice: number; // derived
@@ -111,10 +110,7 @@ export async function buildPricingTable(): Promise<{
   rows: PricingRow[];
 }> {
   const config = await getPricingConfig();
-  const products = await prisma.product.findMany({
-    orderBy: { name: "asc" },
-    include: { recipes: { where: { active: true } } },
-  });
+  const products = await prisma.product.findMany({ orderBy: { name: "asc" } });
 
   const suggestMul = 1 + config.sueldoPercent / 100 + config.utilidadPercent / 100;
   const mayMul = 1 - config.descuentoMayoristaPercent / 100;
@@ -126,7 +122,6 @@ export async function buildPricingTable(): Promise<{
     const disabled = new Set(parseArr(p.disabledBreadcrumbs));
     const prices = parseMap(p.prices);
     const costs = parseMap(p.costs);
-    const activeRecipeBcs = new Set(p.recipes.map((r) => r.breadcrumbType));
 
     for (const bc of available) {
       if (disabled.has(bc)) continue; // skip disabled empanados
@@ -141,7 +136,6 @@ export async function buildPricingTable(): Promise<{
         breadcrumbType: bc,
         breadcrumbLabel: BREADCRUMB_LABELS[bc] ?? bc,
         cost,
-        costFromRecipe: activeRecipeBcs.has(bc),
         suggestedPrice,
         publicPrice,
         mayoristaPrice,
@@ -157,22 +151,19 @@ export async function buildPricingTable(): Promise<{
 
 // ---- Inline edits (with history) -------------------------------------------
 
-// Set the cost for one (product, empanado), update Product.costs + costPerKg
-// fallback, and log CostHistory. Refuses if an active recipe drives the cost.
+// Set the cost for one (product, empanado), update Product.costs and log
+// CostHistory.
 export async function setProductCost(
   productId: string,
   breadcrumbType: string,
-  cost: number,
-  opts: { allowRecipeOverride?: boolean } = {}
+  cost: number
 ): Promise<void> {
   const value = Math.max(0, Math.round(Number(cost) || 0));
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { costs: true, recipes: { where: { breadcrumbType, active: true } } },
+    select: { costs: true },
   });
   if (!product) throw new Error("Producto no encontrado.");
-  if (product.recipes.length > 0 && !opts.allowRecipeOverride)
-    throw new Error("El costo viene de una receta activa; editá la receta.");
 
   const costs = parseMap(product.costs);
   if (costs[breadcrumbType] === value) return; // no change

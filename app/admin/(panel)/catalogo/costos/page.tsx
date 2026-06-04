@@ -1,10 +1,29 @@
-import { buildPricingTable, COSTOS_TABS } from "@/lib/pricing";
+import { COSTOS_TABS } from "@/lib/pricing";
+import {
+  listCostSheets,
+  listProductBreadcrumbsForSheets,
+} from "@/lib/cost-sheets";
 import SubTabs from "@/components/SubTabs";
-import PricingTable from "@/components/PricingTable";
+import CostSheetsManager from "@/components/CostSheetsManager";
 
-// Catálogo → Costos y Precios (Tab 1): the master cost/price table.
-export default async function CostosPreciosPage() {
-  const { config, rows } = await buildPricingTable();
+// Catálogo → Costos y Precios (Tab principal): planillas de costos (réplica del
+// Excel). Selector producto+empanado; cada planilla es una card calculada.
+export default async function CostosPreciosPage({
+  searchParams,
+}: {
+  searchParams: { product?: string; bc?: string };
+}) {
+  const products = await listProductBreadcrumbsForSheets();
+
+  const productId = searchParams.product || products[0]?.id || "";
+  const selected = products.find((p) => p.id === productId);
+  const breadcrumbType =
+    searchParams.bc || selected?.breadcrumbs[0]?.code || "";
+
+  const sheets =
+    productId && breadcrumbType
+      ? await listCostSheets(productId, breadcrumbType)
+      : [];
 
   return (
     <div>
@@ -13,12 +32,16 @@ export default async function CostosPreciosPage() {
       </h1>
       <SubTabs tabs={COSTOS_TABS} />
       <p className="mb-5 text-sm text-muted">
-        Precio sugerido = costo × (1 + sueldo {config.sueldoPercent}% + utilidad{" "}
-        {config.utilidadPercent}%). Mayorista −{config.descuentoMayoristaPercent}%
-        · Kiosco −{config.descuentoKioscoPercent}% sobre el público. Tocá un costo
-        o precio para editarlo.
+        Planillas de costos por producto y empanado, réplica del Excel. Cada
+        planilla calcula su propio precio final. Son una herramienta de
+        referencia: no se promedian ni actualizan el precio de venta.
       </p>
-      <PricingTable rows={rows} />
+      <CostSheetsManager
+        products={products}
+        productId={productId}
+        breadcrumbType={breadcrumbType}
+        sheets={sheets}
+      />
     </div>
   );
 }

@@ -168,8 +168,6 @@ function PricingRowView({
       <td className="px-3 py-2">
         <EditableNumber
           value={row.cost}
-          disabled={row.costFromRecipe}
-          icon={row.costFromRecipe ? "ƒ" : undefined}
           onSave={(v) =>
             fetch("/api/admin/pricing/cost", {
               method: "POST",

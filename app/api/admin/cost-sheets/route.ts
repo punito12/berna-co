@@ -1,20 +1,20 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
-import { saveRecipe, type RecipeInput } from "@/lib/recipes";
+import { createCostSheet, type CostSheetInput } from "@/lib/cost-sheets";
 
-// Create or update a recipe for a product+empanado. Admin-only.
+// Create a cost sheet (planilla de costos). Admin-only.
 export async function POST(request: Request) {
   if (!isAuthenticated())
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  let body: RecipeInput;
+  let body: CostSheetInput;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
   try {
-    await saveRecipe(body);
-    return NextResponse.json({ ok: true });
+    const s = await createCostSheet(body);
+    return NextResponse.json({ ok: true, id: s.id });
   } catch (error) {
     return NextResponse.json(
       { error: (error as Error).message || "No se pudo guardar." },
