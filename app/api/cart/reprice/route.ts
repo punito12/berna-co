@@ -27,14 +27,24 @@ export async function POST(request: Request) {
 
   const prices: Record<
     string,
-    { unitPrice: number; promoType: string; available: boolean }
+    {
+      unitPrice: number;
+      promoType: string;
+      available: boolean;
+      weightGrams: number;
+    }
   > = {};
 
   for (const line of lines) {
     const key = `${line.productId}__${line.breadcrumbType}`;
     const p = byId.get(line.productId);
     if (!p || !p.available) {
-      prices[key] = { unitPrice: 0, promoType: "", available: false };
+      prices[key] = {
+        unitPrice: 0,
+        promoType: "",
+        available: false,
+        weightGrams: 0,
+      };
       continue;
     }
     // Build a promo-aware UI shape and reuse the storefront helpers so the
@@ -51,6 +61,7 @@ export async function POST(request: Request) {
       unitPrice: promoPriceFor(ui, line.breadcrumbType),
       promoType: promoTypeFor(ui, line.breadcrumbType),
       available: true,
+      weightGrams: p.weightGrams,
     };
   }
 

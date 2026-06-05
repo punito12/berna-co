@@ -520,3 +520,15 @@ model PriceHistory {
 
   @@index([productId, breadcrumbType])
 }
+
+// A volume discount tier: buying at least `minKg` total grants `discountPercent`
+// off the products subtotal. The highest active tier the customer reaches wins.
+model QuantityDiscount {
+  id              String  @id @default(cuid())
+  minKg           Float
+  discountPercent Int
+  active          Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

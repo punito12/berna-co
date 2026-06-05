@@ -24,11 +24,13 @@ export type CartLine = {
   price: number; // unit price already with the product's % promo applied
   promoType: string; // "" | "2x1" | "3x2" for the quantity promo
   quantity: number;
+  weightGrams: number; // unit weight, for the volume (kg) discount
 };
 
 type CartContextValue = {
   lines: CartLine[];
   totalItems: number;
+  totalKg: number; // sum of weightGrams*qty / 1000, for the volume discount
   subtotal: number; // sum of price*qty, before quantity promos
   promoDiscount: number; // savings from 2x1/3x2 quantity promos
   totalPrice: number; // subtotal - promoDiscount
@@ -101,6 +103,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             price: promoPriceFor(product, breadcrumbType),
             promoType: promoTypeFor(product, breadcrumbType),
             quantity: 1,
+            weightGrams: product.weightGrams ?? 0,
           },
         ];
       });
@@ -142,7 +145,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const data = (await res.json()) as {
         prices: Record<
           string,
-          { unitPrice: number; promoType: string; available: boolean }
+          {
+            unitPrice: number;
+            promoType: string;
+            available: boolean;
+            weightGrams?: number;
+          }
         >;
       };
       setLines((prev) =>
@@ -150,7 +158,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           .map((l) => {
             const info = data.prices[l.key];
             if (!info) return l;
-            return { ...l, price: info.unitPrice, promoType: info.promoType };
+            return {
+              ...l,
+              price: info.unitPrice,
+              promoType: info.promoType,
+              weightGrams: info.weightGrams ?? l.weightGrams ?? 0,
+            };
           })
           .filter((l) => data.prices[l.key]?.available !== false)
       );
@@ -161,6 +174,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const totalItems = useMemo(
     () => lines.reduce((sum, line) => sum + line.quantity, 0),
+    [lines]
+  );
+  // Total weight in kg (for the volume discount + motivational message).
+  const totalKg = useMemo(
+    () =>
+      lines.reduce(
+        (sum, line) => sum + ((line.weightGrams ?? 0) * line.quantity) / 1000,
+        0
+      ),
     [lines]
   );
   // Subtotal before quantity promos (unit prices already include the % promo).
@@ -185,6 +207,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     () => ({
       lines,
       totalItems,
+      totalKg,
       subtotal,
       promoDiscount,
       totalPrice,
@@ -197,6 +220,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [
       lines,
       totalItems,
+      totalKg,
       subtotal,
       promoDiscount,
       totalPrice,

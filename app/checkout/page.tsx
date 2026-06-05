@@ -18,10 +18,22 @@ export default function CheckoutPage() {
     subtotal,
     promoDiscount,
     totalPrice,
+    totalKg,
     hydrated,
     clearCart,
     reprice,
   } = useCart();
+
+  // Active volume-discount tiers (loaded once), for the kg discount + message.
+  const [kgTiers, setKgTiers] = useState<
+    { minKg: number; discountPercent: number }[]
+  >([]);
+  useEffect(() => {
+    fetch("/api/quantity-discounts")
+      .then((r) => r.json())
+      .then((d) => setKgTiers(d.tiers ?? []))
+      .catch(() => setKgTiers([]));
+  }, []);
 
   // On entering checkout, refresh prices/promos against the live products so
   // the shown amount always matches what the server will charge.
@@ -75,9 +87,22 @@ export default function CheckoutPage() {
 
   const covered = Boolean(options);
 
-  // Code discount (validated against the cart total).
+  // Volume discount: highest active tier the cart's kg total reaches.
+  const kgPercent = kgTiers.reduce(
+    (best, t) =>
+      totalKg >= t.minKg && t.discountPercent > best ? t.discountPercent : best,
+    0
+  );
+  const kgDiscount = kgPercent > 0 ? Math.round((totalPrice * kgPercent) / 100) : 0;
+  const afterKg = Math.max(0, totalPrice - kgDiscount);
+  // Next tier to aim for (motivational message).
+  const nextTier = [...kgTiers]
+    .sort((a, b) => a.minKg - b.minKg)
+    .find((t) => t.minKg > totalKg && t.discountPercent > kgPercent);
+
+  // Code discount (validated against the post-kg subtotal).
   const codeDiscount = codeApplied?.amount ?? 0;
-  const afterDiscounts = Math.max(0, totalPrice - codeDiscount);
+  const afterDiscounts = Math.max(0, afterKg - codeDiscount);
 
   // Delivery fee: free when the zone has a threshold and the (discounted) total
   // reaches it.
@@ -95,7 +120,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/discount/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, subtotal: totalPrice }),
+        body: JSON.stringify({ code, subtotal: afterKg }),
       });
       const data = await res.json();
       if (data.ok) {
@@ -586,6 +611,26 @@ export default function CheckoutPage() {
             )}
           </div>
 
+          {/* Volume discount motivational message */}
+          {(kgPercent > 0 || nextTier) && totalKg > 0 && (
+            <div className="mt-4 rounded-lg border border-black bg-cream/60 px-4 py-3 text-sm">
+              {kgPercent > 0 && (
+                <p className="font-bold text-ink">
+                  🎉 Comprando {totalKg.toFixed(1)} kg accedés a {kgPercent}% off.
+                </p>
+              )}
+              {nextTier && (
+                <p className={kgPercent > 0 ? "mt-1 text-muted" : "text-ink"}>
+                  Te faltan{" "}
+                  <span className="font-bold text-ink">
+                    {(nextTier.minKg - totalKg).toFixed(1)} kg
+                  </span>{" "}
+                  para llegar a {nextTier.discountPercent}% off.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Totals breakdown */}
           <div className="mt-4 space-y-1 border-t border-line pt-4 text-sm">
             <div className="flex items-center justify-between text-muted">
@@ -596,6 +641,12 @@ export default function CheckoutPage() {
               <div className="flex items-center justify-between text-muted">
                 <span>Promos (2x1 / 3x2)</span>
                 <span>− {formatPrice(promoDiscount)}</span>
+              </div>
+            )}
+            {kgDiscount > 0 && (
+              <div className="flex items-center justify-between text-muted">
+                <span>Descuento por cantidad ({kgPercent}%)</span>
+                <span>− {formatPrice(kgDiscount)}</span>
               </div>
             )}
             {codeApplied && (

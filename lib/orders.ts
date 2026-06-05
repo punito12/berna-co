@@ -15,6 +15,10 @@ import {
   validateDiscountCode,
   consumeDiscountCode,
 } from "@/lib/discounts";
+import {
+  listActiveQuantityTiers,
+  tierForKg,
+} from "@/lib/quantity-discounts";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -154,6 +158,7 @@ export async function createOrder(
   // Products subtotal (with per-product % promos) and quantity-promo savings.
   let productsSubtotal = 0;
   let quantityPromo = 0;
+  let totalKg = 0;
   const itemsToCreate = input.items.map((item) => {
     const product = byId.get(item.productId);
     if (!product) {
@@ -165,6 +170,8 @@ export async function createOrder(
     if (!Number.isFinite(qty) || qty < 1) {
       throw new OrderValidationError("Cantidad inválida.");
     }
+    // Accumulate total weight (kg) for the volume discount.
+    totalKg += ((product.weightGrams ?? 0) * qty) / 1000;
     const allowed: string[] = safeParse(product.availableBreadcrumbs);
     const disabled: string[] = safeParse(product.disabledBreadcrumbs);
     if (!allowed.includes(item.breadcrumbType) || disabled.includes(item.breadcrumbType)) {
@@ -193,7 +200,17 @@ export async function createOrder(
   // Subtotal after quantity promos.
   let total = productsSubtotal - quantityPromo;
 
-  // Discount code (validated against the post-quantity-promo subtotal).
+  // Volume discount (descuento por cantidad): highest active tier reached by the
+  // order's total kg, applied to the products subtotal.
+  let kgDiscount = 0;
+  const tiers = await listActiveQuantityTiers();
+  const kgPercent = tierForKg(tiers, totalKg);
+  if (kgPercent > 0) {
+    kgDiscount = Math.round((total * kgPercent) / 100);
+    total -= kgDiscount;
+  }
+
+  // Discount code (validated against the post-quantity-promo, post-kg subtotal).
   let appliedCode: string | null = null;
   let codeDiscount = 0;
   if (input.discountCode?.trim()) {
@@ -253,7 +270,7 @@ export async function createOrder(
         paymentMethod: input.paymentMethod,
         shippingCost: shipping,
         discountCode: appliedCode,
-        discountAmount: quantityPromo + codeDiscount,
+        discountAmount: quantityPromo + kgDiscount + codeDiscount,
         total,
         mpPaymentId: null,
         items: { create: itemsToCreate },
