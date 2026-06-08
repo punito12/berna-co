@@ -4,6 +4,7 @@ import Catalog from "@/components/Catalog";
 import PointsOfSale from "@/components/PointsOfSale";
 import Footer from "@/components/Footer";
 import WhatsappFloat from "@/components/WhatsappFloat";
+import QuantityDiscountBanner from "@/components/QuantityDiscountBanner";
 import { getAvailableProducts } from "@/lib/products";
 import { getPaymentConfig } from "@/lib/payment-config";
 
@@ -17,6 +18,7 @@ export default async function HomePage() {
 
   return (
     <main>
+      <QuantityDiscountBanner />
       <Hero />
       <Ingredients />
 

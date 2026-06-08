@@ -172,23 +172,39 @@ export default function ProductCard({
             </p>
           )}
           {/* Per-method prices (only when a discount is configured). Base is the
-              already-promo'd price. */}
+              already-promo'd price. Shown as green pills so they stand out. */}
           {(() => {
             const base =
               selPromoPercent > 0
                 ? promoPriceFor(product, selected)
                 : priceFor(product, selected);
-            const parts: string[] = [];
+            const chips: { price: number; label: string }[] = [];
             if (efectivoPct > 0)
-              parts.push(
-                `${formatPrice(Math.round((base * (100 - efectivoPct)) / 100))} con efectivo`
-              );
+              chips.push({
+                price: Math.round((base * (100 - efectivoPct)) / 100),
+                label: "efectivo",
+              });
             if (transferenciaPct > 0)
-              parts.push(
-                `${formatPrice(Math.round((base * (100 - transferenciaPct)) / 100))} con transferencia`
-              );
-            return parts.length > 0 ? (
-              <p className="mt-1 text-xs text-muted">{parts.join(" • ")}</p>
+              chips.push({
+                price: Math.round((base * (100 - transferenciaPct)) / 100),
+                label: "transferencia",
+              });
+            return chips.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {chips.map((c) => (
+                  <span
+                    key={c.label}
+                    className="inline-flex items-baseline gap-1 rounded-full bg-green-100 px-2.5 py-1 text-green-800"
+                  >
+                    <span className="font-black text-sm">
+                      {formatPrice(c.price)}
+                    </span>
+                    <span className="text-[11px] font-bold uppercase tracking-wide">
+                      {c.label}
+                    </span>
+                  </span>
+                ))}
+              </div>
             ) : null;
           })()}
           <button

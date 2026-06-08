@@ -522,6 +522,13 @@ function detailHref(kind: "ORDER" | "MANUAL", id: string): string {
   return `/admin/operaciones/ventas/${kind === "ORDER" ? "order" : "sale"}/${id}`;
 }
 
+// Short payment hint for a web order row (CASH = legacy efectivo).
+function webPaymentLabel(method: string): string {
+  if (method === "MERCADOPAGO") return "MP pagado";
+  if (method === "TRANSFERENCIA") return "Transferencia";
+  return "Efectivo al recibir";
+}
+
 export async function listSalesUnified(
   filters: UnifiedFilters
 ): Promise<UnifiedSale[]> {
@@ -581,8 +588,7 @@ export async function listSalesUnified(
       customerType: o.customer?.type ?? null,
       total: o.total,
       status: normalizeStatus(o.status),
-      paymentLabel:
-        o.paymentMethod === "MERCADOPAGO" ? "MP pagado" : "Efectivo al recibir",
+      paymentLabel: webPaymentLabel(o.paymentMethod),
       itemsCount: o.items.length,
       href: detailHref("ORDER", o.id),
     });

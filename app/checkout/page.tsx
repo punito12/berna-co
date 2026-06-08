@@ -18,7 +18,7 @@ export default function CheckoutPage() {
     subtotal,
     promoDiscount,
     totalPrice,
-    totalKg,
+    totalUnits,
     hydrated,
     clearCart,
     reprice,
@@ -102,10 +102,13 @@ export default function CheckoutPage() {
 
   const covered = Boolean(options);
 
-  // Volume discount: highest active tier the cart's kg total reaches.
+  // Volume discount: highest active tier the cart's unit total reaches (each
+  // unit counts as 1).
   const kgPercent = kgTiers.reduce(
     (best, t) =>
-      totalKg >= t.minKg && t.discountPercent > best ? t.discountPercent : best,
+      totalUnits >= t.minKg && t.discountPercent > best
+        ? t.discountPercent
+        : best,
     0
   );
   const kgDiscount = kgPercent > 0 ? Math.round((totalPrice * kgPercent) / 100) : 0;
@@ -113,7 +116,7 @@ export default function CheckoutPage() {
   // Next tier to aim for (motivational message).
   const nextTier = [...kgTiers]
     .sort((a, b) => a.minKg - b.minKg)
-    .find((t) => t.minKg > totalKg && t.discountPercent > kgPercent);
+    .find((t) => t.minKg > totalUnits && t.discountPercent > kgPercent);
 
   // Code discount (validated against the post-kg subtotal).
   const codeDiscount = codeApplied?.amount ?? 0;
@@ -328,6 +331,18 @@ export default function CheckoutPage() {
 
   return (
     <main className="min-h-screen bg-cream pb-28">
+      {/* Volume-discount strip */}
+      {kgTiers.length > 0 && (
+        <div className="bg-black px-4 py-2 text-center">
+          <p className="text-xs font-bold uppercase tracking-wide text-white">
+            🎉 Descuento por cantidad:{" "}
+            {[...kgTiers]
+              .sort((a, b) => a.minKg - b.minKg)
+              .map((t) => `${t.minKg}+ unidades ${t.discountPercent}% OFF`)
+              .join(" · ")}
+          </p>
+        </div>
+      )}
       {/* Slim header */}
       <header className="flex items-center justify-between border-b border-line bg-white px-4 py-3">
         <Link
@@ -667,18 +682,19 @@ export default function CheckoutPage() {
           </div>
 
           {/* Volume discount motivational message */}
-          {(kgPercent > 0 || nextTier) && totalKg > 0 && (
+          {(kgPercent > 0 || nextTier) && totalUnits > 0 && (
             <div className="mt-4 rounded-lg border border-black bg-cream/60 px-4 py-3 text-sm">
               {kgPercent > 0 && (
                 <p className="font-bold text-ink">
-                  🎉 Comprando {totalKg.toFixed(1)} kg accedés a {kgPercent}% off.
+                  🎉 Comprando {totalUnits} unidades accedés a {kgPercent}% off.
                 </p>
               )}
               {nextTier && (
                 <p className={kgPercent > 0 ? "mt-1 text-muted" : "text-ink"}>
                   Te faltan{" "}
                   <span className="font-bold text-ink">
-                    {(nextTier.minKg - totalKg).toFixed(1)} kg
+                    {Math.ceil(nextTier.minKg - totalUnits)} unidad
+                    {Math.ceil(nextTier.minKg - totalUnits) === 1 ? "" : "es"}
                   </span>{" "}
                   para llegar a {nextTier.discountPercent}% off.
                 </p>

@@ -169,7 +169,8 @@ export async function createOrder(
   // Products subtotal (with per-product % promos) and quantity-promo savings.
   let productsSubtotal = 0;
   let quantityPromo = 0;
-  let totalKg = 0;
+  // Volume-discount unit count: each unit counts as 1 (regardless of weight).
+  let totalUnits = 0;
   const itemsToCreate = input.items.map((item) => {
     const product = byId.get(item.productId);
     if (!product) {
@@ -181,8 +182,8 @@ export async function createOrder(
     if (!Number.isFinite(qty) || qty < 1) {
       throw new OrderValidationError("Cantidad inválida.");
     }
-    // Accumulate total weight (kg) for the volume discount.
-    totalKg += ((product.weightGrams ?? 0) * qty) / 1000;
+    // Each unit counts as 1 toward the volume discount.
+    totalUnits += qty;
     const allowed: string[] = safeParse(product.availableBreadcrumbs);
     const disabled: string[] = safeParse(product.disabledBreadcrumbs);
     if (!allowed.includes(item.breadcrumbType) || disabled.includes(item.breadcrumbType)) {
@@ -212,10 +213,10 @@ export async function createOrder(
   let total = productsSubtotal - quantityPromo;
 
   // Volume discount (descuento por cantidad): highest active tier reached by the
-  // order's total kg, applied to the products subtotal.
+  // order's total units, applied to the products subtotal.
   let kgDiscount = 0;
   const tiers = await listActiveQuantityTiers();
-  const kgPercent = tierForKg(tiers, totalKg);
+  const kgPercent = tierForKg(tiers, totalUnits);
   if (kgPercent > 0) {
     kgDiscount = Math.round((total * kgPercent) / 100);
     total -= kgDiscount;

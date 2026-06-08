@@ -30,7 +30,7 @@ export type CartLine = {
 type CartContextValue = {
   lines: CartLine[];
   totalItems: number;
-  totalKg: number; // sum of weightGrams*qty / 1000, for the volume discount
+  totalUnits: number; // total units, for the volume discount
   subtotal: number; // sum of price*qty, before quantity promos
   promoDiscount: number; // savings from 2x1/3x2 quantity promos
   totalPrice: number; // subtotal - promoDiscount
@@ -176,13 +176,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     () => lines.reduce((sum, line) => sum + line.quantity, 0),
     [lines]
   );
-  // Total weight in kg (for the volume discount + motivational message).
-  const totalKg = useMemo(
-    () =>
-      lines.reduce(
-        (sum, line) => sum + ((line.weightGrams ?? 0) * line.quantity) / 1000,
-        0
-      ),
+  // Total units (for the volume discount + motivational message). Each unit
+  // counts as 1 regardless of weight.
+  const totalUnits = useMemo(
+    () => lines.reduce((sum, line) => sum + line.quantity, 0),
     [lines]
   );
   // Subtotal before quantity promos (unit prices already include the % promo).
@@ -207,7 +204,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     () => ({
       lines,
       totalItems,
-      totalKg,
+      totalUnits,
       subtotal,
       promoDiscount,
       totalPrice,
@@ -220,7 +217,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [
       lines,
       totalItems,
-      totalKg,
+      totalUnits,
       subtotal,
       promoDiscount,
       totalPrice,

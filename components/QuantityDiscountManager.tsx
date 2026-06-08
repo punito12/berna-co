@@ -15,8 +15,9 @@ export default function QuantityDiscountManager({
   return (
     <div>
       <p className="mb-4 text-sm text-muted">
-        Tramos de descuento por kilos totales del pedido. Se aplica el tramo
-        activo más alto que el cliente alcance, sobre el subtotal de productos.
+        Tramos de descuento por cantidad de unidades del pedido. Cada unidad
+        cuenta como 1. Se aplica el tramo activo más alto que el cliente
+        alcance, sobre el subtotal de productos.
       </p>
       <NewTier />
       {tiers.length === 0 ? (
@@ -74,12 +75,12 @@ function NewTier() {
     >
       <label className="block">
         <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
-          Mínimo (kg)
+          Mínimo (unidades)
         </span>
         <input
           type="number"
-          min={0}
-          step="0.1"
+          min={1}
+          step="1"
           value={minKg}
           onChange={(e) => setMinKg(e.target.value)}
           className={inputClass + " w-28"}
@@ -158,7 +159,7 @@ function TierRow({ tier }: { tier: QuantityTier }) {
     >
       <div>
         <p className="font-bold uppercase tracking-tight text-ink">
-          {tier.minKg} kg → {tier.discountPercent}% off
+          {tier.minKg} unidades → {tier.discountPercent}% off
         </p>
         <p className="text-xs text-muted">
           {tier.active ? "Activo" : "Inactivo"}

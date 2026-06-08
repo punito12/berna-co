@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getProductBySlug } from "@/lib/products";
 import ProductDetail from "@/components/ProductDetail";
+import QuantityDiscountBanner from "@/components/QuantityDiscountBanner";
 import SiteHeader from "@/components/SiteHeader";
 import Footer from "@/components/Footer";
 import WhatsappFloat from "@/components/WhatsappFloat";
@@ -31,6 +32,7 @@ export default async function ProductPage({
 
   return (
     <main className="min-h-screen bg-cream">
+      <QuantityDiscountBanner />
       <SiteHeader />
 
       <div className="mx-auto max-w-5xl px-4 py-8 sm:py-12">

@@ -72,7 +72,9 @@ export type SaleDetail = {
 
 function pmLabel(method: string | null): string {
   if (method === "MERCADOPAGO") return "Mercado Pago (pagado online)";
-  if (method === "CASH") return "Efectivo (paga al recibir)";
+  if (method === "TRANSFERENCIA") return "Transferencia bancaria";
+  if (method === "CASH" || method === "EFECTIVO")
+    return "Efectivo (paga al recibir)";
   return "—";
 }
 
