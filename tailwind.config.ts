@@ -8,11 +8,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Berna&co palette — see docs/ROADMAP design system. Do not add others.
-        ink: "#0A0A0A", // black: hero bg, footer, primary buttons, strong text
-        cream: "#F5F0EB", // soft alternate bg for product sections
-        line: "#E8E3DC", // borders, separators
-        muted: "#6B6560", // secondary text, weights, descriptions
+        // Berna&co palette. The values are CSS variables (injected by the CMS in
+        // the layout) with the original hex as fallback, so the design is
+        // identical until the admin changes a color.
+        ink: "var(--color-ink, #0A0A0A)", // black: hero bg, footer, buttons, strong text
+        cream: "var(--color-cream, #F5F0EB)", // soft alternate bg
+        line: "var(--color-line, #E8E3DC)", // borders, separators
+        muted: "var(--color-muted, #6B6560)", // secondary text
+        accent: "var(--color-accent, #c0392b)", // promo red
       },
       fontFamily: {
         // Grotesque workhorse (headlines + UI) and the serif accent.

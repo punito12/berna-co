@@ -89,22 +89,34 @@ function CowIcon() {
   );
 }
 
-const ITEMS = [
-  { title: "Huevos de gallinas libres", Icon: EggIcon },
-  { title: "Pollo pastoril", Icon: ChickenIcon },
-  { title: "Peceto de pastura", Icon: CowIcon },
-];
+const ICONS = [EggIcon, ChickenIcon, CowIcon];
 
-export default function Ingredients() {
+export default function Ingredients({
+  eyebrow = "Lo que hay adentro",
+  title = "Nuestros ingredientes",
+  item1 = "Huevos de gallinas libres",
+  item2 = "Pollo pastoril",
+  item3 = "Peceto de pastura",
+}: {
+  eyebrow?: string;
+  title?: string;
+  item1?: string;
+  item2?: string;
+  item3?: string;
+}) {
+  const ITEMS = [item1, item2, item3].map((t, i) => ({
+    title: t,
+    Icon: ICONS[i],
+  }));
   return (
     <section id="ingredientes" className="bg-cream">
       <div className="mx-auto max-w-5xl px-4 py-20 sm:py-24">
         <Reveal className="mb-14 text-center">
           <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
-            Lo que hay adentro
+            {eyebrow}
           </p>
           <h2 className="mt-3 font-black uppercase tracking-tight text-4xl sm:text-6xl text-ink">
-            Nuestros ingredientes
+            {title}
           </h2>
         </Reveal>
 

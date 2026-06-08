@@ -9,6 +9,7 @@ import {
 } from "@/lib/format";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { syncPaymentToOrder, isMpConfigured } from "@/lib/mercadopago";
+import { loadCmsBundle, getSiteText } from "@/lib/cms";
 
 // Server component: reads the saved order and shows the confirmation + WhatsApp.
 // When Mercado Pago redirects here it carries payment_id/status — we sync that
@@ -54,7 +55,9 @@ export default async function ConfirmadoPage({
   }
 
   const shortId = order.id.slice(-6).toUpperCase();
-  const whatsappUrl = buildWhatsappUrl(order);
+  const cms = await loadCmsBundle();
+  const waTemplate = getSiteText(cms, "checkout.whatsapp.template", "");
+  const whatsappUrl = buildWhatsappUrl(order, waTemplate);
 
   return (
     <main className="min-h-screen bg-cream px-4 py-12">
@@ -65,11 +68,15 @@ export default async function ConfirmadoPage({
             Pedido recibido
           </p>
           <h1 className="mt-2 font-black uppercase tracking-tight text-4xl text-ink">
-            ¡Gracias!
+            {getSiteText(cms, "checkout.confirmado.title", "¡Gracias!")}
           </h1>
           <p className="mt-3 text-muted">
-            Tu pedido <span className="font-bold text-ink">#{shortId}</span> quedó
-            registrado. Confirmalo enviándonos el detalle por WhatsApp.
+            Tu pedido <span className="font-bold text-ink">#{shortId}</span>{" "}
+            {getSiteText(
+              cms,
+              "checkout.confirmado.subtitle",
+              "quedó registrado. Confirmalo enviándonos el detalle por WhatsApp."
+            )}
           </p>
         </div>
 

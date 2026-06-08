@@ -2,13 +2,25 @@ import BernaLogo from "@/components/BernaLogo";
 import NewsletterForm from "@/components/NewsletterForm";
 import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 
-export default function Footer() {
+export default function Footer({
+  slogan = "¡La vida es rica!",
+  instagram = "@berna.and.co",
+  instagramUrl = "https://instagram.com/berna.and.co",
+  email = "csberna2020@gmail.com",
+  whatsapp = "+54 11 2545-0304",
+}: {
+  slogan?: string;
+  instagram?: string;
+  instagramUrl?: string;
+  email?: string;
+  whatsapp?: string;
+}) {
   return (
     <footer className="bg-ink text-white">
       {/* Slogan banner with hairline rules */}
       <div className="border-b border-white/10 py-10 text-center">
         <p className="font-black uppercase tracking-[0.4em] text-lg sm:text-2xl">
-          ¡La vida es rica!
+          {slogan}
         </p>
       </div>
 
@@ -24,18 +36,18 @@ export default function Footer() {
 
           <div className="flex flex-col items-center gap-2 sm:items-end">
             <a
-              href="https://instagram.com/berna.and.co"
+              href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="font-bold uppercase tracking-widest text-xs text-cream transition-colors hover:text-white"
             >
-              @berna.and.co
+              {instagram}
             </a>
             <a
-              href="mailto:csberna2020@gmail.com"
+              href={`mailto:${email}`}
               className="text-sm text-cream transition-colors hover:text-white"
             >
-              csberna2020@gmail.com
+              {email}
             </a>
             <a
               href={`https://wa.me/${BUSINESS_WHATSAPP}`}
@@ -43,7 +55,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="text-sm text-cream transition-colors hover:text-white"
             >
-              WhatsApp +54 11 2545-0304
+              WhatsApp {whatsapp}
             </a>
           </div>
         </div>

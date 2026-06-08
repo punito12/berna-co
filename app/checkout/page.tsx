@@ -42,6 +42,16 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
+  // Editable checkout texts from the CMS (published). Fallbacks below if missing.
+  const [cms, setCms] = useState<Record<string, string>>({});
+  useEffect(() => {
+    fetch("/api/cms/texts?category=checkout")
+      .then((r) => r.json())
+      .then((d) => setCms(d.texts ?? {}))
+      .catch(() => setCms({}));
+  }, []);
+  const ct = (key: string, fb: string) => cms[key] || fb;
+
   // --- form state ---
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -360,7 +370,7 @@ export default function CheckoutPage() {
         </h1>
 
         {/* 1. Datos */}
-        <Section number="1" title="Tus datos">
+        <Section number="1" title={ct("checkout.step.contact", "Tus datos")}>
           <Field label="Nombre y apellido" required>
             <input
               type="text"
@@ -400,7 +410,7 @@ export default function CheckoutPage() {
         </Section>
 
         {/* 2. Entrega */}
-        <Section number="2" title="Entrega">
+        <Section number="2" title={ct("checkout.step.delivery", "Entrega")}>
           <div className="grid grid-cols-2 gap-3">
             <ChoiceButton
               active={deliveryType === "DELIVERY"}
@@ -505,7 +515,7 @@ export default function CheckoutPage() {
         </Section>
 
         {/* 3. Cuándo */}
-        <Section number="3" title="¿Cuándo?">
+        <Section number="3" title={ct("checkout.step.schedule", "¿Cuándo?")}>
           {!options && (
             <p className="text-sm text-muted">
               Primero verificá tu zona de entrega (paso 2) para ver los días
@@ -562,7 +572,7 @@ export default function CheckoutPage() {
         </Section>
 
         {/* 4. Pago */}
-        <Section number="4" title="Pago">
+        <Section number="4" title={ct("checkout.step.payment", "Pago")}>
           <div className="grid grid-cols-1 gap-3">
             <PaymentCard
               active={paymentMethod === "EFECTIVO"}
@@ -766,8 +776,8 @@ export default function CheckoutPage() {
           {submitting
             ? "Procesando…"
             : paymentMethod === "MERCADOPAGO"
-            ? "Ir a pagar"
-            : "Confirmar pedido"}
+            ? ct("checkout.cta.pay", "Ir a pagar")
+            : ct("checkout.cta.confirm", "Confirmar pedido")}
         </button>
       </div>
     </main>

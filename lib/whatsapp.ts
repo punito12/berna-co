@@ -32,14 +32,37 @@ export type OrderForMessage = {
   }[];
 };
 
-function buildMessage(order: OrderForMessage): string {
+// Replaces {pedidoId}, {total}, {cliente} in a CMS template. Used as the
+// message header when a template is provided.
+export function fillWhatsappTemplate(
+  template: string,
+  vars: { pedidoId: string; total: string; cliente: string }
+): string {
+  return template
+    .replace(/\{pedidoId\}/g, vars.pedidoId)
+    .replace(/\{total\}/g, vars.total)
+    .replace(/\{cliente\}/g, vars.cliente);
+}
+
+function buildMessage(order: OrderForMessage, template?: string): string {
   const shortId = order.id.slice(-6).toUpperCase();
   const lines: string[] = [];
 
-  lines.push(`¡Hola Berna&co! Hice un pedido nuevo 🛒`);
-  lines.push(`Pedido #${shortId}`);
-  lines.push("");
-  lines.push(`Cliente: ${order.customerName}`);
+  if (template && template.trim()) {
+    // CMS-provided header (with placeholders) replaces the default greeting.
+    lines.push(
+      fillWhatsappTemplate(template, {
+        pedidoId: shortId,
+        total: formatPrice(order.total),
+        cliente: order.customerName,
+      })
+    );
+  } else {
+    lines.push(`¡Hola Berna&co! Hice un pedido nuevo 🛒`);
+    lines.push(`Pedido #${shortId}`);
+    lines.push("");
+    lines.push(`Cliente: ${order.customerName}`);
+  }
   lines.push("");
   lines.push("*Productos:*");
   for (const item of order.items) {
@@ -72,7 +95,10 @@ function buildMessage(order: OrderForMessage): string {
   return lines.join("\n");
 }
 
-export function buildWhatsappUrl(order: OrderForMessage): string {
-  const text = encodeURIComponent(buildMessage(order));
+export function buildWhatsappUrl(
+  order: OrderForMessage,
+  template?: string
+): string {
+  const text = encodeURIComponent(buildMessage(order, template));
   return `https://wa.me/${BUSINESS_WHATSAPP}?text=${text}`;
 }

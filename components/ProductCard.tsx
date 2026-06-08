@@ -20,10 +20,12 @@ export default function ProductCard({
   product,
   efectivoPct = 0,
   transferenciaPct = 0,
+  outOfStockLabel = "Sin stock",
 }: {
   product: ProductForUI;
   efectivoPct?: number;
   transferenciaPct?: number;
+  outOfStockLabel?: string;
 }) {
   const { addToCart } = useCart();
 
@@ -96,7 +98,7 @@ export default function ProductCard({
           )}
           {allOutOfStock && (
             <span className="bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
-              Sin stock
+              {outOfStockLabel}
             </span>
           )}
         </div>
@@ -214,7 +216,7 @@ export default function ProductCard({
             className="mt-3 w-full overflow-hidden bg-black px-4 py-3 font-bold uppercase tracking-widest text-sm text-white transition-colors hover:bg-ink/80 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:bg-muted"
           >
             {selectedOutOfStock
-              ? "Sin stock"
+              ? outOfStockLabel
               : justAdded
               ? "Agregado ✓"
               : "Agregar"}

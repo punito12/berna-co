@@ -5,19 +5,27 @@ import Reveal from "@/components/Reveal";
 const MAP_SRC =
   "https://www.google.com/maps/d/u/0/embed?mid=1CRRd8EzBrKPIstPRUzWnWiaOeoeQOCE&ehbc=2E312F";
 
-export default function PointsOfSale() {
+export default function PointsOfSale({
+  eyebrow = "Dónde encontrarnos",
+  title = "Puntos de venta",
+  subtitle = "Conseguí nuestros productos en estos locales.",
+}: {
+  eyebrow?: string;
+  title?: string;
+  subtitle?: string;
+}) {
   return (
     <section id="puntos-de-venta" className="bg-cream">
       <div className="mx-auto max-w-6xl px-4 py-20">
         <Reveal className="mb-10 text-center">
           <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
-            Dónde encontrarnos
+            {eyebrow}
           </p>
           <h2 className="mt-3 font-black uppercase tracking-tight text-4xl sm:text-5xl text-ink">
-            Puntos de venta
+            {title}
           </h2>
           <p className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted">
-            Conseguí nuestros productos en estos locales.
+            {subtitle}
           </p>
         </Reveal>
 

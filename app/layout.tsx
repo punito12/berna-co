@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo, Fraunces } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
+import { loadCmsBundle, getThemeColors, themeToCssVars } from "@/lib/cms";
 
 // Archivo: a strong grotesque with a true black weight — carries the bold,
 // catalog-like uppercase headlines and all UI text.
@@ -29,13 +30,33 @@ export const metadata: Metadata = {
     "Milanesas premium artesanales, de nuestra cocina a tu freezer. LA VIDA ES RICA!",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Inject the CMS theme colors as CSS variables. Tailwind's color tokens read
+  // these (with the original hex as fallback), so the design is unchanged until
+  // the admin edits a color. Published values only — preview gets its own vars
+  // on the preview route (Fase 4).
+  let cssVars = "";
+  try {
+    const bundle = await loadCmsBundle();
+    cssVars = themeToCssVars(getThemeColors(bundle));
+  } catch {
+    // DB unavailable at render — fall back to the hex defaults in tailwind.
+  }
+
   return (
     <html lang="es-AR" className={`${archivo.variable} ${fraunces.variable}`}>
+      <head>
+        {cssVars && (
+          <style
+            // CMS theme → CSS variables on :root. Tailwind tokens consume them.
+            dangerouslySetInnerHTML={{ __html: `:root{${cssVars}}` }}
+          />
+        )}
+      </head>
       <body className="font-sans">
         <CartProvider>{children}</CartProvider>
       </body>

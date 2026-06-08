@@ -19,10 +19,20 @@ export default function Catalog({
   products,
   efectivoPct = 0,
   transferenciaPct = 0,
+  eyebrow = "Congelados Caseros",
+  title = "Nuestros productos",
+  subtitle = "Elegí tu corte y tu empanado. Listas para el horno.",
+  allLabel = "Todos",
+  outOfStockLabel = "Sin stock",
 }: {
   products: ProductForUI[];
   efectivoPct?: number;
   transferenciaPct?: number;
+  eyebrow?: string;
+  title?: string;
+  subtitle?: string;
+  allLabel?: string;
+  outOfStockLabel?: string;
 }) {
   const { lines, totalItems, totalPrice, changeQuantity } = useCart();
   const [open, setOpen] = useState(false);
@@ -47,13 +57,13 @@ export default function Catalog({
       <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
         <Reveal as="header" className="mb-12 text-center">
           <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
-            Congelados Caseros
+            {eyebrow}
           </p>
           <h2 className="mt-3 font-black uppercase tracking-tight text-4xl sm:text-6xl text-ink">
-            Nuestros productos
+            {title}
           </h2>
           <p className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted">
-            Elegí tu corte y tu empanado. Listas para el horno.
+            {subtitle}
           </p>
         </Reveal>
 
@@ -63,7 +73,7 @@ export default function Catalog({
             active={category === "ALL"}
             onClick={() => setCategory("ALL")}
           >
-            Todos
+            {allLabel}
           </FilterChip>
           {categories.map((c) => (
             <FilterChip
@@ -83,6 +93,7 @@ export default function Catalog({
                 product={product}
                 efectivoPct={efectivoPct}
                 transferenciaPct={transferenciaPct}
+                outOfStockLabel={outOfStockLabel}
               />
             </Reveal>
           ))}
