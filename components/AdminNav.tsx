@@ -68,6 +68,7 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
     links: [
       { href: "/admin/config/zonas", label: "Zonas" },
       { href: "/admin/config/horarios", label: "Días y horarios" },
+      { href: "/admin/config/metodos-pago", label: "Métodos de pago" },
       { href: "/admin/config/negocio", label: "Datos del negocio" },
     ],
   },

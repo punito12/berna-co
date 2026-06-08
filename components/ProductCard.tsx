@@ -16,7 +16,15 @@ import {
   type ProductForUI,
 } from "@/lib/products";
 
-export default function ProductCard({ product }: { product: ProductForUI }) {
+export default function ProductCard({
+  product,
+  efectivoPct = 0,
+  transferenciaPct = 0,
+}: {
+  product: ProductForUI;
+  efectivoPct?: number;
+  transferenciaPct?: number;
+}) {
   const { addToCart } = useCart();
 
   // Local UI state only: which empanado the customer picked. Defaults to first.
@@ -163,6 +171,26 @@ export default function ProductCard({ product }: { product: ProductForUI }) {
               {formatPrice(priceFor(product, selected))}
             </p>
           )}
+          {/* Per-method prices (only when a discount is configured). Base is the
+              already-promo'd price. */}
+          {(() => {
+            const base =
+              selPromoPercent > 0
+                ? promoPriceFor(product, selected)
+                : priceFor(product, selected);
+            const parts: string[] = [];
+            if (efectivoPct > 0)
+              parts.push(
+                `${formatPrice(Math.round((base * (100 - efectivoPct)) / 100))} con efectivo`
+              );
+            if (transferenciaPct > 0)
+              parts.push(
+                `${formatPrice(Math.round((base * (100 - transferenciaPct)) / 100))} con transferencia`
+              );
+            return parts.length > 0 ? (
+              <p className="mt-1 text-xs text-muted">{parts.join(" • ")}</p>
+            ) : null;
+          })()}
           <button
             type="button"
             onClick={handleAdd}

@@ -128,10 +128,11 @@ export async function updateOrderStatus(id: string, status: string) {
     },
   });
 
-  // A cash web order is "paga en efectivo al recibir": the money is collected
-  // when it's DELIVERED, so that's when it hits Caja (deduped by orderId). MP
-  // orders are handled by the payment webhook, not here.
-  if (order.status === "DELIVERED" && order.paymentMethod === "CASH") {
+  // Efectivo / transferencia web orders hit Caja when DELIVERED (deduped by
+  // orderId). The source reflects the method. MP orders are handled by the
+  // payment webhook, not here.
+  const nonMpMethods = ["CASH", "EFECTIVO", "TRANSFERENCIA"];
+  if (order.status === "DELIVERED" && nonMpMethods.includes(order.paymentMethod)) {
     try {
       await recordCashOrderIncome(order);
     } catch (e) {

@@ -55,9 +55,24 @@ export default function CheckoutPage() {
   const [floor, setFloor] = useState(""); // piso/depto (opcional)
   const [dateIso, setDateIso] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "MERCADOPAGO">(
-    "CASH"
-  );
+  const [paymentMethod, setPaymentMethod] = useState<
+    "EFECTIVO" | "TRANSFERENCIA" | "MERCADOPAGO"
+  >("EFECTIVO");
+
+  // Payment-method config (discounts + transfer data), loaded once.
+  const [payCfg, setPayCfg] = useState<{
+    efectivoDiscountPercent: number;
+    transferenciaDiscountPercent: number;
+    aliasMercadoPago: string;
+    cbu: string;
+    whatsappNumber: string;
+  } | null>(null);
+  useEffect(() => {
+    fetch("/api/payment-config")
+      .then((r) => r.json())
+      .then((d) => setPayCfg(d.config ?? null))
+      .catch(() => setPayCfg(null));
+  }, []);
 
   // --- zone (address → coordinates → polygon) state ---
   // options holds the enabled weekdays + slots for the covered zone.
@@ -102,7 +117,19 @@ export default function CheckoutPage() {
 
   // Code discount (validated against the post-kg subtotal).
   const codeDiscount = codeApplied?.amount ?? 0;
-  const afterDiscounts = Math.max(0, afterKg - codeDiscount);
+  const afterCode = Math.max(0, afterKg - codeDiscount);
+
+  // Payment-method discount (efectivo / transferencia), on the post-code
+  // subtotal. MP carries no discount.
+  const methodPercent =
+    payCfg && paymentMethod === "EFECTIVO"
+      ? payCfg.efectivoDiscountPercent
+      : payCfg && paymentMethod === "TRANSFERENCIA"
+      ? payCfg.transferenciaDiscountPercent
+      : 0;
+  const methodDiscount =
+    methodPercent > 0 ? Math.round((afterCode * methodPercent) / 100) : 0;
+  const afterDiscounts = Math.max(0, afterCode - methodDiscount);
 
   // Delivery fee: free when the zone has a threshold and the (discounted) total
   // reaches it.
@@ -253,11 +280,17 @@ export default function CheckoutPage() {
       }
 
       clearCart();
-      // Mercado Pago: redirect to the hosted checkout. Cash: go to confirmation.
+      // Mercado Pago: redirect to the hosted checkout.
       if (paymentMethod === "MERCADOPAGO" && data.paymentUrl) {
         window.location.href = data.paymentUrl;
         return;
       }
+      // Transferencia: show the transfer instructions + WhatsApp screen.
+      if (paymentMethod === "TRANSFERENCIA") {
+        router.push(`/pedido/transferencia?id=${data.id}`);
+        return;
+      }
+      // Efectivo: confirmation.
       router.push(`/pedido/confirmado?id=${data.id}`);
     } catch {
       setError("Hubo un problema de conexión. Probá de nuevo.");
@@ -515,23 +548,45 @@ export default function CheckoutPage() {
 
         {/* 4. Pago */}
         <Section number="4" title="Pago">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <ChoiceButton
-              active={paymentMethod === "CASH"}
-              onClick={() => setPaymentMethod("CASH")}
-            >
-              Efectivo al recibir
-            </ChoiceButton>
-            <ChoiceButton
+          <div className="grid grid-cols-1 gap-3">
+            <PaymentCard
+              active={paymentMethod === "EFECTIVO"}
+              onClick={() => setPaymentMethod("EFECTIVO")}
+              title="Efectivo al recibir"
+              subtitle="Pagás cuando te llega el pedido"
+              badge={
+                payCfg && payCfg.efectivoDiscountPercent > 0
+                  ? `${payCfg.efectivoDiscountPercent}% OFF`
+                  : undefined
+              }
+            />
+            <PaymentCard
+              active={paymentMethod === "TRANSFERENCIA"}
+              onClick={() => setPaymentMethod("TRANSFERENCIA")}
+              title="Transferencia bancaria"
+              subtitle="Transferís y enviás el comprobante por WhatsApp"
+              badge={
+                payCfg && payCfg.transferenciaDiscountPercent > 0
+                  ? `${payCfg.transferenciaDiscountPercent}% OFF`
+                  : undefined
+              }
+            />
+            <PaymentCard
               active={paymentMethod === "MERCADOPAGO"}
               onClick={() => setPaymentMethod("MERCADOPAGO")}
-            >
-              Mercado Pago
-            </ChoiceButton>
+              title="Tarjeta (Mercado Pago)"
+              subtitle="Crédito o débito a través de Mercado Pago"
+            />
           </div>
           {paymentMethod === "MERCADOPAGO" && (
             <p className="mt-3 text-sm text-muted">
               Al confirmar te llevamos a Mercado Pago para completar el pago.
+            </p>
+          )}
+          {paymentMethod === "TRANSFERENCIA" && (
+            <p className="mt-3 text-sm text-muted">
+              Al confirmar te mostramos los datos para transferir y mandar el
+              comprobante por WhatsApp.
             </p>
           )}
         </Section>
@@ -655,6 +710,15 @@ export default function CheckoutPage() {
                 <span>− {formatPrice(codeDiscount)}</span>
               </div>
             )}
+            {methodDiscount > 0 && (
+              <div className="flex items-center justify-between text-muted">
+                <span>
+                  {paymentMethod === "EFECTIVO" ? "Efectivo" : "Transferencia"} (
+                  {methodPercent}%)
+                </span>
+                <span>− {formatPrice(methodDiscount)}</span>
+              </div>
+            )}
             {deliveryType === "DELIVERY" && covered && (
               <div className="flex items-center justify-between text-muted">
                 <span>Envío{zoneName ? ` (${zoneName})` : ""}</span>
@@ -761,6 +825,55 @@ function ChoiceButton({
       }`}
     >
       {children}
+    </button>
+  );
+}
+
+function PaymentCard({
+  active,
+  onClick,
+  title,
+  subtitle,
+  badge,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  subtitle: string;
+  badge?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-4 text-left transition-colors ${
+        active
+          ? "border-black bg-black text-white"
+          : "border-line bg-white text-ink hover:border-black"
+      }`}
+    >
+      <span className="min-w-0">
+        <span className="block font-bold uppercase tracking-wide text-sm">
+          {title}
+        </span>
+        <span
+          className={`mt-0.5 block text-xs ${
+            active ? "text-white/70" : "text-muted"
+          }`}
+        >
+          {subtitle}
+        </span>
+      </span>
+      {badge && (
+        <span
+          className={`shrink-0 rounded-full px-3 py-1 font-black uppercase tracking-wide text-xs ${
+            active ? "bg-white text-black" : "bg-green-100 text-green-700"
+          }`}
+        >
+          {badge}
+        </span>
+      )}
     </button>
   );
 }

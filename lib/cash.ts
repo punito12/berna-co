@@ -265,26 +265,32 @@ export async function deleteMovement(id: string) {
 
 // ---- Auto income from web orders / manual sales (idempotent) ---------------
 
-// Cash web order confirmed: one AVAILABLE income, deduped by orderId.
+// Web order collected (efectivo or transferencia): one AVAILABLE income, deduped
+// by orderId. Both land available immediately (transferencia already cleared by
+// the time the admin confirms). The source reflects the method.
 export async function recordCashOrderIncome(order: {
   id: string;
   total: number;
   customerName: string;
   createdAt: Date;
+  paymentMethod?: string;
 }): Promise<void> {
   const existing = await prisma.cashMovement.findFirst({
     where: { orderId: order.id },
     select: { id: true },
   });
   if (existing) return;
+  const isTransfer = order.paymentMethod === "TRANSFERENCIA";
+  const source = isTransfer ? "TRANSFERENCIA" : "EFECTIVO";
+  const label = isTransfer ? "transferencia" : "efectivo";
   await prisma.cashMovement.create({
     data: {
       date: order.createdAt,
       type: "INCOME",
       amount: order.total,
-      description: `Pedido web (efectivo) — ${order.customerName}`,
+      description: `Pedido web (${label}) — ${order.customerName}`,
       category: "Venta web",
-      source: "EFECTIVO",
+      source,
       status: "AVAILABLE",
       orderId: order.id,
     },

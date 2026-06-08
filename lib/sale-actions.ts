@@ -37,8 +37,10 @@ export async function setSaleStatus(
       throw new Error("Un pedido cancelado no se puede reactivar.");
     await prisma.order.update({ where: { id }, data: { status } });
 
-    // Cash web order collected on delivery → record the income in Caja.
-    if (status === "DELIVERED" && o.paymentMethod === "CASH") {
+    // Efectivo / transferencia web order collected on delivery → record the
+    // income in Caja (source reflects the method). MP is handled by the webhook.
+    const nonMpMethods = ["CASH", "EFECTIVO", "TRANSFERENCIA"];
+    if (status === "DELIVERED" && nonMpMethods.includes(o.paymentMethod)) {
       const full = await prisma.order.findUnique({
         where: { id },
         select: {
@@ -46,6 +48,7 @@ export async function setSaleStatus(
           total: true,
           customerName: true,
           createdAt: true,
+          paymentMethod: true,
         },
       });
       if (full) {

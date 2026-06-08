@@ -19,6 +19,11 @@ import {
   listActiveQuantityTiers,
   tierForKg,
 } from "@/lib/quantity-discounts";
+import {
+  getPaymentConfig,
+  discountPercentFor,
+  normalizePaymentMethod,
+} from "@/lib/payment-config";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -43,7 +48,13 @@ export type CreateOrderInput = {
 };
 
 const DELIVERY_TYPES = ["DELIVERY", "PICKUP"];
-const PAYMENT_METHODS = ["CASH", "MERCADOPAGO"];
+// CASH kept for back-compat; EFECTIVO is its canonical name.
+const PAYMENT_METHODS = [
+  "EFECTIVO",
+  "TRANSFERENCIA",
+  "MERCADOPAGO",
+  "CASH",
+];
 
 export async function createOrder(
   input: CreateOrderInput
@@ -221,6 +232,18 @@ export async function createOrder(
     total -= codeDiscount;
   }
 
+  // Payment-method discount (efectivo / transferencia), on the products subtotal
+  // after the other discounts. MP carries no discount.
+  const payCfg = await getPaymentConfig();
+  const methodPercent = discountPercentFor(payCfg, input.paymentMethod);
+  let methodDiscount = 0;
+  if (methodPercent > 0) {
+    methodDiscount = Math.round((total * methodPercent) / 100);
+    total -= methodDiscount;
+  }
+  // Normalize the stored payment method (CASH -> EFECTIVO).
+  const storedMethod = normalizePaymentMethod(input.paymentMethod);
+
   // Add the delivery fee for the zone (free if the subtotal hits the threshold).
   const shipping = deliveryZone ? shippingFor(deliveryZone, total) : 0;
   total += shipping;
@@ -267,10 +290,11 @@ export async function createOrder(
         lng: deliveryCoords?.lng ?? null,
         scheduledDate,
         scheduledSlot: input.scheduledSlot,
-        paymentMethod: input.paymentMethod,
+        paymentMethod: storedMethod,
         shippingCost: shipping,
         discountCode: appliedCode,
-        discountAmount: quantityPromo + kgDiscount + codeDiscount,
+        discountAmount:
+          quantityPromo + kgDiscount + codeDiscount + methodDiscount,
         total,
         mpPaymentId: null,
         items: { create: itemsToCreate },

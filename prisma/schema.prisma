@@ -532,3 +532,16 @@ model QuantityDiscount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// Payment-method config (singleton). Per-method discounts shown in the store +
+// transfer instructions (alias/CBU/WhatsApp) for the transferencia flow.
+model PaymentMethodConfig {
+  id                       String @id @default("singleton")
+  efectivoDiscountPercent  Int    @default(0)
+  transferenciaDiscountPercent Int @default(0)
+  aliasMercadoPago         String @default("")
+  cbu                      String @default("")
+  whatsappNumber           String @default("")
+
+  updatedAt DateTime @updatedAt
+}

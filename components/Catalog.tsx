@@ -15,7 +15,15 @@ const CATEGORY_LABELS: Record<string, string> = {
   VEGANO: "Vegano",
 };
 
-export default function Catalog({ products }: { products: ProductForUI[] }) {
+export default function Catalog({
+  products,
+  efectivoPct = 0,
+  transferenciaPct = 0,
+}: {
+  products: ProductForUI[];
+  efectivoPct?: number;
+  transferenciaPct?: number;
+}) {
   const { lines, totalItems, totalPrice, changeQuantity } = useCart();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<string>("ALL");
@@ -71,7 +79,11 @@ export default function Catalog({ products }: { products: ProductForUI[] }) {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((product, i) => (
             <Reveal key={product.id} delay={(i % 3) * 90}>
-              <ProductCard product={product} />
+              <ProductCard
+                product={product}
+                efectivoPct={efectivoPct}
+                transferenciaPct={transferenciaPct}
+              />
             </Reveal>
           ))}
         </div>
