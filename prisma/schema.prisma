@@ -545,3 +545,69 @@ model PaymentMethodConfig {
 
   updatedAt DateTime @updatedAt
 }
+
+// ---- CMS (Editor del sitio) ----
+
+// Singleton: theme colors + typography. One row (id = "singleton").
+model SiteContent {
+  id          String  @id @default("singleton")
+  // JSON of semantic color tokens (hex), e.g. {"ink":"#0A0A0A","cream":"#F5F0EB",
+  // "line":"#E8E3DC","muted":"#6B6560","accent":"#c0392b"}. *Draft mirrors it.
+  themeColors      String @default("{}")
+  themeColorsDraft String @default("{}")
+  // JSON of typography, e.g. {"headingFont":"Archivo","bodyFont":"Archivo",
+  // "headingWeight":"900"}.
+  typography       String @default("{}")
+  typographyDraft  String @default("{}")
+  // Logo image (branding).
+  logoUrl      String @default("")
+  logoUrlDraft String @default("")
+
+  publishedAt DateTime?
+  updatedAt   DateTime @updatedAt
+}
+
+// One editable text string of the site. `value` is published, `valueDraft` is
+// being edited.
+model SiteText {
+  id         String  @id @default(cuid())
+  key        String  @unique // e.g. "home.hero.title"
+  value      String  @default("")
+  valueDraft String  @default("")
+  maxLength  Int     @default(200)
+  category   String  @default("home") // home | catalogo | checkout | footer | legal
+  updatedAt  DateTime @updatedAt
+}
+
+// One editable image of the site.
+model SiteImage {
+  id       String  @id @default(cuid())
+  key      String  @unique // e.g. "home.hero.background"
+  url      String  @default("")
+  urlDraft String  @default("")
+  category String  @default("home")
+  updatedAt DateTime @updatedAt
+}
+
+// A page section: lets the admin reorder + show/hide (and edit its config).
+model SiteSection {
+  id          String  @id @default(cuid())
+  key         String  @unique // e.g. "home.hero"
+  page        String  @default("home") // home | ...
+  order       Int     @default(0)
+  orderDraft  Int     @default(0)
+  visible     Boolean @default(true)
+  visibleDraft Boolean @default(true)
+  type        String // hero | products_grid | features | testimonials | faq | newsletter | custom
+  config      String  @default("{}") // JSON
+  configDraft String  @default("{}")
+  updatedAt   DateTime @updatedAt
+}
+
+// A published snapshot of the whole site content, for revert/backup.
+model SiteVersion {
+  id          String   @id @default(cuid())
+  snapshot    String // JSON: SiteContent + texts + images + sections (published)
+  publishedAt DateTime @default(now())
+  publishedBy String   @default("admin")
+}

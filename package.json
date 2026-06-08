@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force && npm run db:seed"
+    "db:seed:cms": "tsx prisma/seed-cms.ts",
+    "db:reset": "prisma migrate reset --force && npm run db:seed && npm run db:seed:cms"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
