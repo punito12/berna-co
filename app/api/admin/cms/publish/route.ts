@@ -9,6 +9,16 @@ export async function POST() {
     const result = await publishCmsDrafts();
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
+    const issues = (error as Error & { issues?: unknown[] }).issues;
+    if (issues) {
+      return NextResponse.json(
+        {
+          error: "Modo seguro: corregí estos valores antes de publicar.",
+          issues,
+        },
+        { status: 400 }
+      );
+    }
     console.error("[cms publish]", error);
     return NextResponse.json(
       { error: "No se pudieron publicar los cambios." },

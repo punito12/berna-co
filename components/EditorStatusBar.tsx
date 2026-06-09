@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Pending = {
@@ -18,6 +18,14 @@ type Version = {
   publishedAt: string;
   publishedBy: string;
 };
+
+type SafetyIssue = {
+  code: string;
+  label: string;
+  detail: string;
+};
+
+const TOUR_STORAGE_KEY = "berna-cms-tour-seen";
 
 function pendingSummary(pending: Pending): string {
   if (!pending || pending.total === 0) return "No hay cambios para publicar.";
@@ -51,27 +59,37 @@ export default function EditorStatusBar() {
   const router = useRouter();
   const [pending, setPending] = useState<Pending>(null);
   const [versions, setVersions] = useState<Version[]>([]);
+  const [issues, setIssues] = useState<SafetyIssue[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [tourOpen, setTourOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   async function refresh() {
     try {
-      const [pendingRes, versionsRes] = await Promise.all([
+      const [pendingRes, versionsRes, safetyRes] = await Promise.all([
         fetch("/api/admin/cms/pending", { cache: "no-store" }),
         fetch("/api/admin/cms/versions", { cache: "no-store" }),
+        fetch("/api/admin/cms/safety", { cache: "no-store" }),
       ]);
       const pendingData = await pendingRes.json();
       const versionsData = await versionsRes.json();
+      const safetyData = await safetyRes.json();
       setPending(pendingData.pending ?? null);
       setVersions(versionsData.versions ?? []);
+      setIssues(safetyData.issues ?? []);
     } catch {
       setPending(null);
       setVersions([]);
+      setIssues([]);
     }
   }
 
   useEffect(() => {
     refresh();
+    if (window.localStorage.getItem(TOUR_STORAGE_KEY) !== "1") {
+      setTourOpen(true);
+    }
     // Refresh when the window regains focus (after editing on another tab).
     const onFocus = () => refresh();
     const onDraftChanged = () => refresh();
@@ -85,6 +103,22 @@ export default function EditorStatusBar() {
 
   const count = pending?.total ?? 0;
   const summary = pendingSummary(pending);
+  const hasSafetyIssues = issues.length > 0;
+
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (count === 0) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [count]);
+
+  function closeTour() {
+    window.localStorage.setItem(TOUR_STORAGE_KEY, "1");
+    setTourOpen(false);
+  }
 
   async function openPreview() {
     setBusy("preview");
@@ -106,6 +140,10 @@ export default function EditorStatusBar() {
 
   async function publish() {
     if (count === 0) return;
+    if (hasSafetyIssues) {
+      setMessage("Modo seguro: corregí los problemas antes de publicar.");
+      return;
+    }
     const ok = window.confirm(
       `Vas a publicar estos cambios:\n\n${summary}\n\nEl público los va a ver de inmediato.`
     );
@@ -117,6 +155,7 @@ export default function EditorStatusBar() {
       const data = await res.json();
       if (!res.ok) {
         setMessage(data.error || "No se pudo publicar.");
+        if (Array.isArray(data.issues)) setIssues(data.issues);
         return;
       }
       setMessage(data.version ? "Cambios publicados." : "No había cambios.");
@@ -147,6 +186,64 @@ export default function EditorStatusBar() {
       router.refresh();
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function downloadBackup() {
+    setBusy("backup");
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/cms/backup", { cache: "no-store" });
+      if (!res.ok) {
+        const data = await res.json();
+        setMessage(data.error || "No se pudo descargar el backup.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `berna-cms-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      setMessage("Backup descargado.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function importBackup(file: File) {
+    const first = window.confirm(
+      "Vas a importar un backup y reemplazar el contenido publicado y los borradores actuales."
+    );
+    if (!first) return;
+    const second = window.confirm("Confirmación final: esta acción se publica al instante.");
+    if (!second) return;
+    setBusy("import");
+    setMessage(null);
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw);
+      const res = await fetch("/api/admin/cms/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "No se pudo importar el backup.");
+        return;
+      }
+      setMessage("Backup importado.");
+      await refresh();
+      router.refresh();
+    } catch {
+      setMessage("El archivo no es un JSON válido.");
+    } finally {
+      setBusy(null);
+      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -182,6 +279,32 @@ export default function EditorStatusBar() {
 
   return (
     <div className="sticky top-4 z-30 mb-6 rounded-lg border border-line bg-white px-4 py-3 shadow-sm">
+      {tourOpen && (
+        <div className="mb-4 rounded-lg border border-ink bg-cream p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="font-black uppercase tracking-tight text-lg text-ink">
+                Tour rápido del editor
+              </p>
+              <ol className="mt-3 grid gap-2 text-sm text-muted sm:grid-cols-2">
+                <li>1. Editá textos, colores, logo y secciones: todo queda en borrador.</li>
+                <li>2. Usá preview para revisar drafts sin cambiar el sitio público.</li>
+                <li>3. Publicar copia el borrador al sitio y guarda una versión.</li>
+                <li>4. El modo seguro bloquea valores rotos antes de publicar.</li>
+                <li>5. Historial, revertir y backup te dejan volver atrás.</li>
+                <li>6. Si salís con cambios pendientes, el navegador te avisa.</li>
+              </ol>
+            </div>
+            <button
+              type="button"
+              onClick={closeTour}
+              className="rounded bg-ink px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-white"
+            >
+              No mostrar de nuevo
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <span
@@ -200,7 +323,30 @@ export default function EditorStatusBar() {
             <p className="mt-2 text-xs text-muted">Resumen: {summary}</p>
           )}
           {message && (
-            <p className="mt-2 text-xs font-bold text-green-700">{message}</p>
+            <p
+              className={`mt-2 text-xs font-bold ${
+                message.includes("No ") || message.includes("Modo seguro")
+                  ? "text-amber-800"
+                  : "text-green-700"
+              }`}
+            >
+              {message}
+            </p>
+          )}
+          {hasSafetyIssues && (
+            <div className="mt-3 rounded border border-amber-200 bg-amber-50 p-3">
+              <p className="text-[11px] font-black uppercase tracking-widest text-amber-900">
+                Modo seguro activo
+              </p>
+              <div className="mt-2 space-y-1">
+                {issues.map((issue) => (
+                  <p key={issue.code} className="text-xs text-amber-900">
+                    <span className="font-bold">{issue.label}:</span>{" "}
+                    {issue.detail}
+                  </p>
+                ))}
+              </div>
+            </div>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -223,13 +369,47 @@ export default function EditorStatusBar() {
           <button
             type="button"
             onClick={publish}
-            disabled={busy !== null || count === 0}
+            disabled={busy !== null || count === 0 || hasSafetyIssues}
             className="rounded bg-ink px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-white disabled:opacity-40"
           >
             {busy === "publish" ? "Publicando..." : "Publicar cambios"}
           </button>
         </div>
       </div>
+
+      <details className="mt-4 border-t border-line pt-3">
+        <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-widest text-muted">
+          Backup del CMS
+        </summary>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={downloadBackup}
+            disabled={busy !== null}
+            className="rounded border border-line bg-white px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-ink hover:border-black disabled:opacity-40"
+          >
+            {busy === "backup" ? "Preparando..." : "Descargar backup"}
+          </button>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={busy !== null}
+            className="rounded border border-line bg-white px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-muted hover:border-black hover:text-ink disabled:opacity-40"
+          >
+            {busy === "import" ? "Importando..." : "Importar backup"}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) importBackup(file);
+            }}
+          />
+        </div>
+      </details>
 
       <details className="mt-4 border-t border-line pt-3">
         <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-widest text-muted">
