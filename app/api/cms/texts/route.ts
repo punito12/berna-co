@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { loadCmsBundle, getSiteText } from "@/lib/cms";
+import { isCmsPreviewRequest } from "@/lib/cms-preview";
 
 // Public: returns the published CMS texts for a category (e.g. ?category=checkout),
 // so client components (checkout) can read them. Falls back to {} on error.
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const category = url.searchParams.get("category") || "";
+  const preview = isCmsPreviewRequest(url.searchParams.get("preview"));
   try {
     const bundle = await loadCmsBundle();
     const out: Record<string, string> = {};
@@ -13,7 +15,7 @@ export async function GET(request: Request) {
     // checkout.* / footer.* etc. Callers pass the prefix as `category`.
     for (const [key] of bundle.texts) {
       if (!category || key.startsWith(`${category}.`)) {
-        out[key] = getSiteText(bundle, key, "");
+        out[key] = getSiteText(bundle, key, "", preview);
       }
     }
     return NextResponse.json({ texts: out });

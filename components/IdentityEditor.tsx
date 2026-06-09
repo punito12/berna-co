@@ -37,6 +37,10 @@ const COLOR_LABELS: Record<string, string> = {
   accent: "Acento (promos)",
 };
 
+function notifyDraftChanged() {
+  window.dispatchEvent(new Event("cms:draft-changed"));
+}
+
 // --- WCAG contrast -----------------------------------------------------------
 function hexToRgb(hex: string): [number, number, number] | null {
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
@@ -83,6 +87,7 @@ export default function IdentityEditor({
       body: JSON.stringify({ colors: next }),
     });
     setSavingMsg(res.ok ? "Colores guardados ✓" : "Error al guardar");
+    if (res.ok) notifyDraftChanged();
     setTimeout(() => setSavingMsg(null), 1200);
   }
 
@@ -93,6 +98,7 @@ export default function IdentityEditor({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ typography: next }),
     });
+    notifyDraftChanged();
     setSavingMsg("Tipografía guardada ✓");
     setTimeout(() => setSavingMsg(null), 1200);
   }
@@ -113,6 +119,7 @@ export default function IdentityEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: d.url }),
       });
+      notifyDraftChanged();
       setSavingMsg("Logo guardado ✓");
       setTimeout(() => setSavingMsg(null), 1200);
     } else {

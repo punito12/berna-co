@@ -12,20 +12,30 @@ import {
   getSiteText,
   getSiteImage,
   getSections,
+  getThemeColors,
+  themeToCssVars,
 } from "@/lib/cms";
+import { isCmsPreviewRequest } from "@/lib/cms-preview";
 
 // Home page. Sections render in the order/visibility configured in the CMS
 // (SiteSection); each section's texts/images come from the CMS too, with the
 // original hardcoded strings as fallbacks. The footer is always rendered last.
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: { preview?: string };
+}) {
   const [products, payCfg, cms] = await Promise.all([
     getAvailableProducts(),
     getPaymentConfig(),
     loadCmsBundle(),
   ]);
 
-  const t = (key: string, fb: string) => getSiteText(cms, key, fb);
-  const sections = getSections(cms, "home");
+  const preview = isCmsPreviewRequest(searchParams?.preview);
+  const t = (key: string, fb: string) => getSiteText(cms, key, fb, preview);
+  const image = (key: string, fb: string) => getSiteImage(cms, key, fb, preview);
+  const sections = getSections(cms, "home", preview);
+  const previewCssVars = preview ? themeToCssVars(getThemeColors(cms, true)) : "";
 
   // Renders one section by its key. Unknown/footer keys are skipped (footer is
   // rendered separately, always last).
@@ -38,11 +48,7 @@ export default async function HomePage() {
             title={t("home.hero.title", "Milanesas\nPremium")}
             subtitle={t("home.hero.subtitle", "de nuestra cocina a tu freezer")}
             cta={t("home.hero.cta", "Ver productos")}
-            backgroundUrl={getSiteImage(
-              cms,
-              "home.hero.background",
-              "/images/hero.jpg"
-            )}
+            backgroundUrl={image("home.hero.background", "/images/hero.jpg")}
           />
         );
       case "home.ingredients":
@@ -98,6 +104,16 @@ export default async function HomePage() {
 
   return (
     <main>
+      {previewCssVars && (
+        <style
+          dangerouslySetInnerHTML={{ __html: `:root{${previewCssVars}}` }}
+        />
+      )}
+      {preview && (
+        <div className="fixed left-4 top-4 z-50 rounded bg-amber-400 px-3 py-2 text-[11px] font-black uppercase tracking-widest text-black shadow">
+          Preview CMS
+        </div>
+      )}
       <QuantityDiscountBanner />
       {sections.map((s) => renderSection(s.key))}
       <Footer

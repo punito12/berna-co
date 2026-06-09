@@ -45,7 +45,10 @@ export default function CheckoutPage() {
   // Editable checkout texts from the CMS (published). Fallbacks below if missing.
   const [cms, setCms] = useState<Record<string, string>>({});
   useEffect(() => {
-    fetch("/api/cms/texts?category=checkout")
+    const params = new URLSearchParams({ category: "checkout" });
+    const preview = new URLSearchParams(window.location.search).get("preview");
+    if (preview) params.set("preview", preview);
+    fetch(`/api/cms/texts?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => setCms(d.texts ?? {}))
       .catch(() => setCms({}));

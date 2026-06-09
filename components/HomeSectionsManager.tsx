@@ -44,6 +44,10 @@ const SECTION_META: Record<string, { name: string; textKeys: string[] }> = {
   "home.footer": { name: "Footer", textKeys: [] },
 };
 
+function notifyDraftChanged() {
+  window.dispatchEvent(new Event("cms:draft-changed"));
+}
+
 export default function HomeSectionsManager({
   initialSections,
   texts,
@@ -65,6 +69,7 @@ export default function HomeSectionsManager({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ page: "home", keys: next.map((s) => s.key) }),
     });
+    notifyDraftChanged();
     router.refresh();
   }
 
@@ -88,6 +93,7 @@ export default function HomeSectionsManager({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key, visible }),
     });
+    notifyDraftChanged();
     router.refresh();
   }
 

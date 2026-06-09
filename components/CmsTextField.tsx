@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 
+function notifyDraftChanged() {
+  window.dispatchEvent(new Event("cms:draft-changed"));
+}
+
 // One editable site text: label, textarea/input, character counter, "restaurar
 // al original" button, and auto-save of the draft on blur. Shows a dot when the
 // draft differs from the published value.
@@ -35,6 +39,7 @@ export default function CmsTextField({
         body: JSON.stringify({ key: textKey, value }),
       });
       if (res.ok) {
+        notifyDraftChanged();
         setSavedTick(true);
         setTimeout(() => setSavedTick(false), 1200);
       }
@@ -51,7 +56,10 @@ export default function CmsTextField({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: textKey, action: "restore" }),
       });
-      if (res.ok) setValue(published);
+      if (res.ok) {
+        setValue(published);
+        notifyDraftChanged();
+      }
     } finally {
       setSaving(false);
     }
