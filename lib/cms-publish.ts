@@ -452,7 +452,30 @@ export async function importCmsBackup(input: unknown) {
 
 async function applySnapshot(snapshot: SiteSnapshot, publishedBy: string) {
   const publishedAt = new Date();
+  const textKeys = snapshot.texts.map((text) => text.key);
+  const imageKeys = snapshot.images.map((image) => image.key);
+  const sectionKeys = snapshot.sections.map((section) => section.key);
+
   await prisma.$transaction(async (tx) => {
+    if (!snapshot.content) {
+      await tx.siteContent.deleteMany({ where: { id: "singleton" } });
+    }
+    if (textKeys.length > 0) {
+      await tx.siteText.deleteMany({ where: { key: { notIn: textKeys } } });
+    } else {
+      await tx.siteText.deleteMany();
+    }
+    if (imageKeys.length > 0) {
+      await tx.siteImage.deleteMany({ where: { key: { notIn: imageKeys } } });
+    } else {
+      await tx.siteImage.deleteMany();
+    }
+    if (sectionKeys.length > 0) {
+      await tx.siteSection.deleteMany({ where: { key: { notIn: sectionKeys } } });
+    } else {
+      await tx.siteSection.deleteMany();
+    }
+
     if (snapshot.content) {
       await tx.siteContent.upsert({
         where: { id: "singleton" },

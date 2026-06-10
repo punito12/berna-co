@@ -42,6 +42,11 @@ const LEGACY_TEXT_KEYS: Record<string, string[]> = {
   "home.pos": ["home.pos.eyebrow", "home.pos.title", "home.pos.subtitle"],
 };
 
+function legacyKeysForSection(key: string, config: CmsBlockConfig): string[] {
+  if (key === "home.about" && (config.title || config.body)) return [];
+  return LEGACY_TEXT_KEYS[key] ?? [];
+}
+
 function notifyDraftChanged() {
   window.dispatchEvent(new Event("cms:draft-changed"));
 }
@@ -212,7 +217,7 @@ export default function HomeSectionsManager({
         const type = normalizeBlockType(section.type, section.key);
         const open = editing === section.key;
         const config = parseBlockConfig(section.configDraft);
-        const legacyKeys = LEGACY_TEXT_KEYS[section.key] ?? [];
+        const legacyKeys = legacyKeysForSection(section.key, config);
         return (
           <div
             key={section.key}
