@@ -456,7 +456,11 @@ export default function CheckoutPage() {
           title={ct("checkout.step1.title", ct("checkout.step.contact", "Tus datos"))}
           textKey="checkout.step1.title"
         >
-          <Field label={ct("checkout.step1.name_label", "Nombre y apellido")} required>
+          <Field
+            label={ct("checkout.step1.name_label", "Nombre y apellido")}
+            textKey="checkout.step1.name_label"
+            required
+          >
             <input
               type="text"
               value={name}
@@ -465,7 +469,11 @@ export default function CheckoutPage() {
               placeholder={ct("checkout.step1.name_placeholder", "Ej: Juana Pérez")}
             />
           </Field>
-          <Field label={ct("checkout.step1.phone_label", "Teléfono")} required>
+          <Field
+            label={ct("checkout.step1.phone_label", "Teléfono")}
+            textKey="checkout.step1.phone_label"
+            required
+          >
             <input
               type="tel"
               value={phone}
@@ -474,7 +482,10 @@ export default function CheckoutPage() {
               placeholder={ct("checkout.step1.phone_placeholder", "Ej: 11 2345 6789")}
             />
           </Field>
-          <Field label={ct("checkout.step1.email_label", "Email (opcional)")}>
+          <Field
+            label={ct("checkout.step1.email_label", "Email (opcional)")}
+            textKey="checkout.step1.email_label"
+          >
             <input
               type="email"
               value={email}
@@ -483,7 +494,10 @@ export default function CheckoutPage() {
               placeholder={ct("checkout.step1.email_placeholder", "Ej: juana@email.com")}
             />
           </Field>
-          <Field label={ct("checkout.step1.notes_label", "Comentarios")}>
+          <Field
+            label={ct("checkout.step1.notes_label", "Comentarios")}
+            textKey="checkout.step1.notes_label"
+          >
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -504,19 +518,25 @@ export default function CheckoutPage() {
             <ChoiceButton
               active={deliveryType === "DELIVERY"}
               onClick={() => setDeliveryType("DELIVERY")}
+              textKey="checkout.step2.delivery_option"
             >
               {ct("checkout.step2.delivery_option", "Envío a domicilio")}
             </ChoiceButton>
             <ChoiceButton
               active={deliveryType === "PICKUP"}
               onClick={() => setDeliveryType("PICKUP")}
+              textKey="checkout.step2.pickup_option"
             >
               {ct("checkout.step2.pickup_option", "Retiro en local")}
             </ChoiceButton>
           </div>
           {deliveryType === "DELIVERY" && (
             <div className="mt-4 space-y-3">
-              <Field label={ct("checkout.step2.street_label", "Calle y número")} required>
+              <Field
+                label={ct("checkout.step2.street_label", "Calle y número")}
+                textKey="checkout.step2.street_label"
+                required
+              >
                 <input
                   type="text"
                   value={street}
@@ -531,7 +551,11 @@ export default function CheckoutPage() {
               </Field>
 
               <div className="grid grid-cols-2 gap-3">
-                <Field label={ct("checkout.step2.locality_label", "Localidad")} required>
+                <Field
+                  label={ct("checkout.step2.locality_label", "Localidad")}
+                  textKey="checkout.step2.locality_label"
+                  required
+                >
                   <input
                     type="text"
                     value={locality}
@@ -544,7 +568,10 @@ export default function CheckoutPage() {
                     placeholder={ct("checkout.step2.locality_placeholder", "Ej: Tigre")}
                   />
                 </Field>
-                <Field label={ct("checkout.step2.postal_label", "Código postal (opcional)")}>
+                <Field
+                  label={ct("checkout.step2.postal_label", "Código postal (opcional)")}
+                  textKey="checkout.step2.postal_label"
+                >
                   <input
                     type="text"
                     inputMode="numeric"
@@ -560,7 +587,10 @@ export default function CheckoutPage() {
                 </Field>
               </div>
 
-              <Field label={ct("checkout.step2.floor_label", "Piso / depto / barrio (opcional)")}>
+              <Field
+                label={ct("checkout.step2.floor_label", "Piso / depto / barrio (opcional)")}
+                textKey="checkout.step2.floor_label"
+              >
                 <input
                   type="text"
                   value={floor}
@@ -686,6 +716,8 @@ export default function CheckoutPage() {
               onClick={() => setPaymentMethod("EFECTIVO")}
               title={ct("checkout.step4.cash_label", "Efectivo al recibir")}
               subtitle={ct("checkout.step4.cash_subtitle", "Pagás cuando te llega el pedido")}
+              titleKey="checkout.step4.cash_label"
+              subtitleKey="checkout.step4.cash_subtitle"
               badge={
                 payCfg && payCfg.efectivoDiscountPercent > 0
                   ? `${payCfg.efectivoDiscountPercent}% OFF`
@@ -700,6 +732,8 @@ export default function CheckoutPage() {
                 "checkout.step4.transfer_subtitle",
                 "Transferís y enviás el comprobante por WhatsApp"
               )}
+              titleKey="checkout.step4.transfer_label"
+              subtitleKey="checkout.step4.transfer_subtitle"
               badge={
                 payCfg && payCfg.transferenciaDiscountPercent > 0
                   ? `${payCfg.transferenciaDiscountPercent}% OFF`
@@ -711,6 +745,8 @@ export default function CheckoutPage() {
               onClick={() => setPaymentMethod("MERCADOPAGO")}
               title={ct("checkout.step4.mp_label", "Tarjeta (Mercado Pago)")}
               subtitle={ct("checkout.step4.mp_subtitle", "Crédito o débito a través de Mercado Pago")}
+              titleKey="checkout.step4.mp_label"
+              subtitleKey="checkout.step4.mp_subtitle"
             />
           </div>
           {paymentMethod === "MERCADOPAGO" && (
@@ -959,16 +995,21 @@ function Section({
 
 function Field({
   label,
+  textKey,
   required,
   children,
 }: {
   label: string;
+  textKey?: string;
   required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block font-bold uppercase tracking-wide text-[11px] text-muted">
+      <span
+        className="mb-1.5 block font-bold uppercase tracking-wide text-[11px] text-muted"
+        data-cms-text={textKey}
+      >
         {label} {required && <span className="text-ink">*</span>}
       </span>
       {children}
@@ -979,10 +1020,12 @@ function Field({
 function ChoiceButton({
   active,
   onClick,
+  textKey,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  textKey?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -990,6 +1033,7 @@ function ChoiceButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
+      data-cms-text={textKey}
       className={`rounded-lg border px-4 py-4 font-bold uppercase tracking-wide text-sm transition-all duration-200 ${
         active
           ? "border-black bg-black text-white shadow-sm"
@@ -1006,12 +1050,16 @@ function PaymentCard({
   onClick,
   title,
   subtitle,
+  titleKey,
+  subtitleKey,
   badge,
 }: {
   active: boolean;
   onClick: () => void;
   title: string;
   subtitle: string;
+  titleKey?: string;
+  subtitleKey?: string;
   badge?: string;
 }) {
   return (
@@ -1026,13 +1074,17 @@ function PaymentCard({
       }`}
     >
       <span className="min-w-0">
-        <span className="block font-bold uppercase tracking-wide text-sm">
+        <span
+          className="block font-bold uppercase tracking-wide text-sm"
+          data-cms-text={titleKey}
+        >
           {title}
         </span>
         <span
           className={`mt-0.5 block text-xs ${
             active ? "text-white/70" : "text-muted"
           }`}
+          data-cms-text={subtitleKey}
         >
           {subtitle}
         </span>
