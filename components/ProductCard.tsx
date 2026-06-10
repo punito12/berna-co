@@ -68,7 +68,7 @@ export default function ProductCard({
           /public/images/productos/. */}
       <Link
         href={`/producto/${product.slug}`}
-        className="relative block aspect-[4/3] w-full overflow-hidden bg-cream"
+        className="relative block aspect-[3/4] w-full overflow-hidden bg-cream"
         aria-label={`Ver ${product.name}`}
       >
         {/* Placeholder name sits BEHIND the photo (-z-10). Only visible when
@@ -79,7 +79,7 @@ export default function ProductCard({
         </span>
         <div
           key={cover}
-          className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 ease-out ${
+          className={`absolute inset-0 bg-contain bg-center bg-no-repeat transition-transform duration-700 ease-out ${
             allOutOfStock ? "opacity-40 grayscale" : "group-hover:scale-105"
           }`}
           style={{ backgroundImage: `url('${cover}')` }}
@@ -222,10 +222,10 @@ export default function ProductCard({
             className="mt-3 w-full overflow-hidden bg-black px-4 py-3 font-bold uppercase tracking-widest text-xs text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:mt-4 sm:py-3.5 sm:text-sm"
           >
             {selectedOutOfStock
-            ? outOfStockLabel
-            : justAdded
-            ? "Agregado ✓"
-            : addToCartLabel}
+              ? outOfStockLabel
+              : justAdded
+              ? "Agregado ✓"
+              : addToCartLabel}
           </button>
         </div>
       </div>
