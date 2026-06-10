@@ -142,6 +142,7 @@ const TEXTS: [string, string, number, string][] = [
 
   // Checkout
   ["checkout.title", "Finalizar pedido", 40, "checkout"],
+  ["checkout.cart_label", "Carrito", 30, "checkout"],
   ["checkout.step1.title", "Tus datos", 30, "checkout"],
   ["checkout.step1.name_label", "Nombre y apellido", 30, "checkout"],
   ["checkout.step1.phone_label", "Teléfono", 20, "checkout"],

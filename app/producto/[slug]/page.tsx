@@ -59,6 +59,9 @@ export default async function ProductPage({
       preview
     ),
   };
+  const cartLabel = cms.texts.has("checkout.cart_label")
+    ? getSiteText(cms, "checkout.cart_label", "Carrito", preview)
+    : "Carrito";
 
   return (
     <main className="min-h-screen bg-cream">
@@ -66,7 +69,7 @@ export default async function ProductPage({
       <SiteHeader
         logoUrl={logoUrl}
         productsLabel={getSiteText(cms, "catalog.page_title", "Productos", preview)}
-        cartLabel={getSiteText(cms, "checkout.cart_label", "Carrito", preview)}
+        cartLabel={cartLabel}
       />
 
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
