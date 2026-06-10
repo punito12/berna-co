@@ -38,6 +38,7 @@ const LEGACY_TEXT_KEYS: Record<string, string[]> = {
     "home.ingredients.item3",
   ],
   "home.products": ["catalogo.eyebrow", "catalogo.title", "catalogo.subtitle"],
+  "home.about": ["home.about.title", "home.about.paragraph"],
   "home.pos": ["home.pos.eyebrow", "home.pos.title", "home.pos.subtitle"],
 };
 
