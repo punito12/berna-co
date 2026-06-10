@@ -4,6 +4,15 @@
 // "restaurar al original" action.
 
 import { prisma } from "@/lib/db";
+import {
+  defaultBlockConfig,
+  isCmsBlockType,
+  isDeletedBlockConfig,
+  isDraftOnlyBlockConfig,
+  normalizeBlockType,
+  sanitizeBlockConfig,
+  type CmsBlockType,
+} from "@/lib/cms-blocks";
 
 // ---- Theme + typography + logo ---------------------------------------------
 
@@ -81,10 +90,11 @@ export async function getImageAdmin(key: string) {
 // ---- Sections ---------------------------------------------------------------
 
 export async function listSectionsAdmin(page: string) {
-  return prisma.siteSection.findMany({
+  const sections = await prisma.siteSection.findMany({
     where: { page },
     orderBy: { orderDraft: "asc" },
   });
+  return sections.filter((section) => !isDeletedBlockConfig(section.configDraft));
 }
 
 // Reorder: takes the ordered list of section keys and writes orderDraft.
@@ -111,9 +121,89 @@ export async function setSectionConfigDraft(
   key: string,
   config: Record<string, unknown>
 ) {
+  const section = await prisma.siteSection.findUnique({ where: { key } });
+  if (!section) throw new Error("La sección no existe.");
+  const type = normalizeBlockType(section.type, section.key);
+  const safe = sanitizeBlockConfig(config);
   await prisma.siteSection.update({
     where: { key },
-    data: { configDraft: JSON.stringify(config) },
+    data: { configDraft: JSON.stringify(safe), type },
+  });
+}
+
+export async function createSectionDraft({
+  page,
+  type,
+}: {
+  page: string;
+  type: CmsBlockType;
+}) {
+  if (!isCmsBlockType(type)) throw new Error("Tipo de sección inválido.");
+  const count = await prisma.siteSection.count({ where: { page } });
+  const key = `${page}.${type}.${Date.now().toString(36)}`;
+  const config = JSON.stringify(defaultBlockConfig(type));
+  const unpublishedConfig = JSON.stringify({ __draftOnly: true });
+  return prisma.siteSection.create({
+    data: {
+      key,
+      page,
+      type,
+      order: count,
+      orderDraft: count,
+      visible: false,
+      visibleDraft: true,
+      config: unpublishedConfig,
+      configDraft: config,
+    },
+  });
+}
+
+export async function duplicateSectionDraft(key: string) {
+  const section = await prisma.siteSection.findUnique({ where: { key } });
+  if (!section) throw new Error("La sección no existe.");
+  const count = await prisma.siteSection.count({ where: { page: section.page } });
+  const newKey = `${section.page}.${normalizeBlockType(
+    section.type,
+    section.key
+  )}.${Date.now().toString(36)}`;
+  const unpublishedConfig = JSON.stringify({ __draftOnly: true });
+  return prisma.siteSection.create({
+    data: {
+      key: newKey,
+      page: section.page,
+      type: normalizeBlockType(section.type, section.key),
+      order: count,
+      orderDraft: count,
+      visible: false,
+      visibleDraft: section.visibleDraft,
+      config: unpublishedConfig,
+      configDraft: section.configDraft,
+    },
+  });
+}
+
+export async function deleteSectionDraft(key: string) {
+  const section = await prisma.siteSection.findUnique({ where: { key } });
+  if (!section) throw new Error("La sección no existe.");
+  if (isDraftOnlyBlockConfig(section.config)) {
+    await prisma.siteSection.delete({ where: { key } });
+    return;
+  }
+  let config: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(section.configDraft);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      config = parsed;
+    }
+  } catch {
+    config = {};
+  }
+  await prisma.siteSection.update({
+    where: { key },
+    data: {
+      visibleDraft: false,
+      configDraft: JSON.stringify({ ...config, __deleted: true }),
+    },
   });
 }
 

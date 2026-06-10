@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { revertCmsToVersion } from "@/lib/cms-publish";
+import { revalidateCmsPublicPaths } from "@/lib/cms-revalidate";
 
 export async function POST(request: Request) {
   if (!isAuthenticated())
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
 
   try {
     const pending = await revertCmsToVersion(body.versionId);
+    revalidateCmsPublicPaths();
     return NextResponse.json({ ok: true, pending });
   } catch (error) {
     return NextResponse.json(

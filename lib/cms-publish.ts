@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/db";
 import { countPendingChanges, getSiteContentAdmin } from "@/lib/cms-admin";
+import {
+  isDeletedBlockConfig,
+  isDraftOnlyBlockConfig,
+  normalizeBlockType,
+  parseBlockConfig,
+  validateBlockConfig,
+} from "@/lib/cms-blocks";
 
 export type SiteSnapshot = {
   content: {
@@ -236,11 +243,28 @@ export async function validateCmsDrafts(): Promise<CmsSafetyIssue[]> {
   }
 
   for (const section of sections) {
-    if (!parseObject(section.configDraft)) {
+    if (!section.visibleDraft) continue;
+    if (isDeletedBlockConfig(section.configDraft)) continue;
+    const parsedConfig = parseObject(section.configDraft);
+    if (!parsedConfig) {
       issues.push({
         code: `section.${section.key}.config`,
         label: "Configuración inválida",
         detail: `${section.key} tiene un configDraft que no es JSON válido.`,
+      });
+      continue;
+    }
+    if (Object.keys(parsedConfig).length === 0) continue;
+    const type = normalizeBlockType(section.type, section.key);
+    const configIssues = validateBlockConfig(
+      type,
+      parseBlockConfig(section.configDraft)
+    );
+    for (const detail of configIssues) {
+      issues.push({
+        code: `section.${section.key}.config`,
+        label: "Configuración inválida",
+        detail: `${section.key}: ${detail}`,
       });
     }
   }
@@ -276,11 +300,14 @@ export async function publishCmsDrafts(publishedBy = "admin") {
     prisma.siteSection.findMany({ orderBy: { orderDraft: "asc" } }),
   ]);
 
+  const publishedSections = sections.filter(
+    (section) => !isDeletedBlockConfig(section.configDraft)
+  );
   const snapshot = snapshotFromRows({
     content,
     texts,
     images,
-    sections,
+    sections: publishedSections,
     publishedAt,
     draft: true,
   });
@@ -310,11 +337,16 @@ export async function publishCmsDrafts(publishedBy = "admin") {
       });
     }
     for (const section of sections) {
+      if (isDeletedBlockConfig(section.configDraft)) {
+        await tx.siteSection.delete({ where: { key: section.key } });
+        continue;
+      }
       await tx.siteSection.update({
         where: { key: section.key },
         data: {
           order: section.orderDraft,
           visible: section.visibleDraft,
+          type: normalizeBlockType(section.type, section.key),
           config: section.configDraft,
         },
       });
@@ -365,6 +397,10 @@ export async function discardCmsDrafts() {
       });
     }
     for (const section of sections) {
+      if (isDraftOnlyBlockConfig(section.config)) {
+        await tx.siteSection.delete({ where: { key: section.key } });
+        continue;
+      }
       await tx.siteSection.update({
         where: { key: section.key },
         data: {

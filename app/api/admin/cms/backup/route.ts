@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { exportCmsBackup, importCmsBackup } from "@/lib/cms-publish";
+import { revalidateCmsPublicPaths } from "@/lib/cms-revalidate";
 
 export async function GET() {
   if (!isAuthenticated())
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const pending = await importCmsBackup(body);
+    revalidateCmsPublicPaths();
     return NextResponse.json({ ok: true, pending });
   } catch (error) {
     return NextResponse.json(
