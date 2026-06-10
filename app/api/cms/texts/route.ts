@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loadCmsBundle, getSiteText } from "@/lib/cms";
+import { loadCmsBundle, getSiteText, isPreview } from "@/lib/cms";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 
 // Public: returns the published CMS texts for a category (e.g. ?category=checkout),
@@ -7,7 +7,8 @@ import { isCmsPreviewRequest } from "@/lib/cms-preview";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const category = url.searchParams.get("category") || "";
-  const preview = isCmsPreviewRequest(url.searchParams.get("preview"));
+  const preview =
+    (await isPreview()) || isCmsPreviewRequest(url.searchParams.get("preview"));
   try {
     const bundle = await loadCmsBundle();
     const out: Record<string, string> = {};

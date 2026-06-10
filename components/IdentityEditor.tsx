@@ -14,14 +14,14 @@ const FONTS = [
   "Roboto",
   "Oswald",
   "Raleway",
-  "Work Sans",
   "Merriweather",
-  "Nunito",
-  "DM Sans",
+  "Anton",
+  "Work Sans",
   "Space Grotesk",
-  "Fraunces",
-  "Archivo Black",
-  "Libre Franklin",
+  "DM Sans",
+  "Manrope",
+  "Outfit",
+  "Plus Jakarta Sans",
 ];
 
 const WEIGHTS = ["400", "500", "600", "700", "800", "900"];
@@ -35,6 +35,9 @@ const COLOR_LABELS: Record<string, string> = {
   line: "Bordes / separadores",
   muted: "Texto secundario",
   accent: "Acento (promos)",
+  bg: "Fondo principal",
+  buttonBg: "Fondo de botón",
+  buttonText: "Texto de botón",
 };
 
 function notifyDraftChanged() {
@@ -144,7 +147,16 @@ export default function IdentityEditor({
           Colores
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {["ink", "cream", "line", "muted", "accent"].map((key) => (
+          {[
+            "ink",
+            "cream",
+            "line",
+            "muted",
+            "accent",
+            "bg",
+            "buttonBg",
+            "buttonText",
+          ].map((key) => (
             <label
               key={key}
               className="flex items-center justify-between gap-3 rounded-lg border border-line bg-white p-3"
@@ -238,7 +250,7 @@ export default function IdentityEditor({
               onChange={(e) =>
                 saveTypo({ ...typo, headingWeight: e.target.value })
               }
-              className="w-full rounded border border-line bg-white px-3 py-2 text-ink"
+              className="w-full rounded border border-line bg-white px-3 py-2 text-ink disabled:cursor-not-allowed disabled:opacity-50"
             >
               {WEIGHTS.map((w) => (
                 <option key={w} value={w}>
@@ -274,10 +286,6 @@ export default function IdentityEditor({
             De nuestra cocina a tu freezer. Elegí tu corte y tu empanado.
           </p>
         </div>
-        <p className="mt-2 text-xs text-muted">
-          Nota: el cambio de tipografía se aplica al sitio cuando publicás (y
-          requiere que la fuente esté en Google Fonts).
-        </p>
       </section>
 
       {/* Logo */}
@@ -341,10 +349,12 @@ function FontSelect({
   label,
   value,
   onChange,
+  disabled = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <label className="block">
@@ -354,7 +364,8 @@ function FontSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded border border-line bg-white px-3 py-2 text-ink"
+        disabled={disabled}
+        className="w-full rounded border border-line bg-white px-3 py-2 text-ink disabled:cursor-not-allowed disabled:opacity-50"
       >
         {FONTS.map((f) => (
           <option key={f} value={f}>

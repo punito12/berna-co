@@ -11,16 +11,38 @@ html {
 }
 
 body {
-  background-color: #ffffff;
-  color: #0a0a0a;
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Text selection in the brand palette (black on cream). */
+* {
+  border-color: var(--color-line);
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
 ::selection {
-  background-color: #0a0a0a;
-  color: #f5f0eb;
+  background-color: var(--color-ink);
+  color: var(--color-cream);
+}
+
+.font-heading {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: var(--weight-heading);
 }
 
 /* --- Motion ---------------------------------------------------------------
@@ -37,9 +59,24 @@ body {
   }
 }
 
+@keyframes soft-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 /* Plays immediately on mount (hero). Use inline animationDelay to stagger. */
 .animate-fade-up {
   animation: fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-soft-pop {
+  animation: soft-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Scroll reveal: hidden until <Reveal> adds .is-visible (IntersectionObserver). */
@@ -69,6 +106,7 @@ body {
     scroll-behavior: auto;
   }
   .animate-fade-up,
+  .animate-soft-pop,
   .animate-slow-zoom,
   [data-reveal].is-visible {
     animation: none;

@@ -6,6 +6,13 @@
 // Missing keys fall back to a provided default and log a warning (never crash).
 
 import { prisma } from "@/lib/db";
+import type { SiteSection } from "@prisma/client";
+import { cookies } from "next/headers";
+import {
+  isDeletedBlockConfig,
+  isDraftOnlyBlockConfig,
+  parseBlockConfig,
+} from "@/lib/cms-blocks";
 import { cache } from "react";
 
 export type ThemeColors = {
@@ -14,6 +21,9 @@ export type ThemeColors = {
   line: string;
   muted: string;
   accent: string;
+  bg: string;
+  buttonBg: string;
+  buttonText: string;
 };
 
 export type Typography = {
@@ -28,11 +38,14 @@ export const DEFAULT_THEME: ThemeColors = {
   line: "#E8E3DC",
   muted: "#6B6560",
   accent: "#c0392b",
+  bg: "#FFFFFF",
+  buttonBg: "#0A0A0A",
+  buttonText: "#FFFFFF",
 };
 
 export const DEFAULT_TYPOGRAPHY: Typography = {
   headingFont: "Archivo",
-  bodyFont: "Archivo",
+  bodyFont: "Inter",
   headingWeight: "900",
 };
 
@@ -59,6 +72,7 @@ export type CmsBundle = {
     logoUrlDraft: string;
   } | null;
   sections: {
+    id: string;
     key: string;
     page: string;
     order: number;
@@ -68,6 +82,7 @@ export type CmsBundle = {
     type: string;
     config: string;
     configDraft: string;
+    updatedAt: Date;
   }[];
 };
 
@@ -117,6 +132,18 @@ export function getSiteText(
   return v && v.length > 0 ? v : fallback;
 }
 
+export async function isPreview(): Promise<boolean> {
+  return cookies().get("cms-preview")?.value === "1";
+}
+
+export async function getText(
+  key: string,
+  fallback = ""
+): Promise<string> {
+  const bundle = await loadCmsBundle();
+  return getSiteText(bundle, key, fallback, await isPreview());
+}
+
 export function getSiteImage(
   bundle: CmsBundle,
   key: string,
@@ -132,6 +159,14 @@ export function getSiteImage(
   return v && v.length > 0 ? v : fallback;
 }
 
+export async function getImage(
+  key: string,
+  fallback = ""
+): Promise<string> {
+  const bundle = await loadCmsBundle();
+  return getSiteImage(bundle, key, fallback, await isPreview());
+}
+
 export function getThemeColors(bundle: CmsBundle, preview = false): ThemeColors {
   if (!bundle.content) return DEFAULT_THEME;
   const raw = preview
@@ -140,7 +175,22 @@ export function getThemeColors(bundle: CmsBundle, preview = false): ThemeColors 
   return parseJson(raw, DEFAULT_THEME);
 }
 
-export function getTypography(bundle: CmsBundle, preview = false): Typography {
+export async function getColors(): Promise<Record<string, string>> {
+  const bundle = await loadCmsBundle();
+  return getThemeColors(bundle, await isPreview());
+}
+
+export function getTypography(bundle: CmsBundle, preview?: boolean): Typography;
+export function getTypography(): Promise<Typography>;
+export function getTypography(
+  bundle?: CmsBundle,
+  preview = false
+): Typography | Promise<Typography> {
+  if (!bundle) {
+    return loadCmsBundle().then(async (cms) =>
+      getTypography(cms, await isPreview())
+    );
+  }
   if (!bundle.content) return DEFAULT_TYPOGRAPHY;
   const raw = preview
     ? bundle.content.typographyDraft
@@ -159,26 +209,69 @@ export type SectionView = {
   config: Record<string, unknown>;
 };
 
+function sectionIsVisible(section: CmsBundle["sections"][number], preview: boolean) {
+  if (preview) {
+    return section.visibleDraft && !isDeletedBlockConfig(section.configDraft);
+  }
+  return (
+    section.visible &&
+    !isDeletedBlockConfig(section.config) &&
+    !isDraftOnlyBlockConfig(section.config)
+  );
+}
+
 // Active, ordered sections for a page (honoring draft order/visibility in
 // preview).
 export function getSections(
   bundle: CmsBundle,
   page: string,
+  preview?: boolean
+): SectionView[];
+export function getSections(page: string): Promise<SiteSection[]>;
+export function getSections(
+  bundleOrPage: CmsBundle | string,
+  page?: string,
   preview = false
-): SectionView[] {
+): SectionView[] | Promise<SiteSection[]> {
+  if (typeof bundleOrPage === "string") {
+    return loadCmsBundle().then(async (bundle) => {
+      const usePreview = await isPreview();
+      return bundle.sections
+        .filter((s) => s.page === bundleOrPage)
+        .filter((s) => sectionIsVisible(s, usePreview))
+        .sort((a, b) =>
+          usePreview ? a.orderDraft - b.orderDraft : a.order - b.order
+        )
+        .map(
+          (s) =>
+            ({
+              id: s.id,
+              key: s.key,
+              page: s.page,
+              order: usePreview ? s.orderDraft : s.order,
+              orderDraft: s.orderDraft,
+              visible: usePreview ? s.visibleDraft : s.visible,
+              visibleDraft: s.visibleDraft,
+              type: s.type,
+              config: usePreview ? s.configDraft : s.config,
+              configDraft: s.configDraft,
+              updatedAt: s.updatedAt,
+            }) satisfies SiteSection
+        );
+    });
+  }
+  const bundle = bundleOrPage;
+  const targetPage = page ?? "home";
   return bundle.sections
-    .filter((s) => s.page === page)
-    .filter((s) => (preview ? s.visibleDraft : s.visible))
+    .filter((s) => s.page === targetPage)
+    .filter((s) => sectionIsVisible(s, preview))
     .sort((a, b) =>
       preview ? a.orderDraft - b.orderDraft : a.order - b.order
     )
     .map((s) => ({
       key: s.key,
       type: s.type,
-      config: parseJson<Record<string, unknown>>(
-        preview ? s.configDraft : s.config,
-        {}
-      ),
+      config: parseBlockConfig(preview ? s.configDraft : s.config),
     }));
 }
 
@@ -190,5 +283,16 @@ export function themeToCssVars(theme: ThemeColors): string {
     `--color-line:${theme.line}`,
     `--color-muted:${theme.muted}`,
     `--color-accent:${theme.accent}`,
+    `--color-bg:${theme.bg}`,
+    `--color-button-bg:${theme.buttonBg}`,
+    `--color-button-text:${theme.buttonText}`,
+  ].join(";");
+}
+
+export function typographyToCssVars(typography: Typography): string {
+  return [
+    `--font-heading:${JSON.stringify(typography.headingFont)}`,
+    `--font-body:${JSON.stringify(typography.bodyFont)}`,
+    `--weight-heading:${typography.headingWeight}`,
   ].join(";");
 }
