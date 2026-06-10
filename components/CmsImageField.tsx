@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function notifyDraftChanged() {
   window.dispatchEvent(new Event("cms:draft-changed"));
@@ -18,12 +18,18 @@ export default function CmsImageField({
   draft: string;
 }) {
   const [url, setUrl] = useState(draft);
+  const [savedUrl, setSavedUrl] = useState(draft);
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
   const changed = url !== published;
 
+  useEffect(() => {
+    setUrl(draft);
+    setSavedUrl(draft);
+  }, [draft]);
+
   async function save(nextUrl = url) {
-    if (nextUrl === draft) return;
+    if (nextUrl === savedUrl) return;
     setSaving(true);
     try {
       const res = await fetch("/api/admin/cms/image", {
@@ -32,6 +38,7 @@ export default function CmsImageField({
         body: JSON.stringify({ key: imageKey, url: nextUrl }),
       });
       if (res.ok) {
+        setSavedUrl(nextUrl);
         notifyDraftChanged();
         setSavedTick(true);
         setTimeout(() => setSavedTick(false), 1200);

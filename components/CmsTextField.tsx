@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function notifyDraftChanged() {
   window.dispatchEvent(new Event("cms:draft-changed"));
@@ -25,12 +25,18 @@ export default function CmsTextField({
   multiline?: boolean;
 }) {
   const [value, setValue] = useState(draft);
+  const [savedValue, setSavedValue] = useState(draft);
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
   const changed = value !== published;
 
+  useEffect(() => {
+    setValue(draft);
+    setSavedValue(draft);
+  }, [draft]);
+
   async function save() {
-    if (value === draft) return; // nothing new
+    if (value === savedValue) return; // nothing new
     setSaving(true);
     try {
       const res = await fetch("/api/admin/cms/text", {
@@ -39,6 +45,7 @@ export default function CmsTextField({
         body: JSON.stringify({ key: textKey, value }),
       });
       if (res.ok) {
+        setSavedValue(value);
         notifyDraftChanged();
         setSavedTick(true);
         setTimeout(() => setSavedTick(false), 1200);
@@ -58,6 +65,7 @@ export default function CmsTextField({
       });
       if (res.ok) {
         setValue(published);
+        setSavedValue(published);
         notifyDraftChanged();
       }
     } finally {
