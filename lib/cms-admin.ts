@@ -13,6 +13,7 @@ import {
   sanitizeBlockConfig,
   type CmsBlockType,
 } from "@/lib/cms-blocks";
+import { sanitizeTextStyle } from "@/lib/cms-text-styles";
 
 // ---- Theme + typography + logo ---------------------------------------------
 
@@ -58,6 +59,19 @@ export async function setTextDraft(key: string, valueDraft: string) {
   await prisma.siteText.update({ where: { key }, data: { valueDraft: v } });
 }
 
+export async function setTextStyleDraft(
+  key: string,
+  styleDraft: Record<string, unknown>
+) {
+  const row = await prisma.siteText.findUnique({ where: { key } });
+  if (!row) throw new Error(`Texto "${key}" no existe.`);
+  const style = sanitizeTextStyle(styleDraft);
+  await prisma.siteText.update({
+    where: { key },
+    data: { styleDraft: JSON.stringify(style) },
+  });
+}
+
 // Restore one text's draft to its published value.
 export async function restoreTextDraft(key: string) {
   const row = await prisma.siteText.findUnique({ where: { key } });
@@ -65,6 +79,15 @@ export async function restoreTextDraft(key: string) {
   await prisma.siteText.update({
     where: { key },
     data: { valueDraft: row.value },
+  });
+}
+
+export async function restoreTextStyleDraft(key: string) {
+  const row = await prisma.siteText.findUnique({ where: { key } });
+  if (!row) throw new Error(`Texto "${key}" no existe.`);
+  await prisma.siteText.update({
+    where: { key },
+    data: { styleDraft: row.style },
   });
 }
 
@@ -221,7 +244,9 @@ export type PendingChanges = {
 
 export async function countPendingChanges(): Promise<PendingChanges> {
   const [texts, images, sections, content] = await Promise.all([
-    prisma.siteText.findMany({ select: { value: true, valueDraft: true } }),
+    prisma.siteText.findMany({
+      select: { value: true, valueDraft: true, style: true, styleDraft: true },
+    }),
     prisma.siteImage.findMany({ select: { url: true, urlDraft: true } }),
     prisma.siteSection.findMany({
       select: {
@@ -236,7 +261,9 @@ export async function countPendingChanges(): Promise<PendingChanges> {
     getSiteContentAdmin(),
   ]);
 
-  const tx = texts.filter((t) => t.value !== t.valueDraft).length;
+  const tx = texts.filter(
+    (t) => t.value !== t.valueDraft || t.style !== t.styleDraft
+  ).length;
   const im = images.filter((i) => i.url !== i.urlDraft).length;
   const sc = sections.filter(
     (s) =>

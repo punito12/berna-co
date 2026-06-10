@@ -7,6 +7,7 @@ import NewsletterForm from "@/components/NewsletterForm";
 import RichText from "@/components/RichText";
 import {
   getLogo,
+  cmsTextAttrs,
   getSiteImage,
   getSiteText,
   type CmsBundle,
@@ -16,6 +17,7 @@ import {
   normalizeBlockType,
   type CmsBlockConfig,
 } from "@/lib/cms-blocks";
+import { textStyleCssRule } from "@/lib/cms-text-styles";
 import type { ProductForUI } from "@/lib/products";
 
 type PaymentDiscounts = {
@@ -41,6 +43,7 @@ export default function CmsHomeSection({
   const t = (key: string, fb: string) => getSiteText(cms, key, fb, preview);
   const image = (key: string, fb: string) => getSiteImage(cms, key, fb, preview);
   const logoUrl = getLogo(cms, preview);
+  const blockStyleCss = blockTextStylesCss(section.key, config);
 
   if (section.key === "home.hero" || type === "hero") {
     return (
@@ -54,6 +57,9 @@ export default function CmsHomeSection({
           config.imageUrl || image("home.hero.background", "/images/hero.jpg")
         }
         logoUrl={logoUrl}
+        titleKey="home.hero.title"
+        subtitleKey="home.hero.subtitle"
+        ctaKey="home.hero.cta_primary"
       />
     );
   }
@@ -87,6 +93,16 @@ export default function CmsHomeSection({
           CERDO: t("catalog.filter.cerdo", "Cerdo"),
           VEGANO: t("catalog.filter.vegano", "Vegano"),
         }}
+        textKeys={{
+          eyebrow: "catalogo.eyebrow",
+          title: "catalogo.title",
+          subtitle: "catalogo.subtitle",
+          allLabel: "catalog.filter.all",
+          outOfStockLabel: "catalog.product.out_of_stock",
+          addToCartLabel: "catalog.product.add_to_cart",
+          chooseBreadcrumbLabel: "catalog.product.choose_breadcrumb",
+          newLabel: "catalog.badge.new",
+        }}
       />
     ) : (
       <section className="bg-cream px-4 py-24 text-center">
@@ -102,6 +118,7 @@ export default function CmsHomeSection({
       config.imageUrl || image("home.about.image", "/images/about/cocina.jpg");
     return (
       <section className="bg-white">
+        {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-20 md:grid-cols-2 md:items-center sm:py-24">
           <div className="overflow-hidden rounded-lg border border-line bg-cream">
             {aboutImage ? (
@@ -117,10 +134,16 @@ export default function CmsHomeSection({
             )}
           </div>
           <div>
-            <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
+            <p
+              className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
+              {...cmsTextAttrs("home.hero.eyebrow")}
+            >
               {config.eyebrow || t("home.hero.eyebrow", "LA VIDA ES RICA!")}
             </p>
-            <h2 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl">
+            <h2
+              className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
+              {...cmsTextAttrs("home.about.title")}
+            >
               {config.title || t("home.about.title", "BERNA & CO")}
             </h2>
             <RichText
@@ -131,6 +154,7 @@ export default function CmsHomeSection({
                   "Nace de nuestro amor por la comida rica, práctica y bien hecha."
                 )
               }
+              textKey="home.about.body"
               className="mt-6 space-y-3 text-base leading-relaxed text-ink/80"
             />
           </div>
@@ -235,6 +259,9 @@ export default function CmsHomeSection({
           t("home.pos.subtitle", "Conseguí nuestros productos en estos locales.")
         }
         mapSrc={config.mapSrc}
+        eyebrowKey="home.pos.eyebrow"
+        titleKey="home.pos.title"
+        subtitleKey="home.pos.subtitle"
       />
     );
   }
@@ -348,6 +375,17 @@ export default function CmsHomeSection({
           "home.newsletter.success",
           "¡Gracias! Te vas a enterar de las novedades."
         )}
+        textKeys={{
+          slogan: "footer.slogan",
+          instagram: "footer.instagram",
+          email: "footer.email",
+          whatsapp: "footer.whatsapp",
+          copyright: "footer.copyright",
+          newsletterTitle: "home.newsletter.title",
+          newsletterSubtitle: "home.newsletter.subtitle",
+          newsletterPlaceholder: "home.newsletter.placeholder",
+          newsletterButton: "home.newsletter.button",
+        }}
       />
     );
   }
@@ -391,6 +429,14 @@ function BlockCopy({ config }: { config: CmsBlockConfig }) {
       )}
     </div>
   );
+}
+
+function blockTextStylesCss(sectionKey: string, config: CmsBlockConfig): string {
+  if (!config.textStyles) return "";
+  return Object.entries(config.textStyles)
+    .map(([part, style]) => textStyleCssRule(`${sectionKey}.${part}`, style))
+    .filter(Boolean)
+    .join("");
 }
 
 function BlockImage({

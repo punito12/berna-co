@@ -31,6 +31,8 @@ export default async function EditorFooterPage() {
               label={LABELS[t.key] ?? t.key}
               published={t.value}
               draft={t.valueDraft}
+              style={t.style}
+              styleDraft={t.styleDraft}
               maxLength={t.maxLength}
             />
           ))}
@@ -48,6 +50,8 @@ export default async function EditorFooterPage() {
               label={LABELS[t.key] ?? t.key}
               published={t.value}
               draft={t.valueDraft}
+              style={t.style}
+              styleDraft={t.styleDraft}
               maxLength={t.maxLength}
               multiline
             />

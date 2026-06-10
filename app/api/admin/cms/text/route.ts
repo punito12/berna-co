@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
-import { setTextDraft, restoreTextDraft } from "@/lib/cms-admin";
+import {
+  setTextDraft,
+  setTextStyleDraft,
+  restoreTextDraft,
+  restoreTextStyleDraft,
+} from "@/lib/cms-admin";
 
 // Save (or restore) a text draft. Admin-only.
 // POST { key, value }  |  POST { key, action: "restore" }
 export async function POST(request: Request) {
   if (!isAuthenticated())
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  let body: { key?: string; value?: string; action?: string };
+  let body: {
+    key?: string;
+    value?: string;
+    style?: Record<string, unknown>;
+    action?: string;
+  };
   try {
     body = await request.json();
   } catch {
@@ -17,6 +27,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Falta la key." }, { status: 400 });
   try {
     if (body.action === "restore") await restoreTextDraft(body.key);
+    else if (body.action === "restore-style") await restoreTextStyleDraft(body.key);
+    else if (body.style) await setTextStyleDraft(body.key, body.style);
     else await setTextDraft(body.key, body.value ?? "");
     return NextResponse.json({ ok: true });
   } catch (error) {

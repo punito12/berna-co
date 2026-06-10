@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { loadCmsBundle, getSiteText, isPreview } from "@/lib/cms";
+import {
+  loadCmsBundle,
+  getSiteText,
+  isPreview,
+  textStylesToCss,
+} from "@/lib/cms";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 
 // Public: returns the published CMS texts for a category (e.g. ?category=checkout),
@@ -19,8 +24,8 @@ export async function GET(request: Request) {
         out[key] = getSiteText(bundle, key, "", preview);
       }
     }
-    return NextResponse.json({ texts: out });
+    return NextResponse.json({ texts: out, textStylesCss: textStylesToCss(bundle, preview) });
   } catch {
-    return NextResponse.json({ texts: {} });
+    return NextResponse.json({ texts: {}, textStylesCss: "" });
   }
 }

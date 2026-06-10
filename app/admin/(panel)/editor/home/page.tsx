@@ -9,7 +9,14 @@ export default async function EditorHomePage() {
     // Home + catalog texts (the products section reuses catalog texts).
     prisma.siteText.findMany({
       where: { category: { in: ["home", "catalogo"] } },
-      select: { key: true, value: true, valueDraft: true, maxLength: true },
+      select: {
+        key: true,
+        value: true,
+        valueDraft: true,
+        style: true,
+        styleDraft: true,
+        maxLength: true,
+      },
     }),
     prisma.siteImage.findMany({
       where: { category: "home" },

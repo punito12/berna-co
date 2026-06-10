@@ -1,3 +1,8 @@
+import {
+  sanitizeTextStyle,
+  type CmsTextStyle,
+} from "@/lib/cms-text-styles";
+
 export const CMS_BLOCK_TYPES = [
   "hero",
   "rich_text",
@@ -26,6 +31,7 @@ export type CmsBlockConfig = {
   items?: { title: string; body?: string }[];
   faqs?: { question: string; answer: string }[];
   imageSide?: "left" | "right";
+  textStyles?: Record<string, CmsTextStyle>;
 };
 
 export const CMS_BLOCK_LABELS: Record<CmsBlockType, string> = {
@@ -123,6 +129,24 @@ export function sanitizeBlockConfig(input: Record<string, unknown>): CmsBlockCon
         answer: typeof row.answer === "string" ? row.answer.slice(0, 1000) : "",
       };
     });
+  }
+  if (
+    input.textStyles &&
+    typeof input.textStyles === "object" &&
+    !Array.isArray(input.textStyles)
+  ) {
+    const styles: Record<string, CmsTextStyle> = {};
+    for (const [key, value] of Object.entries(
+      input.textStyles as Record<string, unknown>
+    )) {
+      if (!["eyebrow", "title", "subtitle", "body", "ctaLabel"].includes(key)) {
+        continue;
+      }
+      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+      const safe = sanitizeTextStyle(value as Record<string, unknown>);
+      if (Object.keys(safe).length > 0) styles[key] = safe;
+    }
+    if (Object.keys(styles).length > 0) out.textStyles = styles;
   }
   return out;
 }

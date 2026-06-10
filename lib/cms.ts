@@ -14,6 +14,7 @@ import {
   isDraftOnlyBlockConfig,
   parseBlockConfig,
 } from "@/lib/cms-blocks";
+import { parseTextStyle, textStyleCssRule } from "@/lib/cms-text-styles";
 import { cache } from "react";
 
 export type ThemeColors = {
@@ -62,7 +63,10 @@ function parseJson<T>(raw: string, fallback: T): T {
 // ---- Bundle loader (one DB round-trip per request) -------------------------
 
 export type CmsBundle = {
-  texts: Map<string, { value: string; valueDraft: string }>;
+  texts: Map<
+    string,
+    { value: string; valueDraft: string; style: string; styleDraft: string }
+  >;
   images: Map<string, { url: string; urlDraft: string }>;
   content: {
     themeColors: string;
@@ -91,7 +95,13 @@ export type CmsBundle = {
 export const loadCmsBundle = cache(async (): Promise<CmsBundle> => {
   const [texts, images, content, sections] = await Promise.all([
     prisma.siteText.findMany({
-      select: { key: true, value: true, valueDraft: true },
+      select: {
+        key: true,
+        value: true,
+        valueDraft: true,
+        style: true,
+        styleDraft: true,
+      },
     }),
     prisma.siteImage.findMany({
       select: { key: true, url: true, urlDraft: true },
@@ -131,6 +141,10 @@ export function getSiteText(
   }
   const v = preview ? row.valueDraft : row.value;
   return v && v.length > 0 ? v : fallback;
+}
+
+export function cmsTextAttrs(key: string): { "data-cms-text": string } {
+  return { "data-cms-text": key };
 }
 
 export async function isPreview(): Promise<boolean> {
@@ -296,4 +310,14 @@ export function typographyToCssVars(typography: Typography): string {
     `--font-body:${JSON.stringify(typography.bodyFont)}`,
     `--weight-heading:${typography.headingWeight}`,
   ].join(";");
+}
+
+export function textStylesToCss(bundle: CmsBundle, preview = false): string {
+  const rules: string[] = [];
+  for (const [key, row] of bundle.texts) {
+    const style = parseTextStyle(preview ? row.styleDraft : row.style);
+    const rule = textStyleCssRule(key, style);
+    if (rule) rules.push(rule);
+  }
+  return rules.join("");
 }

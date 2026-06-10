@@ -45,6 +45,7 @@ export default function CheckoutPage() {
 
   // Editable checkout texts from the CMS (published). Fallbacks below if missing.
   const [cms, setCms] = useState<Record<string, string>>({});
+  const [cmsTextCss, setCmsTextCss] = useState("");
   useEffect(() => {
     const params = new URLSearchParams();
     const preview = new URLSearchParams(window.location.search).get("preview");
@@ -52,10 +53,17 @@ export default function CheckoutPage() {
     const query = params.toString();
     fetch(query ? `/api/cms/texts?${query}` : "/api/cms/texts")
       .then((r) => r.json())
-      .then((d) => setCms(d.texts ?? {}))
-      .catch(() => setCms({}));
+      .then((d) => {
+        setCms(d.texts ?? {});
+        setCmsTextCss(d.textStylesCss ?? "");
+      })
+      .catch(() => {
+        setCms({});
+        setCmsTextCss("");
+      });
   }, []);
   const ct = (key: string, fb: string) => cms[key] || fb;
+  const cmsText = (key: string) => ({ "data-cms-text": key });
 
   // --- form state ---
   const [name, setName] = useState("");
@@ -372,6 +380,7 @@ export default function CheckoutPage() {
   if (!hydrated) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-cream px-4">
+        {cmsTextCss && <style dangerouslySetInnerHTML={{ __html: cmsTextCss }} />}
         <p className="animate-pulse font-bold uppercase tracking-wide text-muted">
           Cargando…
         </p>
@@ -382,8 +391,12 @@ export default function CheckoutPage() {
   if (lines.length === 0) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4 text-center">
+        {cmsTextCss && <style dangerouslySetInnerHTML={{ __html: cmsTextCss }} />}
         <BernaLogo variant="dark" size="sm" />
-        <p className="font-bold uppercase tracking-wide text-ink">
+        <p
+          className="font-bold uppercase tracking-wide text-ink"
+          {...cmsText("checkout.emptyCart")}
+        >
           {ct("checkout.emptyCart", "Tu carrito está vacío.")}
         </p>
         <Link
@@ -401,6 +414,7 @@ export default function CheckoutPage() {
 
   return (
     <main className="min-h-screen bg-cream pb-28">
+      {cmsTextCss && <style dangerouslySetInnerHTML={{ __html: cmsTextCss }} />}
       {/* Volume-discount strip */}
       {kgTiers.length > 0 && (
         <div className="bg-ink px-4 py-2.5 text-center">
@@ -428,13 +442,20 @@ export default function CheckoutPage() {
 
       <div className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
         <div className="mb-8 max-w-2xl">
-          <h1 className="font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-5xl">
+          <h1
+            className="font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-5xl"
+            {...cmsText("checkout.title")}
+          >
             {ct("checkout.title", "Finalizar pedido")}
           </h1>
         </div>
 
         {/* 1. Datos */}
-        <Section number="1" title={ct("checkout.step1.title", ct("checkout.step.contact", "Tus datos"))}>
+        <Section
+          number="1"
+          title={ct("checkout.step1.title", ct("checkout.step.contact", "Tus datos"))}
+          textKey="checkout.step1.title"
+        >
           <Field label={ct("checkout.step1.name_label", "Nombre y apellido")} required>
             <input
               type="text"
@@ -474,7 +495,11 @@ export default function CheckoutPage() {
         </Section>
 
         {/* 2. Entrega */}
-        <Section number="2" title={ct("checkout.step2.title", ct("checkout.step.delivery", "Entrega"))}>
+        <Section
+          number="2"
+          title={ct("checkout.step2.title", ct("checkout.step.delivery", "Entrega"))}
+          textKey="checkout.step2.title"
+        >
           <div className="grid grid-cols-2 gap-3">
             <ChoiceButton
               active={deliveryType === "DELIVERY"}
@@ -584,7 +609,11 @@ export default function CheckoutPage() {
         </Section>
 
         {/* 3. Cuándo */}
-        <Section number="3" title={ct("checkout.step3.title", ct("checkout.step.schedule", "¿Cuándo?"))}>
+        <Section
+          number="3"
+          title={ct("checkout.step3.title", ct("checkout.step.schedule", "¿Cuándo?"))}
+          textKey="checkout.step3.title"
+        >
           {!options && (
             <p className="text-sm text-muted">
               {ct(
@@ -646,7 +675,11 @@ export default function CheckoutPage() {
         </Section>
 
         {/* 4. Pago */}
-        <Section number="4" title={ct("checkout.step4.title", ct("checkout.step.payment", "Pago"))}>
+        <Section
+          number="4"
+          title={ct("checkout.step4.title", ct("checkout.step.payment", "Pago"))}
+          textKey="checkout.step4.title"
+        >
           <div className="grid grid-cols-1 gap-3">
             <PaymentCard
               active={paymentMethod === "EFECTIVO"}
@@ -699,7 +732,11 @@ export default function CheckoutPage() {
         </Section>
 
         {/* 5. Resumen */}
-        <Section number="5" title={ct("checkout.step.summary", "Resumen")}>
+        <Section
+          number="5"
+          title={ct("checkout.step.summary", "Resumen")}
+          textKey="checkout.step.summary"
+        >
           <ul className="divide-y divide-line">
             {lines.map((line) => (
               <li
@@ -858,6 +895,11 @@ export default function CheckoutPage() {
           type="button"
           onClick={handleSubmit}
           disabled={submitting}
+          {...cmsText(
+            paymentMethod === "MERCADOPAGO"
+              ? "checkout.cta.pay"
+              : "checkout.cta.confirm"
+          )}
           className="mt-6 w-full bg-black px-4 py-4 font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {submitting
@@ -872,6 +914,7 @@ export default function CheckoutPage() {
             href={whatsappHelpUrl}
             target="_blank"
             rel="noopener noreferrer"
+            {...cmsText("checkout.help_button")}
             className="mt-3 block rounded-lg border border-green-700 bg-green-600 px-4 py-3 text-center text-xs font-bold uppercase tracking-widest text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-green-500 active:translate-y-0"
           >
             {ct("checkout.help_button", "Preferís pedir por WhatsApp")}
@@ -890,15 +933,20 @@ const inputClass =
 function Section({
   number,
   title,
+  textKey,
   children,
 }: {
   number: string;
   title: string;
+  textKey?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-[0_1px_0_rgba(10,10,10,0.03)] sm:p-6">
-      <h2 className="mb-5 flex items-center gap-3 font-black uppercase tracking-tight text-lg text-ink">
+      <h2
+        className="mb-5 flex items-center gap-3 font-black uppercase tracking-tight text-lg text-ink"
+        data-cms-text={textKey}
+      >
         <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink text-sm text-white shadow-sm">
           {number}
         </span>

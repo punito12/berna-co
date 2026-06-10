@@ -9,12 +9,14 @@ export default function NewsletterForm({
   placeholder = "tu@email.com",
   buttonLabel = "Sumarme",
   successMessage = "¡Gracias! Te vas a enterar de las novedades.",
+  textKeys = {},
 }: {
   title?: string;
   subtitle?: string;
   placeholder?: string;
   buttonLabel?: string;
   successMessage?: string;
+  textKeys?: Partial<Record<"title" | "subtitle" | "placeholder" | "button", string>>;
 }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error">(
@@ -49,10 +51,13 @@ export default function NewsletterForm({
 
   return (
     <div className="mx-auto max-w-sm">
-      <p className="font-bold uppercase tracking-widest text-xs text-cream">
+      <p
+        className="font-bold uppercase tracking-widest text-xs text-cream"
+        data-cms-text={textKeys.title}
+      >
         {title}
       </p>
-      <p className="mt-1 text-sm text-white/60">
+      <p className="mt-1 text-sm text-white/60" data-cms-text={textKeys.subtitle}>
         {subtitle}
       </p>
       <form onSubmit={submit} className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -62,11 +67,13 @@ export default function NewsletterForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={placeholder}
+          data-cms-text={textKeys.placeholder}
           className="flex-1 rounded border border-white/20 bg-white/5 px-3 py-3 text-sm text-white placeholder:text-white/40 outline-none transition-colors focus:border-white"
         />
         <button
           type="submit"
           disabled={status === "sending"}
+          data-cms-text={textKeys.button}
           className="bg-white px-4 py-3 font-bold uppercase tracking-widest text-xs text-black transition-all duration-300 hover:-translate-y-0.5 hover:bg-cream active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {status === "sending" ? "…" : buttonLabel}

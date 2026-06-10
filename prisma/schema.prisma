@@ -574,6 +574,8 @@ model SiteText {
   key        String  @unique // e.g. "home.hero.title"
   value      String  @default("")
   valueDraft String  @default("")
+  style      String  @default("{}") // JSON text style published by the CMS
+  styleDraft String  @default("{}") // JSON text style draft edited by admin
   maxLength  Int     @default(200)
   category   String  @default("home") // home | catalogo | checkout | footer | legal
   updatedAt  DateTime @updatedAt

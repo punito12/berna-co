@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { Archivo, Fraunces } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
-import { loadCmsBundle, getThemeColors, themeToCssVars } from "@/lib/cms";
+import {
+  loadCmsBundle,
+  getThemeColors,
+  themeToCssVars,
+  textStylesToCss,
+} from "@/lib/cms";
 
 // Archivo: a strong grotesque with a true black weight — carries the bold,
 // catalog-like uppercase headlines and all UI text.
@@ -39,9 +44,11 @@ export default async function RootLayout({
   // these (with the original hex as fallback), so the design is unchanged until
   // the admin edits a color.
   let cssVars = "";
+  let textStyleCss = "";
   try {
     const bundle = await loadCmsBundle();
     cssVars = themeToCssVars(getThemeColors(bundle));
+    textStyleCss = textStylesToCss(bundle);
   } catch {
     // DB unavailable at render — fall back to the hex defaults in tailwind.
   }
@@ -53,6 +60,13 @@ export default async function RootLayout({
           <style
             // CMS theme → CSS variables on :root. Tailwind tokens consume them.
             dangerouslySetInnerHTML={{ __html: `:root{${cssVars}}` }}
+          />
+        )}
+        {textStyleCss && (
+          <style
+            // Optional per-text CMS styles. Empty by default, so the current
+            // design is unchanged until the admin publishes text styles.
+            dangerouslySetInnerHTML={{ __html: textStyleCss }}
           />
         )}
       </head>

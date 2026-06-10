@@ -8,6 +8,7 @@ import {
   getSections,
   getThemeColors,
   themeToCssVars,
+  textStylesToCss,
   isPreview,
 } from "@/lib/cms";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
@@ -29,6 +30,7 @@ export default async function HomePage({
   const preview = (await isPreview()) || isCmsPreviewRequest(searchParams?.preview);
   const sections = getSections(cms, "home", preview);
   const previewCssVars = preview ? themeToCssVars(getThemeColors(cms, true)) : "";
+  const previewTextCss = preview ? textStylesToCss(cms, true) : "";
 
   return (
     <main>
@@ -36,6 +38,9 @@ export default async function HomePage({
         <style
           dangerouslySetInnerHTML={{ __html: `:root{${previewCssVars}}` }}
         />
+      )}
+      {previewTextCss && (
+        <style dangerouslySetInnerHTML={{ __html: previewTextCss }} />
       )}
       {preview && (
         <div className="fixed left-4 top-4 z-50 rounded bg-amber-400 px-3 py-2 text-[11px] font-black uppercase tracking-widest text-black shadow">

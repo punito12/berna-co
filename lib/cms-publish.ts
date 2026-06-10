@@ -19,6 +19,7 @@ export type SiteSnapshot = {
   texts: {
     key: string;
     value: string;
+    style: string;
     maxLength: number;
     category: string;
   }[];
@@ -155,6 +156,7 @@ function snapshotFromRows({
     texts: texts.map((t) => ({
       key: t.key,
       value: draft ? t.valueDraft : t.value,
+      style: draft ? t.styleDraft : t.style,
       maxLength: t.maxLength,
       category: t.category,
     })),
@@ -327,7 +329,7 @@ export async function publishCmsDrafts(publishedBy = "admin") {
     for (const text of texts) {
       await tx.siteText.update({
         where: { key: text.key },
-        data: { value: text.valueDraft },
+        data: { value: text.valueDraft, style: text.styleDraft },
       });
     }
     for (const image of images) {
@@ -387,7 +389,7 @@ export async function discardCmsDrafts() {
     for (const text of texts) {
       await tx.siteText.update({
         where: { key: text.key },
-        data: { valueDraft: text.value },
+        data: { valueDraft: text.value, styleDraft: text.style },
       });
     }
     for (const image of images) {
@@ -507,12 +509,16 @@ async function applySnapshot(snapshot: SiteSnapshot, publishedBy: string) {
           key: text.key,
           value: text.value,
           valueDraft: text.value,
+          style: text.style ?? "{}",
+          styleDraft: text.style ?? "{}",
           maxLength: text.maxLength,
           category: text.category,
         },
         update: {
           value: text.value,
           valueDraft: text.value,
+          style: text.style ?? "{}",
+          styleDraft: text.style ?? "{}",
           maxLength: text.maxLength,
           category: text.category,
         },

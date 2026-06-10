@@ -7,9 +7,11 @@ import { Fragment } from "react";
 export default function RichText({
   text,
   className = "",
+  textKey,
 }: {
   text: string;
   className?: string;
+  textKey?: string;
 }) {
   const lines = text.split("\n");
   const blocks: React.ReactNode[] = [];
@@ -41,7 +43,11 @@ export default function RichText({
   });
   flushBullets("ul-end");
 
-  return <div className={className}>{blocks}</div>;
+  return (
+    <div className={className} data-cms-text={textKey}>
+      {blocks}
+    </div>
+  );
 }
 
 // Parse inline **bold** / *italic* within a single line.

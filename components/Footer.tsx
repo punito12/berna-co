@@ -15,6 +15,7 @@ export default function Footer({
   newsletterPlaceholder = "tu@email.com",
   newsletterButton = "Sumarme",
   newsletterSuccess = "¡Gracias! Te vas a enterar de las novedades.",
+  textKeys = {},
 }: {
   slogan?: string;
   instagram?: string;
@@ -28,12 +29,27 @@ export default function Footer({
   newsletterPlaceholder?: string;
   newsletterButton?: string;
   newsletterSuccess?: string;
+  textKeys?: Partial<Record<
+    | "slogan"
+    | "instagram"
+    | "email"
+    | "whatsapp"
+    | "copyright"
+    | "newsletterTitle"
+    | "newsletterSubtitle"
+    | "newsletterPlaceholder"
+    | "newsletterButton",
+    string
+  >>;
 }) {
   return (
     <footer className="bg-ink text-white">
       {/* Slogan banner with hairline rules */}
       <div className="border-b border-white/10 px-4 py-10 text-center">
-        <p className="font-black uppercase tracking-[0.32em] text-lg sm:text-2xl sm:tracking-[0.4em]">
+        <p
+          className="font-black uppercase tracking-[0.32em] text-lg sm:text-2xl sm:tracking-[0.4em]"
+          data-cms-text={textKeys.slogan}
+        >
           {slogan}
         </p>
       </div>
@@ -46,6 +62,12 @@ export default function Footer({
           placeholder={newsletterPlaceholder}
           buttonLabel={newsletterButton}
           successMessage={newsletterSuccess}
+          textKeys={{
+            title: textKeys.newsletterTitle,
+            subtitle: textKeys.newsletterSubtitle,
+            placeholder: textKeys.newsletterPlaceholder,
+            button: textKeys.newsletterButton,
+          }}
         />
       </div>
 
@@ -60,12 +82,14 @@ export default function Footer({
               target="_blank"
               rel="noopener noreferrer"
               className="font-bold uppercase tracking-widest text-xs text-cream transition-colors hover:text-white"
+              data-cms-text={textKeys.instagram}
             >
               {instagram}
             </a>
             <a
               href={`mailto:${email}`}
               className="text-sm text-cream transition-colors hover:text-white"
+              data-cms-text={textKeys.email}
             >
               {email}
             </a>
@@ -74,13 +98,17 @@ export default function Footer({
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-cream transition-colors hover:text-white"
+              data-cms-text={textKeys.whatsapp}
             >
               WhatsApp {whatsapp}
             </a>
           </div>
         </div>
       </div>
-      <div className="border-t border-white/10 px-4 py-4 text-center text-xs text-cream/70">
+      <div
+        className="border-t border-white/10 px-4 py-4 text-center text-xs text-cream/70"
+        data-cms-text={textKeys.copyright}
+      >
         {copyright}
       </div>
     </footer>

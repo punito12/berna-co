@@ -27,6 +27,7 @@ export default function Catalog({
   addToCartLabel = "Agregar al carrito",
   chooseBreadcrumbLabel = "Empanado",
   newLabel = "New",
+  textKeys = {},
 }: {
   products: ProductForUI[];
   efectivoPct?: number;
@@ -40,6 +41,17 @@ export default function Catalog({
   addToCartLabel?: string;
   chooseBreadcrumbLabel?: string;
   newLabel?: string;
+  textKeys?: Partial<Record<
+    | "eyebrow"
+    | "title"
+    | "subtitle"
+    | "allLabel"
+    | "outOfStockLabel"
+    | "addToCartLabel"
+    | "chooseBreadcrumbLabel"
+    | "newLabel",
+    string
+  >>;
 }) {
   const { lines, totalItems, totalPrice, changeQuantity } = useCart();
   const [open, setOpen] = useState(false);
@@ -63,13 +75,22 @@ export default function Catalog({
     <section id="productos" className="bg-cream">
       <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
         <Reveal as="header" className="mb-10 text-center sm:mb-12">
-          <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
+          <p
+            className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
+            data-cms-text={textKeys.eyebrow}
+          >
             {eyebrow}
           </p>
-          <h2 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl">
+          <h2
+            className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
+            data-cms-text={textKeys.title}
+          >
             {title}
           </h2>
-          <p className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted">
+          <p
+            className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted"
+            data-cms-text={textKeys.subtitle}
+          >
             {subtitle}
           </p>
         </Reveal>
@@ -79,6 +100,7 @@ export default function Catalog({
           <FilterChip
             active={category === "ALL"}
             onClick={() => setCategory("ALL")}
+            textKey={textKeys.allLabel}
           >
             {allLabel}
           </FilterChip>
@@ -199,16 +221,19 @@ function FilterChip({
   active,
   onClick,
   children,
+  textKey,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  textKey?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
+      data-cms-text={textKey}
       className={`rounded-full border px-4 py-2 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
         active
           ? "border-black bg-black text-white shadow-sm"

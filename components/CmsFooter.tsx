@@ -62,6 +62,17 @@ export default async function CmsFooter({ preview = false }: { preview?: boolean
           "¡Gracias! Te vas a enterar de las novedades.",
           preview
         )}
+        textKeys={{
+          slogan: "footer.slogan",
+          instagram: "footer.instagram",
+          email: "footer.email",
+          whatsapp: "footer.whatsapp",
+          copyright: "footer.copyright",
+          newsletterTitle: "home.newsletter.title",
+          newsletterSubtitle: "home.newsletter.subtitle",
+          newsletterPlaceholder: "home.newsletter.placeholder",
+          newsletterButton: "home.newsletter.button",
+        }}
       />
     );
   } catch {

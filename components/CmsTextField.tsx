@@ -1,6 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  parseTextStyle,
+  sanitizeTextStyle,
+  type CmsTextStyle,
+} from "@/lib/cms-text-styles";
+
+const FONT_OPTIONS = [
+  "",
+  "Archivo",
+  "Fraunces",
+  "Inter",
+  "Poppins",
+  "Montserrat",
+  "Bebas Neue",
+  "Playfair Display",
+  "Lora",
+  "Roboto",
+  "Oswald",
+  "Raleway",
+  "Work Sans",
+  "Merriweather",
+  "Nunito",
+  "DM Sans",
+  "Space Grotesk",
+  "Archivo Black",
+  "Libre Franklin",
+];
+
+const WEIGHT_OPTIONS = ["", "300", "400", "500", "600", "700", "800", "900"];
 
 function notifyDraftChanged() {
   window.dispatchEvent(new Event("cms:draft-changed"));
@@ -14,6 +43,8 @@ export default function CmsTextField({
   label,
   published,
   draft,
+  style,
+  styleDraft,
   maxLength,
   multiline = false,
 }: {
@@ -21,19 +52,36 @@ export default function CmsTextField({
   label: string;
   published: string;
   draft: string;
+  style?: string;
+  styleDraft?: string;
   maxLength: number;
   multiline?: boolean;
 }) {
   const [value, setValue] = useState(draft);
   const [savedValue, setSavedValue] = useState(draft);
+  const [textStyle, setTextStyle] = useState<CmsTextStyle>(
+    parseTextStyle(styleDraft ?? "{}")
+  );
+  const [savedStyle, setSavedStyle] = useState<CmsTextStyle>(
+    parseTextStyle(styleDraft ?? "{}")
+  );
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
-  const changed = value !== published;
+  const publishedStyle = parseTextStyle(style ?? "{}");
+  const changed =
+    value !== published ||
+    JSON.stringify(textStyle) !== JSON.stringify(publishedStyle);
 
   useEffect(() => {
     setValue(draft);
     setSavedValue(draft);
   }, [draft]);
+
+  useEffect(() => {
+    const next = parseTextStyle(styleDraft ?? "{}");
+    setTextStyle(next);
+    setSavedStyle(next);
+  }, [styleDraft]);
 
   async function save() {
     if (value === savedValue) return; // nothing new
@@ -66,6 +114,46 @@ export default function CmsTextField({
       if (res.ok) {
         setValue(published);
         setSavedValue(published);
+        notifyDraftChanged();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveStyle(nextStyle: CmsTextStyle) {
+    const safe = sanitizeTextStyle(nextStyle as Record<string, unknown>);
+    setTextStyle(safe);
+    if (JSON.stringify(safe) === JSON.stringify(savedStyle)) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/cms/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: textKey, style: safe }),
+      });
+      if (res.ok) {
+        setSavedStyle(safe);
+        notifyDraftChanged();
+        setSavedTick(true);
+        setTimeout(() => setSavedTick(false), 1200);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function restoreStyle() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/cms/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: textKey, action: "restore-style" }),
+      });
+      if (res.ok) {
+        setTextStyle(publishedStyle);
+        setSavedStyle(publishedStyle);
         notifyDraftChanged();
       }
     } finally {
@@ -124,6 +212,175 @@ export default function CmsTextField({
           <span className="text-[10px] font-bold text-green-700">✓ Guardado</span>
         )}
       </div>
+      <details className="mt-3 border-t border-line pt-3">
+        <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-widest text-muted">
+          Estilo del texto
+        </summary>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <StyleSelect
+            label="Fuente"
+            value={textStyle.fontFamily ?? ""}
+            options={FONT_OPTIONS}
+            emptyLabel="Actual"
+            onChange={(fontFamily) =>
+              saveStyle({ ...textStyle, fontFamily: fontFamily || undefined })
+            }
+          />
+          <StyleSelect
+            label="Peso"
+            value={textStyle.fontWeight ?? ""}
+            options={WEIGHT_OPTIONS}
+            emptyLabel="Actual"
+            onChange={(fontWeight) =>
+              saveStyle({ ...textStyle, fontWeight: fontWeight || undefined })
+            }
+          />
+          <StyleInput
+            label="Tamaño desktop"
+            value={textStyle.fontSize ?? ""}
+            placeholder="Ej: 48px"
+            onBlur={(fontSize) =>
+              saveStyle({ ...textStyle, fontSize: fontSize || undefined })
+            }
+          />
+          <StyleInput
+            label="Tamaño mobile"
+            value={textStyle.fontSizeMobile ?? ""}
+            placeholder="Ej: 32px"
+            onBlur={(fontSizeMobile) =>
+              saveStyle({
+                ...textStyle,
+                fontSizeMobile: fontSizeMobile || undefined,
+              })
+            }
+          />
+          <StyleInput
+            label="Interlineado"
+            value={textStyle.lineHeight ?? ""}
+            placeholder="Ej: 1.1"
+            onBlur={(lineHeight) =>
+              saveStyle({ ...textStyle, lineHeight: lineHeight || undefined })
+            }
+          />
+          <StyleInput
+            label="Espaciado"
+            value={textStyle.letterSpacing ?? ""}
+            placeholder="Ej: 0.02em"
+            onBlur={(letterSpacing) =>
+              saveStyle({
+                ...textStyle,
+                letterSpacing: letterSpacing || undefined,
+              })
+            }
+          />
+          <StyleToggle
+            label="Itálica"
+            checked={textStyle.italic === true}
+            onChange={(italic) =>
+              saveStyle({ ...textStyle, italic: italic || undefined })
+            }
+          />
+          <StyleToggle
+            label="Negrita / mayúsculas"
+            checked={textStyle.uppercase === true}
+            onChange={(uppercase) =>
+              saveStyle({ ...textStyle, uppercase: uppercase || undefined })
+            }
+          />
+        </div>
+        <button
+          type="button"
+          onClick={restoreStyle}
+          disabled={saving || JSON.stringify(textStyle) === JSON.stringify(publishedStyle)}
+          className="mt-3 font-bold uppercase tracking-widest text-[10px] text-muted hover:text-ink disabled:opacity-40"
+        >
+          Restaurar estilo publicado
+        </button>
+      </details>
     </div>
+  );
+}
+
+function StyleSelect({
+  label,
+  value,
+  options,
+  emptyLabel,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  emptyLabel: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded border border-line bg-white px-2 py-1.5 text-sm text-ink"
+      >
+        {options.map((option) => (
+          <option key={option || "empty"} value={option}>
+            {option || emptyLabel}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function StyleInput({
+  label,
+  value,
+  placeholder,
+  onBlur,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onBlur: (value: string) => void;
+}) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => setLocal(value), [value]);
+  return (
+    <label className="block">
+      <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+        {label}
+      </span>
+      <input
+        value={local}
+        placeholder={placeholder}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={() => onBlur(local.trim())}
+        className="w-full rounded border border-line bg-white px-2 py-1.5 text-sm text-ink"
+      />
+    </label>
+  );
+}
+
+function StyleToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm font-bold text-ink">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 accent-black"
+      />
+      {label}
+    </label>
   );
 }

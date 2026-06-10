@@ -8,12 +8,18 @@ export default function Hero({
   cta = "Ver productos",
   backgroundUrl = "/images/hero.jpg",
   logoUrl = "",
+  titleKey = "home.hero.title",
+  subtitleKey = "home.hero.subtitle",
+  ctaKey = "home.hero.cta_primary",
 }: {
   title?: string;
   subtitle?: string;
   cta?: string;
   backgroundUrl?: string;
   logoUrl?: string;
+  titleKey?: string;
+  subtitleKey?: string;
+  ctaKey?: string;
 }) {
   // Title may contain a newline (rendered as <br/>).
   const titleLines = title.split("\n");
@@ -38,6 +44,7 @@ export default function Hero({
       </div>
 
       <h1
+        data-cms-text={titleKey}
         className="mt-10 animate-fade-up font-black uppercase tracking-tight text-white text-[3.3rem] leading-[0.86] sm:mt-12 sm:text-8xl"
         style={{ animationDelay: "220ms" }}
       >
@@ -50,6 +57,7 @@ export default function Hero({
       </h1>
 
       <p
+        data-cms-text={subtitleKey}
         className="mt-6 animate-fade-up font-serif italic text-cream text-xl sm:text-2xl"
         style={{ animationDelay: "360ms" }}
       >
@@ -58,6 +66,7 @@ export default function Hero({
 
       <a
         href="#productos"
+        data-cms-text={ctaKey}
         className="group mt-12 inline-flex animate-fade-up items-center gap-3 bg-white px-9 py-4 font-bold uppercase tracking-widest text-sm text-black shadow-[0_18px_40px_rgba(0,0,0,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cream hover:shadow-[0_22px_50px_rgba(0,0,0,0.3)] active:translate-y-0"
         style={{ animationDelay: "500ms" }}
       >

@@ -10,23 +10,38 @@ export default function PointsOfSale({
   title = "Puntos de venta",
   subtitle = "Conseguí nuestros productos en estos locales.",
   mapSrc = MAP_SRC,
+  eyebrowKey = "home.pos.eyebrow",
+  titleKey = "home.pos.title",
+  subtitleKey = "home.pos.subtitle",
 }: {
   eyebrow?: string;
   title?: string;
   subtitle?: string;
   mapSrc?: string;
+  eyebrowKey?: string;
+  titleKey?: string;
+  subtitleKey?: string;
 }) {
   return (
     <section id="puntos-de-venta" className="bg-cream">
       <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
         <Reveal className="mb-10 text-center">
-          <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
+          <p
+            className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
+            data-cms-text={eyebrowKey}
+          >
             {eyebrow}
           </p>
-          <h2 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-5xl">
+          <h2
+            className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-5xl"
+            data-cms-text={titleKey}
+          >
             {title}
           </h2>
-          <p className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted">
+          <p
+            className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted"
+            data-cms-text={subtitleKey}
+          >
             {subtitle}
           </p>
         </Reveal>

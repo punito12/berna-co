@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import CmsTextField from "@/components/CmsTextField";
 import {
@@ -13,6 +13,42 @@ import {
   type CmsBlockConfig,
   type CmsBlockType,
 } from "@/lib/cms-blocks";
+import {
+  sanitizeTextStyle,
+  type CmsTextStyle,
+} from "@/lib/cms-text-styles";
+
+const FONT_OPTIONS = [
+  "",
+  "Archivo",
+  "Fraunces",
+  "Inter",
+  "Poppins",
+  "Montserrat",
+  "Bebas Neue",
+  "Playfair Display",
+  "Lora",
+  "Roboto",
+  "Oswald",
+  "Raleway",
+  "Work Sans",
+  "Merriweather",
+  "Nunito",
+  "DM Sans",
+  "Space Grotesk",
+  "Archivo Black",
+  "Libre Franklin",
+];
+
+const WEIGHT_OPTIONS = ["", "300", "400", "500", "600", "700", "800", "900"];
+
+const BLOCK_STYLE_LABELS: Record<string, string> = {
+  eyebrow: "Bajada",
+  title: "Título",
+  subtitle: "Subtítulo",
+  body: "Texto",
+  ctaLabel: "Botón",
+};
 
 type Section = {
   key: string;
@@ -25,6 +61,8 @@ type TextRow = {
   key: string;
   value: string;
   valueDraft: string;
+  style: string;
+  styleDraft: string;
   maxLength: number;
 };
 
@@ -298,6 +336,8 @@ export default function HomeSectionsManager({
                           label={tk.split(".").slice(-1)[0]}
                           published={t.value}
                           draft={t.valueDraft}
+                          style={t.style}
+                          styleDraft={t.styleDraft}
                           maxLength={t.maxLength}
                           multiline={t.maxLength > 80}
                         />
@@ -338,6 +378,17 @@ function BlockConfigEditor({
 
   function update(next: CmsBlockConfig) {
     setDraft(next);
+  }
+
+  function updateTextStyle(part: string, style: CmsTextStyle) {
+    const safe = sanitizeTextStyle(style as Record<string, unknown>);
+    const textStyles = { ...(draft.textStyles ?? {}) };
+    if (Object.keys(safe).length > 0) textStyles[part] = safe;
+    else delete textStyles[part];
+    update({
+      ...draft,
+      textStyles: Object.keys(textStyles).length > 0 ? textStyles : undefined,
+    });
   }
 
   async function uploadImage(file: File) {
@@ -447,6 +498,21 @@ function BlockConfigEditor({
             onChange={(faqs) => update({ ...draft, faqs })}
           />
         )}
+        <details className="rounded border border-line bg-white p-3">
+          <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-widest text-muted">
+            Estilos de textos del bloque
+          </summary>
+          <div className="mt-3 grid gap-4">
+            {["eyebrow", "title", "subtitle", "body", "ctaLabel"].map((part) => (
+              <BlockTextStyleControls
+                key={part}
+                label={BLOCK_STYLE_LABELS[part] ?? part}
+                value={draft.textStyles?.[part] ?? {}}
+                onChange={(style) => updateTextStyle(part, style)}
+              />
+            ))}
+          </div>
+        </details>
       </div>
       <button
         type="button"
@@ -608,5 +674,167 @@ function FaqRepeater({
         Agregar pregunta
       </button>
     </div>
+  );
+}
+
+function BlockTextStyleControls({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: CmsTextStyle;
+  onChange: (value: CmsTextStyle) => void;
+}) {
+  return (
+    <div className="rounded border border-line bg-cream/30 p-3">
+      <p className="mb-2 font-bold uppercase tracking-wide text-[10px] text-muted">
+        {label}
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <SmallSelect
+          label="Fuente"
+          value={value.fontFamily ?? ""}
+          options={FONT_OPTIONS}
+          onChange={(fontFamily) =>
+            onChange({ ...value, fontFamily: fontFamily || undefined })
+          }
+        />
+        <SmallSelect
+          label="Peso"
+          value={value.fontWeight ?? ""}
+          options={WEIGHT_OPTIONS}
+          onChange={(fontWeight) =>
+            onChange({ ...value, fontWeight: fontWeight || undefined })
+          }
+        />
+        <SmallInput
+          label="Tamaño desktop"
+          value={value.fontSize ?? ""}
+          placeholder="Ej: 48px"
+          onBlur={(fontSize) =>
+            onChange({ ...value, fontSize: fontSize || undefined })
+          }
+        />
+        <SmallInput
+          label="Tamaño mobile"
+          value={value.fontSizeMobile ?? ""}
+          placeholder="Ej: 32px"
+          onBlur={(fontSizeMobile) =>
+            onChange({ ...value, fontSizeMobile: fontSizeMobile || undefined })
+          }
+        />
+        <SmallInput
+          label="Interlineado"
+          value={value.lineHeight ?? ""}
+          placeholder="Ej: 1.1"
+          onBlur={(lineHeight) =>
+            onChange({ ...value, lineHeight: lineHeight || undefined })
+          }
+        />
+        <SmallInput
+          label="Espaciado"
+          value={value.letterSpacing ?? ""}
+          placeholder="Ej: 0.02em"
+          onBlur={(letterSpacing) =>
+            onChange({ ...value, letterSpacing: letterSpacing || undefined })
+          }
+        />
+        <SmallToggle
+          label="Itálica"
+          checked={value.italic === true}
+          onChange={(italic) => onChange({ ...value, italic: italic || undefined })}
+        />
+        <SmallToggle
+          label="Mayúsculas"
+          checked={value.uppercase === true}
+          onChange={(uppercase) =>
+            onChange({ ...value, uppercase: uppercase || undefined })
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function SmallSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded border border-line bg-white px-2 py-1.5 text-sm text-ink"
+      >
+        {options.map((option) => (
+          <option key={option || "default"} value={option}>
+            {option || "Actual"}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function SmallInput({
+  label,
+  value,
+  placeholder,
+  onBlur,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onBlur: (value: string) => void;
+}) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => setLocal(value), [value]);
+  return (
+    <label className="block">
+      <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+        {label}
+      </span>
+      <input
+        value={local}
+        placeholder={placeholder}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={() => onBlur(local.trim())}
+        className="w-full rounded border border-line bg-white px-2 py-1.5 text-sm text-ink"
+      />
+    </label>
+  );
+}
+
+function SmallToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm font-bold text-ink">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 accent-black"
+      />
+      {label}
+    </label>
   );
 }
