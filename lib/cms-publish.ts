@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { countPendingChanges, getSiteContentAdmin } from "@/lib/cms-admin";
 import {
   isDeletedBlockConfig,
@@ -314,9 +315,10 @@ export async function publishCmsDrafts(publishedBy = "admin") {
     draft: true,
   });
 
-  const version = await prisma.$transaction(async (tx) => {
-    if (content) {
-      await tx.siteContent.update({
+  const operations: Prisma.PrismaPromise<unknown>[] = [];
+  if (content) {
+    operations.push(
+      prisma.siteContent.update({
         where: { id: "singleton" },
         data: {
           themeColors: content.themeColorsDraft,
@@ -324,26 +326,32 @@ export async function publishCmsDrafts(publishedBy = "admin") {
           logoUrl: content.logoUrlDraft,
           publishedAt,
         },
-      });
-    }
-    for (const text of texts) {
-      await tx.siteText.update({
+      })
+    );
+  }
+  for (const text of texts) {
+    operations.push(
+      prisma.siteText.update({
         where: { key: text.key },
         data: { value: text.valueDraft, style: text.styleDraft },
-      });
-    }
-    for (const image of images) {
-      await tx.siteImage.update({
+      })
+    );
+  }
+  for (const image of images) {
+    operations.push(
+      prisma.siteImage.update({
         where: { key: image.key },
         data: { url: image.urlDraft },
-      });
+      })
+    );
+  }
+  for (const section of sections) {
+    if (isDeletedBlockConfig(section.configDraft)) {
+      operations.push(prisma.siteSection.delete({ where: { key: section.key } }));
+      continue;
     }
-    for (const section of sections) {
-      if (isDeletedBlockConfig(section.configDraft)) {
-        await tx.siteSection.delete({ where: { key: section.key } });
-        continue;
-      }
-      await tx.siteSection.update({
+    operations.push(
+      prisma.siteSection.update({
         where: { key: section.key },
         data: {
           order: section.orderDraft,
@@ -351,17 +359,26 @@ export async function publishCmsDrafts(publishedBy = "admin") {
           type: normalizeBlockType(section.type, section.key),
           config: section.configDraft,
         },
-      });
-    }
-    return tx.siteVersion.create({
+      })
+    );
+  }
+  operations.push(
+    prisma.siteVersion.create({
       data: {
         snapshot: JSON.stringify(snapshot),
         publishedAt,
         publishedBy,
       },
       select: { id: true, publishedAt: true, publishedBy: true },
-    });
-  });
+    })
+  );
+
+  const results = await prisma.$transaction(operations);
+  const version = results[results.length - 1] as {
+    id: string;
+    publishedAt: Date;
+    publishedBy: string;
+  };
 
   return { pending, version };
 }
