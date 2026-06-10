@@ -73,7 +73,7 @@ export default function Catalog({
 
   return (
     <section id="productos" className="bg-cream">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:py-24">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:py-20">
         <Reveal as="header" className="mb-10 text-center sm:mb-12">
           <p
             className="font-bold uppercase tracking-[0.3em] text-xs text-muted"

@@ -68,18 +68,18 @@ export default function ProductCard({
           /public/images/productos/. */}
       <Link
         href={`/producto/${product.slug}`}
-        className="relative block aspect-square w-full overflow-hidden bg-cream sm:aspect-[2/3]"
+        className="relative block aspect-[4/3] w-full overflow-hidden bg-cream"
         aria-label={`Ver ${product.name}`}
       >
         {/* Placeholder name sits BEHIND the photo (-z-10). Only visible when
             the image file is missing (the photo layer is then transparent).
-            The frame matches the photos' 2:3 ratio so nothing gets cropped. */}
+            The frame is 4/3 (per the design system) and the photo covers it. */}
         <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line">
           {product.name}
         </span>
         <div
           key={cover}
-          className={`absolute inset-0 bg-contain bg-top bg-no-repeat transition-transform duration-700 ease-out ${
+          className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 ease-out ${
             allOutOfStock ? "opacity-40 grayscale" : "group-hover:scale-105"
           }`}
           style={{ backgroundImage: `url('${cover}')` }}
@@ -88,12 +88,12 @@ export default function ProductCard({
         {/* Top-left badges: promos stand out the most (red), then New / stock. */}
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
           {!allOutOfStock && selPromoType && (
-            <span className="bg-accent px-3 py-1.5 font-black uppercase tracking-widest text-sm text-white shadow-md">
+            <span className="bg-accent px-2 py-1 font-black uppercase tracking-widest text-[11px] text-white shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
               {selPromoType}
             </span>
           )}
           {!allOutOfStock && selPromoPercent > 0 && (
-            <span className="bg-accent px-3 py-1.5 font-black uppercase tracking-widest text-sm text-white shadow-md">
+            <span className="bg-accent px-2 py-1 font-black uppercase tracking-widest text-[11px] text-white shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
               -{selPromoPercent}%
             </span>
           )}
