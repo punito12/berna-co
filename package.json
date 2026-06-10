@@ -9,6 +9,7 @@
     "lint": "next lint",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:cms": "tsx prisma/seed-cms.ts",
+    "migrate:sqlite-to-postgres": "tsx scripts/migrate-sqlite-to-postgres.ts",
     "db:reset": "prisma migrate reset --force && npm run db:seed && npm run db:seed:cms"
   },
   "prisma": {

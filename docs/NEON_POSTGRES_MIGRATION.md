@@ -55,6 +55,18 @@ Para Neon conviene crear una baseline limpia de Postgres desde el schema actual:
 La baseline Postgres debe representar el schema actual completo, no cada paso
 historico SQLite.
 
+## Checkpoint de rama recomendado
+
+Antes de cambiar provider o generar una baseline real, crear un checkpoint Git:
+
+```bash
+git status
+git checkout -b infra/neon-postgres-baseline
+```
+
+No es obligatorio crear la rama durante Phase 3-A, pero si es recomendable antes
+de tocar `prisma/schema.prisma` o `prisma/migrations`.
+
 ## Pasos futuros para crear la DB Neon
 
 Cuando se apruebe la fase de infraestructura:
@@ -73,6 +85,17 @@ Formato esperado:
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/DB?sslmode=require"
 ```
+
+Variables para la migracion de datos en staging:
+
+```env
+SOURCE_SQLITE_PATH="prisma/dev.db"
+TARGET_DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/STAGING?sslmode=require"
+CONFIRM_SQLITE_TO_POSTGRES_IMPORT="YES"
+```
+
+`SOURCE_SQLITE_PATH` y `TARGET_DATABASE_URL` son intencionalmente distintos de
+`DATABASE_URL` para evitar escribir por accidente en la base activa de la app.
 
 ## Pasos futuros para generar baseline Postgres
 
@@ -101,6 +124,26 @@ npx tsc --noEmit
 ```
 
 Nota: esta fase no debe mezclarse con migracion de datos.
+
+Flujo seguro sugerido para baseline:
+
+```bash
+# En una rama dedicada, con una DB Neon staging vacia.
+cp prisma/dev.db /tmp/berna-before-postgres-baseline.db
+
+# Cambiar provider a postgresql solo en esa rama/fase aprobada.
+npx prisma validate
+
+# Generar SQL de baseline revisable contra schema actual.
+npx prisma migrate diff \
+  --from-empty \
+  --to-schema-datamodel prisma/schema.prisma \
+  --script > /tmp/berna-postgres-baseline.sql
+```
+
+Despues revisar manualmente `/tmp/berna-postgres-baseline.sql`. Solo cuando este
+aprobado, crear una carpeta de migracion Postgres para staging. No mezclar esa
+baseline con las migraciones SQLite existentes sin una decision explicita.
 
 ## Estrategia futura de migracion de datos
 
@@ -157,6 +200,44 @@ Orden recomendado de importacion:
    - `CostHistory`
    - `PriceHistory`
 
+Phase 3-A agrega el script:
+
+```bash
+npm run migrate:sqlite-to-postgres
+```
+
+Modo dry-run, sin escribir en Postgres:
+
+```bash
+SOURCE_SQLITE_PATH=prisma/dev.db \
+TARGET_DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/STAGING?sslmode=require" \
+npm run migrate:sqlite-to-postgres -- --dry-run
+```
+
+Modo import real, solo staging y con confirmacion explicita:
+
+```bash
+CONFIRM_SQLITE_TO_POSTGRES_IMPORT=YES \
+SOURCE_SQLITE_PATH=prisma/dev.db \
+TARGET_DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/STAGING?sslmode=require" \
+npm run migrate:sqlite-to-postgres -- --execute
+```
+
+El script:
+
+- No corre seeds.
+- No borra datos.
+- Rechaza targets no vacios.
+- Requiere env vars explicitas.
+- Preserva IDs y timestamps.
+- Importa en orden de dependencias.
+- Compara conteos al final.
+- Solo permite `--execute` cuando `prisma/schema.prisma` ya esta en
+  `provider = "postgresql"` y el Prisma Client fue regenerado para esa fase.
+
+Requisito: el comando `sqlite3` debe estar disponible en la maquina que corre el
+script.
+
 ## Verificacion futura de datos
 
 Comparar SQLite vs Neon:
@@ -171,6 +252,21 @@ Comparar SQLite vs Neon:
 - Cantidad de textos, imagenes, secciones y versiones CMS.
 - Productos con `imageUrl` y JSON `images` parseable.
 - Configuracion de pagos y zonas.
+
+Consultas de verificacion sugeridas:
+
+```sql
+SELECT COUNT(*) FROM "Product";
+SELECT COUNT(*) FROM "Order";
+SELECT SUM("total") FROM "Order";
+SELECT COUNT(*) FROM "ManualSale";
+SELECT SUM("net") FROM "ManualSale";
+SELECT "type", "status", SUM("amount") FROM "CashMovement" GROUP BY "type", "status";
+SELECT COUNT(*) FROM "StockMovement";
+SELECT COUNT(*) FROM "SiteText";
+SELECT COUNT(*) FROM "SiteImage";
+SELECT COUNT(*) FROM "SiteSection";
+```
 
 Despues, verificar en la app:
 
