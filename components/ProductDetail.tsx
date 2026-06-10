@@ -6,10 +6,22 @@ import AddToCartPanel from "@/components/AddToCartPanel";
 import RichText from "@/components/RichText";
 import { formatWeight, type ProductForUI } from "@/lib/products";
 
+type ProductDetailLabels = {
+  chooseBreadcrumb?: string;
+  addToCart?: string;
+  outOfStock?: string;
+};
+
 // Two-column product detail. Holds the selected empanado so the gallery (left)
 // and the buy controls (right) stay in sync: choosing a breadcrumb swaps the
 // photos to that variant's packaging.
-export default function ProductDetail({ product }: { product: ProductForUI }) {
+export default function ProductDetail({
+  product,
+  labels = {},
+}: {
+  product: ProductForUI;
+  labels?: ProductDetailLabels;
+}) {
   const [selected, setSelected] = useState<string>(
     product.breadcrumbs[0] ?? "TRADITIONAL"
   );
@@ -17,7 +29,7 @@ export default function ProductDetail({ product }: { product: ProductForUI }) {
   const images = product.imagesByBreadcrumb[selected] ?? [];
 
   return (
-    <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.02fr)_minmax(320px,0.98fr)] lg:gap-14">
       {/* Gallery — `key` resets the active thumbnail when the empanado changes */}
       <ProductGallery
         key={selected}
@@ -28,11 +40,11 @@ export default function ProductDetail({ product }: { product: ProductForUI }) {
       />
 
       {/* Info + buy */}
-      <div>
+      <div className="lg:pt-6">
         <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
           {product.category}
         </p>
-        <h1 className="mt-2 font-black uppercase tracking-tight text-4xl sm:text-5xl text-ink">
+        <h1 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl">
           {product.name}
         </h1>
         <p className="mt-2 font-bold uppercase tracking-wide text-sm text-muted">
@@ -43,13 +55,14 @@ export default function ProductDetail({ product }: { product: ProductForUI }) {
             Rendered with RichText so **bold**, *italic* and "- " bullets show. */}
         <RichText
           text={product.longDescription?.trim() || product.description}
-          className="mt-6 font-serif text-lg leading-relaxed text-ink/80 [&_p]:mt-2 first:[&_p]:mt-0"
+          className="mt-6 border-y border-line py-6 font-serif text-lg leading-relaxed text-ink/80 [&_p]:mt-2 first:[&_p]:mt-0"
         />
 
         <AddToCartPanel
           product={product}
           selected={selected}
           onSelect={setSelected}
+          labels={labels}
         />
       </div>
     </div>

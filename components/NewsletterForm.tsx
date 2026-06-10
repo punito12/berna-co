@@ -3,7 +3,19 @@
 import { useState } from "react";
 
 // Newsletter signup used in the footer. Light styling so it reads on dark bg.
-export default function NewsletterForm() {
+export default function NewsletterForm({
+  title = "Sumate al newsletter",
+  subtitle = "Novedades, recetas y promos. Sin spam.",
+  placeholder = "tu@email.com",
+  buttonLabel = "Sumarme",
+  successMessage = "¡Gracias! Te vas a enterar de las novedades.",
+}: {
+  title?: string;
+  subtitle?: string;
+  placeholder?: string;
+  buttonLabel?: string;
+  successMessage?: string;
+}) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error">(
     "idle"
@@ -27,7 +39,7 @@ export default function NewsletterForm() {
         return;
       }
       setStatus("ok");
-      setMessage("¡Gracias! Te vas a enterar de las novedades.");
+      setMessage(successMessage);
       setEmail("");
     } catch {
       setStatus("error");
@@ -38,26 +50,26 @@ export default function NewsletterForm() {
   return (
     <div className="mx-auto max-w-sm">
       <p className="font-bold uppercase tracking-widest text-xs text-cream">
-        Sumate al newsletter
+        {title}
       </p>
       <p className="mt-1 text-sm text-white/60">
-        Novedades, recetas y promos. Sin spam.
+        {subtitle}
       </p>
-      <form onSubmit={submit} className="mt-4 flex gap-2">
+      <form onSubmit={submit} className="mt-4 flex flex-col gap-2 sm:flex-row">
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="tu@email.com"
-          className="flex-1 rounded border border-white/20 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 outline-none focus:border-white"
+          placeholder={placeholder}
+          className="flex-1 rounded border border-white/20 bg-white/5 px-3 py-3 text-sm text-white placeholder:text-white/40 outline-none transition-colors focus:border-white"
         />
         <button
           type="submit"
           disabled={status === "sending"}
-          className="bg-white px-4 py-2 font-bold uppercase tracking-widest text-xs text-black transition-colors hover:bg-cream disabled:opacity-50"
+          className="bg-white px-4 py-3 font-bold uppercase tracking-widest text-xs text-black transition-all duration-300 hover:-translate-y-0.5 hover:bg-cream active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0"
         >
-          {status === "sending" ? "…" : "Sumarme"}
+          {status === "sending" ? "…" : buttonLabel}
         </button>
       </form>
       {message && (

@@ -13,7 +13,7 @@ export default function WhatsappFloat() {
       rel="noopener noreferrer"
       aria-label="Contactanos por WhatsApp"
       title="Contactanos por WhatsApp"
-      className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition-transform hover:scale-105"
+      className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-white/40 bg-[#25D366] text-white shadow-[0_16px_35px_rgba(10,10,10,0.22)] transition-transform duration-300 hover:scale-105 active:scale-100"
     >
       {/* WhatsApp glyph (inline SVG, no extra deps) */}
       <svg viewBox="0 0 32 32" className="h-7 w-7 fill-current" aria-hidden="true">

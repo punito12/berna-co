@@ -7,8 +7,7 @@ import Reveal from "@/components/Reveal";
 import { useCart } from "@/components/CartProvider";
 import { BREADCRUMB_LABELS, formatPrice, type ProductForUI } from "@/lib/products";
 
-// Human labels for the category filter chips.
-const CATEGORY_LABELS: Record<string, string> = {
+const DEFAULT_CATEGORY_LABELS: Record<string, string> = {
   CARNE: "Carne",
   POLLO: "Pollo",
   CERDO: "Cerdo",
@@ -24,6 +23,10 @@ export default function Catalog({
   subtitle = "Elegí tu corte y tu empanado. Listas para el horno.",
   allLabel = "Todos",
   outOfStockLabel = "Sin stock",
+  categoryLabels = DEFAULT_CATEGORY_LABELS,
+  addToCartLabel = "Agregar al carrito",
+  chooseBreadcrumbLabel = "Empanado",
+  newLabel = "New",
 }: {
   products: ProductForUI[];
   efectivoPct?: number;
@@ -33,6 +36,10 @@ export default function Catalog({
   subtitle?: string;
   allLabel?: string;
   outOfStockLabel?: string;
+  categoryLabels?: Record<string, string>;
+  addToCartLabel?: string;
+  chooseBreadcrumbLabel?: string;
+  newLabel?: string;
 }) {
   const { lines, totalItems, totalPrice, changeQuantity } = useCart();
   const [open, setOpen] = useState(false);
@@ -55,11 +62,11 @@ export default function Catalog({
   return (
     <section id="productos" className="bg-cream">
       <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
-        <Reveal as="header" className="mb-12 text-center">
+        <Reveal as="header" className="mb-10 text-center sm:mb-12">
           <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
             {eyebrow}
           </p>
-          <h2 className="mt-3 font-black uppercase tracking-tight text-4xl sm:text-6xl text-ink">
+          <h2 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl">
             {title}
           </h2>
           <p className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted">
@@ -68,7 +75,7 @@ export default function Catalog({
         </Reveal>
 
         {/* Category filter */}
-        <Reveal className="mb-10 flex flex-wrap justify-center gap-2" delay={80}>
+        <Reveal className="mb-10 flex flex-wrap justify-center gap-2 sm:mb-12" delay={80}>
           <FilterChip
             active={category === "ALL"}
             onClick={() => setCategory("ALL")}
@@ -81,12 +88,12 @@ export default function Catalog({
               active={category === c}
               onClick={() => setCategory(c)}
             >
-              {CATEGORY_LABELS[c] ?? c}
+              {categoryLabels[c] ?? c}
             </FilterChip>
           ))}
         </Reveal>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {visible.map((product, i) => (
             <Reveal key={product.id} delay={(i % 3) * 90}>
               <ProductCard
@@ -94,6 +101,9 @@ export default function Catalog({
                 efectivoPct={efectivoPct}
                 transferenciaPct={transferenciaPct}
                 outOfStockLabel={outOfStockLabel}
+                addToCartLabel={addToCartLabel}
+                chooseBreadcrumbLabel={chooseBreadcrumbLabel}
+                newLabel={newLabel}
               />
             </Reveal>
           ))}
@@ -102,16 +112,16 @@ export default function Catalog({
 
       {/* Sticky cart bar — only when there is something in the cart */}
       {totalItems > 0 && (
-        <div className="sticky bottom-0 z-20 border-t border-line bg-white/95 backdrop-blur">
+        <div className="sticky bottom-0 z-20 border-t border-line bg-white/95 shadow-[0_-18px_45px_rgba(10,10,10,0.08)] backdrop-blur-xl">
           {/* Extra right padding (pr-20) keeps the total clear of the floating
               WhatsApp button in the corner. */}
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 py-3 pl-4 pr-20">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 py-3 pl-4 pr-20 sm:pr-4">
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              className="flex items-center gap-2 font-bold uppercase tracking-wide text-sm text-ink"
+              className="flex items-center gap-2 font-bold uppercase tracking-wide text-sm text-ink transition-colors hover:text-muted"
             >
-              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-ink px-2 text-xs text-white">
+              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-ink px-2 text-xs text-white shadow-sm">
                 {totalItems}
               </span>
               {open ? "Ocultar carrito" : "Ver carrito"}
@@ -122,7 +132,7 @@ export default function Catalog({
           </div>
 
           {open && (
-            <div className="border-t border-line bg-white">
+            <div className="animate-soft-pop border-t border-line bg-white">
               <ul className="mx-auto max-w-6xl divide-y divide-line px-4">
                 {lines.map((line) => (
                   <li
@@ -145,7 +155,7 @@ export default function Catalog({
                           type="button"
                           onClick={() => changeQuantity(line.key, -1)}
                           aria-label="Quitar uno"
-                          className="h-7 w-7 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
+                          className="h-8 w-8 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
                         >
                           −
                         </button>
@@ -156,7 +166,7 @@ export default function Catalog({
                           type="button"
                           onClick={() => changeQuantity(line.key, 1)}
                           aria-label="Agregar uno"
-                          className="h-7 w-7 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
+                          className="h-8 w-8 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
                         >
                           +
                         </button>
@@ -172,7 +182,7 @@ export default function Catalog({
               <div className="mx-auto max-w-6xl px-4 py-4">
                 <Link
                   href="/checkout"
-                  className="block w-full bg-black px-4 py-4 text-center font-bold uppercase tracking-widest text-sm text-white transition-colors hover:bg-ink/80"
+                  className="block w-full bg-black px-4 py-4 text-center font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0"
                 >
                   Continuar
                 </Link>
@@ -199,10 +209,10 @@ function FilterChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-4 py-1.5 font-bold uppercase tracking-wide text-xs transition-colors ${
+      className={`rounded-full border px-4 py-2 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
         active
-          ? "border-black bg-black text-white"
-          : "border-line bg-white text-ink hover:border-black"
+          ? "border-black bg-black text-white shadow-sm"
+          : "border-line bg-white text-ink hover:-translate-y-0.5 hover:border-black"
       }`}
     >
       {children}

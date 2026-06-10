@@ -21,11 +21,17 @@ export default function ProductCard({
   efectivoPct = 0,
   transferenciaPct = 0,
   outOfStockLabel = "Sin stock",
+  addToCartLabel = "Agregar al carrito",
+  chooseBreadcrumbLabel = "Empanado",
+  newLabel = "New",
 }: {
   product: ProductForUI;
   efectivoPct?: number;
   transferenciaPct?: number;
   outOfStockLabel?: string;
+  addToCartLabel?: string;
+  chooseBreadcrumbLabel?: string;
+  newLabel?: string;
 }) {
   const { addToCart } = useCart();
 
@@ -56,7 +62,7 @@ export default function ProductCard({
   }
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-lg border border-line bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-ink/20 hover:shadow-xl">
+    <article className="group flex h-full flex-col overflow-hidden rounded-lg border border-line bg-white shadow-[0_1px_0_rgba(10,10,10,0.03)] transition-all duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_22px_55px_rgba(10,10,10,0.10)]">
       {/* Photo → product detail. Missing files simply show the cream block
           underneath — no broken-image icon. Drop the .jpg into
           /public/images/productos/. */}
@@ -82,18 +88,18 @@ export default function ProductCard({
         {/* Top-left badges: promos stand out the most (red), then New / stock. */}
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
           {!allOutOfStock && selPromoType && (
-            <span className="bg-[#c0392b] px-3 py-1.5 font-black uppercase tracking-widest text-sm text-white shadow-md">
+            <span className="bg-accent px-3 py-1.5 font-black uppercase tracking-widest text-sm text-white shadow-md">
               {selPromoType}
             </span>
           )}
           {!allOutOfStock && selPromoPercent > 0 && (
-            <span className="bg-[#c0392b] px-3 py-1.5 font-black uppercase tracking-widest text-sm text-white shadow-md">
+            <span className="bg-accent px-3 py-1.5 font-black uppercase tracking-widest text-sm text-white shadow-md">
               -{selPromoPercent}%
             </span>
           )}
           {product.isNew && !allOutOfStock && (
             <span className="bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
-              New
+              {newLabel}
             </span>
           )}
           {allOutOfStock && (
@@ -103,21 +109,21 @@ export default function ProductCard({
           )}
         </div>
 
-        <span className="absolute right-3 top-3 bg-white/90 px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-ink backdrop-blur-sm">
+        <span className="absolute right-3 top-3 border border-line/80 bg-white/90 px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-ink backdrop-blur-sm">
           {product.category}
         </span>
       </Link>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-5 sm:p-6">
         <Link href={`/producto/${product.slug}`}>
-          <h3 className="font-bold uppercase tracking-tight text-lg text-ink transition-colors hover:text-muted">
+          <h3 className="font-black uppercase tracking-tight text-xl leading-tight text-ink transition-colors hover:text-muted">
             {product.name}
           </h3>
         </Link>
         <p className="mt-0.5 font-bold uppercase tracking-wide text-xs text-muted">
           {formatWeight(product.weightGrams)}
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
+          <p className="mt-3 text-sm leading-relaxed text-muted">
           {product.description}
         </p>
 
@@ -131,7 +137,7 @@ export default function ProductCard({
         {/* Empanado selector (pills) */}
         <div className="mt-4">
           <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
-            Empanado
+            {chooseBreadcrumbLabel}
           </p>
           <div className="flex flex-wrap gap-2">
             {product.breadcrumbs.map((code) => {
@@ -142,10 +148,10 @@ export default function ProductCard({
                   type="button"
                   onClick={() => setSelected(code)}
                   aria-pressed={active}
-                  className={`rounded-full border border-black px-3 py-1 font-bold uppercase tracking-wide text-xs transition-colors ${
+                  className={`rounded-full border border-black px-3 py-1.5 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
                     active
-                      ? "bg-black text-white"
-                      : "bg-white text-black hover:bg-cream"
+                      ? "bg-black text-white shadow-sm"
+                      : "bg-white text-black hover:-translate-y-0.5 hover:bg-cream"
                   }`}
                 >
                   {BREADCRUMB_LABELS[code] ?? code}
@@ -161,7 +167,7 @@ export default function ProductCard({
         <div className="mt-auto pt-5">
           {selPromoPercent > 0 ? (
             <p className="flex items-baseline gap-2">
-              <span className="font-black text-2xl text-[#c0392b]">
+              <span className="font-black text-2xl text-accent">
                 {formatPrice(promoPriceFor(product, selected))}
               </span>
               <span className="text-sm text-muted line-through">
@@ -196,7 +202,7 @@ export default function ProductCard({
                 {chips.map((c) => (
                   <span
                     key={c.label}
-                    className="inline-flex items-baseline gap-1 rounded-full bg-green-100 px-2.5 py-1 text-green-800"
+                    className="inline-flex items-baseline gap-1 rounded-full border border-line bg-cream px-2.5 py-1 text-ink"
                   >
                     <span className="font-black text-sm">
                       {formatPrice(c.price)}
@@ -213,13 +219,13 @@ export default function ProductCard({
             type="button"
             onClick={handleAdd}
             disabled={selectedOutOfStock}
-            className="mt-3 w-full overflow-hidden bg-black px-4 py-3 font-bold uppercase tracking-widest text-sm text-white transition-colors hover:bg-ink/80 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:bg-muted"
+            className="mt-4 w-full overflow-hidden bg-black px-4 py-3.5 font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted"
           >
             {selectedOutOfStock
-              ? outOfStockLabel
-              : justAdded
-              ? "Agregado ✓"
-              : "Agregar"}
+            ? outOfStockLabel
+            : justAdded
+            ? "Agregado ✓"
+            : addToCartLabel}
           </button>
         </div>
       </div>

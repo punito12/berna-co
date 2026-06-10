@@ -21,9 +21,9 @@ export default function ProductGallery({
   const [active, setActive] = useState(0);
 
   return (
-    <div>
+    <div className="lg:sticky lg:top-24">
       {/* Main image. 2:3 frame matches the photos so nothing is cropped. */}
-      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-line bg-cream">
+      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-line bg-cream shadow-[0_18px_45px_rgba(10,10,10,0.08)]">
         {/* Placeholder name sits BEHIND the photo; only shows if a file is missing. */}
         <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-8 text-center font-black uppercase tracking-tight text-2xl text-line">
           {name}
@@ -35,11 +35,11 @@ export default function ProductGallery({
         />
 
         {isNew && (
-          <span className="absolute left-4 top-4 bg-ink px-3 py-1 font-bold uppercase tracking-widest text-xs text-white">
+          <span className="absolute left-4 top-4 bg-ink px-3 py-1 font-bold uppercase tracking-widest text-xs text-white shadow-sm">
             New
           </span>
         )}
-        <span className="absolute right-4 top-4 bg-white/90 px-3 py-1 font-bold uppercase tracking-widest text-xs text-ink backdrop-blur-sm">
+        <span className="absolute right-4 top-4 border border-line/80 bg-white/90 px-3 py-1 font-bold uppercase tracking-widest text-xs text-ink backdrop-blur-sm">
           {category}
         </span>
       </div>
@@ -54,10 +54,10 @@ export default function ProductGallery({
               onClick={() => setActive(i)}
               aria-label={`Ver foto ${i + 1}`}
               aria-pressed={i === active}
-              className={`relative aspect-square overflow-hidden rounded-md border bg-cream transition-all ${
+              className={`relative aspect-square overflow-hidden rounded-md border bg-cream transition-all duration-200 ${
                 i === active
                   ? "border-ink ring-2 ring-ink"
-                  : "border-line hover:border-ink/40"
+                  : "border-line hover:-translate-y-0.5 hover:border-ink/40"
               }`}
             >
               <div

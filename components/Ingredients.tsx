@@ -23,26 +23,57 @@ function EggIcon() {
 }
 
 function ChickenIcon() {
-  // A chicken drumstick: meaty top + bone with two knobs at the end.
+  // A pasture chicken: whole bird, comb, beak, wing and a small ground line.
   return (
     <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
-      {/* meat */}
+      {/* body */}
       <path
-        d="M40 14c7 0 12 5 12 12 0 6-4 10-9 11l-3 3a7 7 0 0 1-10-10l3-3c1-5 5-9 10-9Z"
+        d="M18 38c0-10 8-18 19-18 9 0 16 6 16 15 0 8-7 14-17 14H22c-6 0-10-4-10-9 0-4 2-7 6-9"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinejoin="round"
+        strokeLinecap="round"
       />
-      {/* bone */}
+      {/* neck + head */}
       <path
-        d="M30 34 18 46"
+        d="M38 21c1-6 5-10 11-10 4 0 7 3 7 7 0 3-2 6-5 7"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* comb + beak */}
+      <path
+        d="M45 11c0-3 2-5 4-5 0 3 1 5 3 7m4 5 5 2-5 3"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* wing */}
+      <path
+        d="M29 31c6 1 10 5 11 11-6 1-12-2-15-7"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* eye */}
+      <circle cx="50" cy="17" r="1.6" fill="currentColor" />
+      {/* legs */}
+      <path
+        d="M28 49v6m10-6v6m-13 0h6m4 0h6"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinecap="round"
       />
-      {/* bone knobs at the end */}
-      <circle cx="15" cy="45" r="3.5" stroke="currentColor" strokeWidth="2.5" />
-      <circle cx="19" cy="49" r="3.5" stroke="currentColor" strokeWidth="2.5" />
+      {/* pasture line */}
+      <path
+        d="M10 57h8m31 0h5M15 53l-3 4m38-5 3 5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -115,20 +146,20 @@ export default function Ingredients({
           <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
             {eyebrow}
           </p>
-          <h2 className="mt-3 font-black uppercase tracking-tight text-4xl sm:text-6xl text-ink">
+          <h2 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl">
             {title}
           </h2>
         </Reveal>
 
-        <ul className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-line bg-line shadow-[0_18px_45px_rgba(10,10,10,0.06)] sm:grid-cols-3">
           {ITEMS.map((item, i) => (
             <Reveal
               as="li"
               key={item.title}
               delay={i * 100}
-              className="flex flex-col items-center gap-5 bg-white px-6 py-12 text-center transition-colors hover:bg-cream"
+              className="group flex flex-col items-center gap-5 bg-white px-6 py-12 text-center transition-all duration-300 hover:bg-cream sm:min-h-64"
             >
-              <span className="text-ink">
+              <span className="rounded-full border border-line bg-cream/60 p-4 text-ink transition-transform duration-300 group-hover:scale-105">
                 <item.Icon />
               </span>
               <h3 className="font-black uppercase tracking-tight text-xl text-ink">

@@ -7,6 +7,7 @@ import { useCart } from "@/components/CartProvider";
 import CheckoutCalendar from "@/components/CheckoutCalendar";
 import BernaLogo from "@/components/BernaLogo";
 import { BREADCRUMB_LABELS, formatPrice } from "@/lib/products";
+import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 import type { DeliveryOptions } from "@/lib/delivery";
 
 type DeliveryType = "DELIVERY" | "PICKUP";
@@ -45,10 +46,11 @@ export default function CheckoutPage() {
   // Editable checkout texts from the CMS (published). Fallbacks below if missing.
   const [cms, setCms] = useState<Record<string, string>>({});
   useEffect(() => {
-    const params = new URLSearchParams({ category: "checkout" });
+    const params = new URLSearchParams();
     const preview = new URLSearchParams(window.location.search).get("preview");
     if (preview) params.set("preview", preview);
-    fetch(`/api/cms/texts?${params.toString()}`)
+    const query = params.toString();
+    fetch(query ? `/api/cms/texts?${query}` : "/api/cms/texts")
       .then((r) => r.json())
       .then((d) => setCms(d.texts ?? {}))
       .catch(() => setCms({}));
@@ -185,6 +187,58 @@ export default function CheckoutPage() {
     setCodeError(null);
   }
 
+  function buildWhatsappHelpUrl(): string | null {
+    const phoneDigits =
+      (payCfg?.whatsappNumber ?? "").replace(/[^0-9]/g, "") ||
+      BUSINESS_WHATSAPP;
+    if (!phoneDigits || lines.length === 0) return null;
+
+    const messageLines = [
+      ct("checkout.help.whatsapp_intro", "Hola! Estoy queriendo hacer un pedido y necesito ayuda."),
+      "",
+      ct("checkout.help.cart_title", "Tengo en el carrito:"),
+      ...lines.map((line) => {
+        const empanado =
+          BREADCRUMB_LABELS[line.breadcrumbType] ?? line.breadcrumbType;
+        return `• ${line.quantity} x ${line.name} (${empanado}) - ${formatPrice(
+          line.price
+        )}`;
+      }),
+      "",
+      `${ct("checkout.summary.subtotal", "Subtotal estimado")}: ${formatPrice(subtotal)}`,
+    ];
+
+    const dataLines: string[] = [];
+    if (name.trim()) dataLines.push(`${ct("checkout.step1.name_label", "Nombre")}: ${name.trim()}`);
+    if (phone.trim()) dataLines.push(`${ct("checkout.step1.phone_label", "Teléfono")}: ${phone.trim()}`);
+    if (deliveryType === "DELIVERY") {
+      const addressParts = [
+        street.trim(),
+        locality.trim(),
+        postalCode.trim(),
+        floor.trim(),
+      ].filter(Boolean);
+      if (addressParts.length > 0) {
+        dataLines.push(`${ct("checkout.step2.address_label", "Dirección")}: ${addressParts.join(", ")}`);
+      }
+    } else {
+      dataLines.push(`${ct("checkout.step2.address_label", "Dirección")}: ${ct("checkout.step2.pickup_option", "Retiro en local")}`);
+    }
+    if (dateIso || slot) {
+      dataLines.push(
+        `${ct("checkout.step3.date_label", "Día preferido")}: ${[dateIso, slot].filter(Boolean).join(" · ")}`
+      );
+    }
+
+    if (dataLines.length > 0) {
+      messageLines.push("", ct("checkout.help.customer_data", "Mis datos:"), ...dataLines);
+    }
+
+    return `https://wa.me/${phoneDigits}?text=${encodeURIComponent(
+      messageLines.join("\n")
+    )}`;
+  }
+
   // Resets everything tied to a verified address / zone.
   function resetZone() {
     setOptions(null);
@@ -201,8 +255,8 @@ export default function CheckoutPage() {
   // Geocodes the structured address and checks which zone polygon it lands in.
   // If covered, loads that zone's days + slots; otherwise shows the right msg.
   async function checkZone() {
-    if (!street.trim()) return setZoneError("Ingresá la calle y número.");
-    if (!locality.trim()) return setZoneError("Ingresá la localidad.");
+    if (!street.trim()) return setZoneError(ct("checkout.validation.street", "Ingresá la calle y número."));
+    if (!locality.trim()) return setZoneError(ct("checkout.validation.locality", "Ingresá la localidad."));
     setCheckingZone(true);
     resetZone();
     try {
@@ -217,7 +271,7 @@ export default function CheckoutPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setZoneError(data?.error ?? "No pudimos verificar tu dirección.");
+        setZoneError(data?.error ?? ct("checkout.validation.zone_error", "No pudimos verificar tu dirección."));
         return;
       }
       if (!data.covered) {
@@ -234,7 +288,7 @@ export default function CheckoutPage() {
         slots: data.slots,
       });
     } catch {
-      setZoneError("Hubo un problema de conexión. Probá de nuevo.");
+      setZoneError(ct("checkout.validation.connection", "Hubo un problema de conexión. Probá de nuevo."));
     } finally {
       setCheckingZone(false);
     }
@@ -244,18 +298,18 @@ export default function CheckoutPage() {
     setError(null);
 
     // Friendly client-side checks (the server validates again).
-    if (!name.trim()) return setError("Ingresá tu nombre.");
-    if (!phone.trim()) return setError("Ingresá tu teléfono.");
+    if (!name.trim()) return setError(ct("checkout.validation.name", "Ingresá tu nombre."));
+    if (!phone.trim()) return setError(ct("checkout.validation.phone", "Ingresá tu teléfono."));
     if (deliveryType === "DELIVERY") {
-      if (!street.trim()) return setError("Ingresá la calle y número.");
-      if (!locality.trim()) return setError("Ingresá la localidad.");
+      if (!street.trim()) return setError(ct("checkout.validation.street", "Ingresá la calle y número."));
+      if (!locality.trim()) return setError(ct("checkout.validation.locality", "Ingresá la localidad."));
       if (notCovered || notLocated)
-        return setError("Lo sentimos, por ahora no llegamos a tu dirección.");
+        return setError(ct("checkout.step2.outside_zone", "Lo sentimos, por ahora no llegamos a tu dirección."));
       if (!covered)
-        return setError("Verificá tu dirección (paso 2) antes de seguir.");
+        return setError(ct("checkout.validation.verify_address", "Verificá tu dirección (paso 2) antes de seguir."));
     }
-    if (!dateIso) return setError("Elegí un día de entrega.");
-    if (!slot) return setError("Elegí un horario.");
+    if (!dateIso) return setError(ct("checkout.validation.date", "Elegí un día de entrega."));
+    if (!slot) return setError(ct("checkout.validation.slot", "Elegí un horario."));
 
     setSubmitting(true);
     try {
@@ -290,7 +344,7 @@ export default function CheckoutPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data?.error ?? "No pudimos guardar el pedido.");
+        setError(data?.error ?? ct("checkout.validation.submit_error", "No pudimos guardar el pedido."));
         setSubmitting(false);
         return;
       }
@@ -309,7 +363,7 @@ export default function CheckoutPage() {
       // Efectivo: confirmation.
       router.push(`/pedido/confirmado?id=${data.id}`);
     } catch {
-      setError("Hubo un problema de conexión. Probá de nuevo.");
+      setError(ct("checkout.validation.connection", "Hubo un problema de conexión. Probá de nuevo."));
       setSubmitting(false);
     }
   }
@@ -317,8 +371,8 @@ export default function CheckoutPage() {
   // Wait for the cart to hydrate before deciding it's empty.
   if (!hydrated) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-cream">
-        <p className="font-bold uppercase tracking-wide text-muted">
+      <main className="flex min-h-screen items-center justify-center bg-cream px-4">
+        <p className="animate-pulse font-bold uppercase tracking-wide text-muted">
           Cargando…
         </p>
       </main>
@@ -330,25 +384,28 @@ export default function CheckoutPage() {
       <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4 text-center">
         <BernaLogo variant="dark" size="sm" />
         <p className="font-bold uppercase tracking-wide text-ink">
-          Tu carrito está vacío.
+          {ct("checkout.emptyCart", "Tu carrito está vacío.")}
         </p>
         <Link
           href="/#productos"
-          className="bg-black px-6 py-3 font-bold uppercase tracking-widest text-sm text-white"
+          className="bg-buttonBg px-6 py-3 font-bold uppercase tracking-widest text-sm text-buttonText shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0"
         >
-          Ver productos
+          {ct("home.hero.cta_primary", "Ver productos")}
         </Link>
       </main>
     );
   }
 
+  const whatsappHelpUrl = buildWhatsappHelpUrl();
+  const missingUnits = nextTier ? Math.ceil(nextTier.minKg - totalUnits) : 0;
+
   return (
     <main className="min-h-screen bg-cream pb-28">
       {/* Volume-discount strip */}
       {kgTiers.length > 0 && (
-        <div className="bg-black px-4 py-2 text-center">
+        <div className="bg-ink px-4 py-2.5 text-center">
           <p className="text-xs font-bold uppercase tracking-wide text-white">
-            🎉 Descuento por cantidad:{" "}
+            {ct("checkout.discount.quantity_title", "Descuento por cantidad")}:{" "}
             {[...kgTiers]
               .sort((a, b) => a.minKg - b.minKg)
               .map((t) => `${t.minKg}+ unidades ${t.discountPercent}% OFF`)
@@ -357,80 +414,84 @@ export default function CheckoutPage() {
         </div>
       )}
       {/* Slim header */}
-      <header className="flex items-center justify-between border-b border-line bg-white px-4 py-3">
+      <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link
           href="/#productos"
-          className="font-bold uppercase tracking-widest text-xs text-ink"
+          className="py-2 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:text-muted"
         >
-          ‹ Volver
+          ‹ {ct("checkout.back", "Volver")}
         </Link>
         <BernaLogo variant="dark" size="sm" />
+        </div>
       </header>
 
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <h1 className="mb-8 font-black uppercase tracking-tight text-3xl text-ink">
-          Finalizá tu pedido
-        </h1>
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
+        <div className="mb-8 max-w-2xl">
+          <h1 className="font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-5xl">
+            {ct("checkout.title", "Finalizar pedido")}
+          </h1>
+        </div>
 
         {/* 1. Datos */}
-        <Section number="1" title={ct("checkout.step.contact", "Tus datos")}>
-          <Field label="Nombre y apellido" required>
+        <Section number="1" title={ct("checkout.step1.title", ct("checkout.step.contact", "Tus datos"))}>
+          <Field label={ct("checkout.step1.name_label", "Nombre y apellido")} required>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={inputClass}
-              placeholder="Ej: Juana Pérez"
+              placeholder={ct("checkout.step1.name_placeholder", "Ej: Juana Pérez")}
             />
           </Field>
-          <Field label="Teléfono" required>
+          <Field label={ct("checkout.step1.phone_label", "Teléfono")} required>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className={inputClass}
-              placeholder="Ej: 11 2345 6789"
+              placeholder={ct("checkout.step1.phone_placeholder", "Ej: 11 2345 6789")}
             />
           </Field>
-          <Field label="Email (opcional)">
+          <Field label={ct("checkout.step1.email_label", "Email (opcional)")}>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={inputClass}
-              placeholder="Ej: juana@email.com"
+              placeholder={ct("checkout.step1.email_placeholder", "Ej: juana@email.com")}
             />
           </Field>
-          <Field label="Nota para el pedido (opcional)">
+          <Field label={ct("checkout.step1.notes_label", "Comentarios")}>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
               className={inputClass}
-              placeholder="Ej: tocar timbre 2B"
+              placeholder={ct("checkout.step1.notes_placeholder", "Ej: tocar timbre 2B")}
             />
           </Field>
         </Section>
 
         {/* 2. Entrega */}
-        <Section number="2" title={ct("checkout.step.delivery", "Entrega")}>
+        <Section number="2" title={ct("checkout.step2.title", ct("checkout.step.delivery", "Entrega"))}>
           <div className="grid grid-cols-2 gap-3">
             <ChoiceButton
               active={deliveryType === "DELIVERY"}
               onClick={() => setDeliveryType("DELIVERY")}
             >
-              Envío a domicilio
+              {ct("checkout.step2.delivery_option", "Envío a domicilio")}
             </ChoiceButton>
             <ChoiceButton
               active={deliveryType === "PICKUP"}
               onClick={() => setDeliveryType("PICKUP")}
             >
-              Retiro en local
+              {ct("checkout.step2.pickup_option", "Retiro en local")}
             </ChoiceButton>
           </div>
           {deliveryType === "DELIVERY" && (
             <div className="mt-4 space-y-3">
-              <Field label="Calle y número" required>
+              <Field label={ct("checkout.step2.street_label", "Calle y número")} required>
                 <input
                   type="text"
                   value={street}
@@ -440,12 +501,12 @@ export default function CheckoutPage() {
                       resetZone();
                   }}
                   className={inputClass}
-                  placeholder="Ej: Avenida Italia 600"
+                  placeholder={ct("checkout.step2.street_placeholder", "Ej: Avenida Italia 600")}
                 />
               </Field>
 
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Localidad" required>
+                <Field label={ct("checkout.step2.locality_label", "Localidad")} required>
                   <input
                     type="text"
                     value={locality}
@@ -455,10 +516,10 @@ export default function CheckoutPage() {
                         resetZone();
                     }}
                     className={inputClass}
-                    placeholder="Ej: Tigre"
+                    placeholder={ct("checkout.step2.locality_placeholder", "Ej: Tigre")}
                   />
                 </Field>
-                <Field label="Código postal (opcional)">
+                <Field label={ct("checkout.step2.postal_label", "Código postal (opcional)")}>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -469,18 +530,18 @@ export default function CheckoutPage() {
                         resetZone();
                     }}
                     className={inputClass}
-                    placeholder="Ej: 1648"
+                    placeholder={ct("checkout.step2.postal_placeholder", "Ej: 1648")}
                   />
                 </Field>
               </div>
 
-              <Field label="Piso / depto / barrio (opcional)">
+              <Field label={ct("checkout.step2.floor_label", "Piso / depto / barrio (opcional)")}>
                 <input
                   type="text"
                   value={floor}
                   onChange={(e) => setFloor(e.target.value)}
                   className={inputClass}
-                  placeholder="Ej: Piso 3 B, o Barrio Los Robles, lote 12"
+                placeholder={ct("checkout.step2.floor_placeholder", "Ej: Piso 3 B, o Barrio Los Robles, lote 12")}
                 />
               </Field>
 
@@ -488,29 +549,34 @@ export default function CheckoutPage() {
                 type="button"
                 onClick={() => checkZone()}
                 disabled={checkingZone || !street.trim() || !locality.trim()}
-                className="w-full border border-black px-4 py-3 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:bg-black hover:text-white disabled:opacity-40"
+                className="w-full border border-black bg-white px-4 py-3.5 font-bold uppercase tracking-widest text-xs text-ink shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-black hover:text-white active:translate-y-0 disabled:opacity-40 disabled:hover:translate-y-0"
               >
-                {checkingZone ? "Verificando…" : "Verificar dirección"}
+                {checkingZone
+                  ? ct("checkout.step2.checking_zone", "Verificando…")
+                  : ct("checkout.step2.verify_address", "Verificar dirección")}
               </button>
 
               {zoneError && <ErrorNote>{zoneError}</ErrorNote>}
 
               {notLocated && (
-                <p className="rounded-lg border border-black bg-white px-4 py-3 text-sm font-bold text-ink">
-                  No pudimos ubicar esa dirección. Revisá que esté completa
-                  (calle, número y localidad).
+                <p className="rounded-lg border border-black bg-white px-4 py-3 text-sm font-bold text-ink shadow-sm">
+                  {ct(
+                    "checkout.step2.not_located",
+                    "No pudimos ubicar esa dirección. Revisá que esté completa (calle, número y localidad)."
+                  )}
                 </p>
               )}
 
               {notCovered && (
-                <p className="rounded-lg border border-black bg-ink px-4 py-3 text-sm font-bold text-white">
-                  Lo sentimos, por ahora no llegamos a tu dirección.
+                <p className="rounded-lg border border-black bg-ink px-4 py-3 text-sm font-bold text-white shadow-sm">
+                  {ct("checkout.step2.outside_zone", "Lo sentimos, por ahora no llegamos a tu dirección.")}
                 </p>
               )}
 
               {covered && (
-                <p className="rounded-lg border border-line bg-cream/60 px-4 py-3 text-sm font-bold text-ink">
-                  ✓ Entregamos en tu dirección{zoneName ? `: zona ${zoneName}` : ""}
+                <p className="rounded-lg border border-line bg-cream/70 px-4 py-3 text-sm font-bold text-ink">
+                  {ct("checkout.step2.covered", "Entregamos en tu dirección")}
+                  {zoneName ? `: zona ${zoneName}` : ""}
                 </p>
               )}
             </div>
@@ -518,16 +584,21 @@ export default function CheckoutPage() {
         </Section>
 
         {/* 3. Cuándo */}
-        <Section number="3" title={ct("checkout.step.schedule", "¿Cuándo?")}>
+        <Section number="3" title={ct("checkout.step3.title", ct("checkout.step.schedule", "¿Cuándo?"))}>
           {!options && (
             <p className="text-sm text-muted">
-              Primero verificá tu zona de entrega (paso 2) para ver los días
-              disponibles.
+              {ct(
+                "checkout.step3.verify_first",
+                "Primero verificá tu zona de entrega (paso 2) para ver los días disponibles."
+              )}
             </p>
           )}
           {options && options.enabledWeekdays.length === 0 && (
             <p className="text-sm text-muted">
-              Tu zona no tiene días de entrega configurados por el momento.
+              {ct(
+                "checkout.step3.no_days",
+                "Tu zona no tiene días de entrega configurados por el momento."
+              )}
             </p>
           )}
           {options && options.enabledWeekdays.length > 0 && (
@@ -543,11 +614,11 @@ export default function CheckoutPage() {
               {dateIso && (
                 <div className="mt-4">
                   <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
-                    Horario
+                    {ct("checkout.step3.slot_label", "Horario")}
                   </p>
                   {options.slots.length === 0 ? (
                     <p className="text-sm text-muted">
-                      No hay horarios disponibles por ahora.
+                      {ct("checkout.step3.no_slots", "No hay horarios disponibles por ahora.")}
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
@@ -557,10 +628,10 @@ export default function CheckoutPage() {
                           type="button"
                           onClick={() => setSlot(s.label)}
                           aria-pressed={slot === s.label}
-                          className={`rounded-full border border-black px-4 py-1.5 font-bold uppercase tracking-wide text-xs transition-colors ${
+                          className={`rounded-full border border-black px-4 py-2 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
                             slot === s.label
-                              ? "bg-black text-white"
-                              : "bg-white text-black"
+                              ? "bg-black text-white shadow-sm"
+                              : "bg-white text-black hover:-translate-y-0.5"
                           }`}
                         >
                           {s.label}
@@ -575,13 +646,13 @@ export default function CheckoutPage() {
         </Section>
 
         {/* 4. Pago */}
-        <Section number="4" title={ct("checkout.step.payment", "Pago")}>
+        <Section number="4" title={ct("checkout.step4.title", ct("checkout.step.payment", "Pago"))}>
           <div className="grid grid-cols-1 gap-3">
             <PaymentCard
               active={paymentMethod === "EFECTIVO"}
               onClick={() => setPaymentMethod("EFECTIVO")}
-              title="Efectivo al recibir"
-              subtitle="Pagás cuando te llega el pedido"
+              title={ct("checkout.step4.cash_label", "Efectivo al recibir")}
+              subtitle={ct("checkout.step4.cash_subtitle", "Pagás cuando te llega el pedido")}
               badge={
                 payCfg && payCfg.efectivoDiscountPercent > 0
                   ? `${payCfg.efectivoDiscountPercent}% OFF`
@@ -591,8 +662,11 @@ export default function CheckoutPage() {
             <PaymentCard
               active={paymentMethod === "TRANSFERENCIA"}
               onClick={() => setPaymentMethod("TRANSFERENCIA")}
-              title="Transferencia bancaria"
-              subtitle="Transferís y enviás el comprobante por WhatsApp"
+              title={ct("checkout.step4.transfer_label", "Transferencia bancaria")}
+              subtitle={ct(
+                "checkout.step4.transfer_subtitle",
+                "Transferís y enviás el comprobante por WhatsApp"
+              )}
               badge={
                 payCfg && payCfg.transferenciaDiscountPercent > 0
                   ? `${payCfg.transferenciaDiscountPercent}% OFF`
@@ -602,25 +676,30 @@ export default function CheckoutPage() {
             <PaymentCard
               active={paymentMethod === "MERCADOPAGO"}
               onClick={() => setPaymentMethod("MERCADOPAGO")}
-              title="Tarjeta (Mercado Pago)"
-              subtitle="Crédito o débito a través de Mercado Pago"
+              title={ct("checkout.step4.mp_label", "Tarjeta (Mercado Pago)")}
+              subtitle={ct("checkout.step4.mp_subtitle", "Crédito o débito a través de Mercado Pago")}
             />
           </div>
           {paymentMethod === "MERCADOPAGO" && (
             <p className="mt-3 text-sm text-muted">
-              Al confirmar te llevamos a Mercado Pago para completar el pago.
+              {ct(
+                "checkout.step4.mp_note",
+                "Al confirmar te llevamos a Mercado Pago para completar el pago."
+              )}
             </p>
           )}
           {paymentMethod === "TRANSFERENCIA" && (
             <p className="mt-3 text-sm text-muted">
-              Al confirmar te mostramos los datos para transferir y mandar el
-              comprobante por WhatsApp.
+              {ct(
+                "checkout.transfer.instructions",
+                "Al confirmar te mostramos los datos para transferir y mandar el comprobante por WhatsApp."
+              )}
             </p>
           )}
         </Section>
 
         {/* 5. Resumen */}
-        <Section number="5" title="Resumen">
+        <Section number="5" title={ct("checkout.step.summary", "Resumen")}>
           <ul className="divide-y divide-line">
             {lines.map((line) => (
               <li
@@ -647,22 +726,22 @@ export default function CheckoutPage() {
           {/* Discount code */}
           <div className="mt-4 border-t border-line pt-4">
             {codeApplied ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-cream/40 px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-cream/60 px-3 py-2">
                 <span className="text-sm font-bold text-ink">
-                  Código {codeApplied.code} · {codeApplied.label}
+                  {ct("checkout.discount.code_label", "Código")} {codeApplied.code} · {codeApplied.label}
                 </span>
                 <button
                   type="button"
                   onClick={clearCode}
                   className="font-bold uppercase tracking-widest text-[11px] text-muted hover:text-ink"
                 >
-                  Quitar
+                  {ct("checkout.discount.remove", "Quitar")}
                 </button>
               </div>
             ) : (
               <div>
                 <p className="mb-1 font-bold uppercase tracking-wide text-[11px] text-muted">
-                  ¿Tenés un código de descuento?
+                  {ct("checkout.discount.question", "¿Tenés un código de descuento?")}
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -676,15 +755,15 @@ export default function CheckoutPage() {
                       }
                     }}
                     className={inputClass}
-                    placeholder="Ej: BERNA10"
+                    placeholder={ct("checkout.discount.placeholder", "Ej: BERNA10")}
                   />
                   <button
                     type="button"
                     onClick={applyCode}
                     disabled={checkingCode || !code.trim()}
-                    className="shrink-0 border border-black px-4 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:bg-black hover:text-white disabled:opacity-40"
+                    className="shrink-0 border border-black bg-white px-4 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:bg-black hover:text-white disabled:opacity-40"
                   >
-                    {checkingCode ? "…" : "Aplicar"}
+                    {checkingCode ? "…" : ct("checkout.discount.apply", "Aplicar")}
                   </button>
                 </div>
                 {codeError && (
@@ -696,20 +775,23 @@ export default function CheckoutPage() {
 
           {/* Volume discount motivational message */}
           {(kgPercent > 0 || nextTier) && totalUnits > 0 && (
-            <div className="mt-4 rounded-lg border border-black bg-cream/60 px-4 py-3 text-sm">
+            <div className="mt-4 rounded-lg border border-black bg-cream/70 px-4 py-3 text-sm">
               {kgPercent > 0 && (
                 <p className="font-bold text-ink">
-                  🎉 Comprando {totalUnits} unidades accedés a {kgPercent}% off.
+                  {ct("checkout.discount.quantity_earned", "Comprando")} {totalUnits}{" "}
+                  {ct("checkout.discount.units", "unidades")} {ct("checkout.discount.access", "accedés a")} {kgPercent}% off.
                 </p>
               )}
               {nextTier && (
                 <p className={kgPercent > 0 ? "mt-1 text-muted" : "text-ink"}>
-                  Te faltan{" "}
+                  {ct("checkout.discount.missing_prefix", "Te faltan")}{" "}
                   <span className="font-bold text-ink">
-                    {Math.ceil(nextTier.minKg - totalUnits)} unidad
-                    {Math.ceil(nextTier.minKg - totalUnits) === 1 ? "" : "es"}
+                    {missingUnits}{" "}
+                    {missingUnits === 1
+                      ? ct("checkout.discount.unit", "unidad")
+                      : ct("checkout.discount.units", "unidades")}
                   </span>{" "}
-                  para llegar a {nextTier.discountPercent}% off.
+                  {ct("checkout.discount.missing_suffix", "para llegar a")} {nextTier.discountPercent}% off.
                 </p>
               )}
             </div>
@@ -718,31 +800,33 @@ export default function CheckoutPage() {
           {/* Totals breakdown */}
           <div className="mt-4 space-y-1 border-t border-line pt-4 text-sm">
             <div className="flex items-center justify-between text-muted">
-              <span>Subtotal</span>
+              <span>{ct("checkout.summary.subtotal", "Subtotal")}</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
             {promoDiscount > 0 && (
               <div className="flex items-center justify-between text-muted">
-                <span>Promos (2x1 / 3x2)</span>
+                <span>{ct("checkout.summary.promos", "Promos (2x1 / 3x2)")}</span>
                 <span>− {formatPrice(promoDiscount)}</span>
               </div>
             )}
             {kgDiscount > 0 && (
               <div className="flex items-center justify-between text-muted">
-                <span>Descuento por cantidad ({kgPercent}%)</span>
+                <span>{ct("checkout.summary.quantity_discount", "Descuento por cantidad")} ({kgPercent}%)</span>
                 <span>− {formatPrice(kgDiscount)}</span>
               </div>
             )}
             {codeApplied && (
               <div className="flex items-center justify-between text-muted">
-                <span>Código {codeApplied.code}</span>
+                <span>{ct("checkout.discount.code_label", "Código")} {codeApplied.code}</span>
                 <span>− {formatPrice(codeDiscount)}</span>
               </div>
             )}
             {methodDiscount > 0 && (
               <div className="flex items-center justify-between text-muted">
                 <span>
-                  {paymentMethod === "EFECTIVO" ? "Efectivo" : "Transferencia"} (
+                  {paymentMethod === "EFECTIVO"
+                    ? ct("checkout.step4.cash_label", "Efectivo")
+                    : ct("checkout.step4.transfer_label", "Transferencia")} (
                   {methodPercent}%)
                 </span>
                 <span>− {formatPrice(methodDiscount)}</span>
@@ -750,15 +834,15 @@ export default function CheckoutPage() {
             )}
             {deliveryType === "DELIVERY" && covered && (
               <div className="flex items-center justify-between text-muted">
-                <span>Envío{zoneName ? ` (${zoneName})` : ""}</span>
-                <span>{shipping === 0 ? "Gratis" : formatPrice(shipping)}</span>
+                <span>{ct("checkout.summary.shipping", "Envío")}{zoneName ? ` (${zoneName})` : ""}</span>
+                <span>{shipping === 0 ? ct("checkout.summary.free", "Gratis") : formatPrice(shipping)}</span>
               </div>
             )}
           </div>
 
           <div className="mt-2 flex items-center justify-between border-t border-line pt-3">
             <span className="font-bold uppercase tracking-wide text-ink">
-              Total
+              {ct("checkout.summary.total", "Total")}
             </span>
             <span className="font-black text-2xl text-ink">
               {formatPrice(
@@ -774,14 +858,25 @@ export default function CheckoutPage() {
           type="button"
           onClick={handleSubmit}
           disabled={submitting}
-          className="mt-6 w-full bg-black px-4 py-4 font-bold uppercase tracking-widest text-sm text-white transition-colors hover:bg-ink/80 disabled:opacity-50"
+          className="mt-6 w-full bg-black px-4 py-4 font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {submitting
             ? "Procesando…"
             : paymentMethod === "MERCADOPAGO"
             ? ct("checkout.cta.pay", "Ir a pagar")
-            : ct("checkout.cta.confirm", "Confirmar pedido")}
+            : ct("checkout.confirm_button", ct("checkout.cta.confirm", "Confirmar pedido"))}
         </button>
+
+        {whatsappHelpUrl && (
+          <a
+            href={whatsappHelpUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 block rounded-lg border border-green-700 bg-green-600 px-4 py-3 text-center text-xs font-bold uppercase tracking-widest text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-green-500 active:translate-y-0"
+          >
+            {ct("checkout.help_button", "Preferís pedir por WhatsApp")}
+          </a>
+        )}
       </div>
     </main>
   );
@@ -790,7 +885,7 @@ export default function CheckoutPage() {
 // --- small presentational helpers ---
 
 const inputClass =
-  "w-full rounded-lg border border-line bg-white px-3 py-2.5 text-ink outline-none focus:border-black";
+  "w-full rounded-lg border border-line bg-white px-3.5 py-3 text-ink outline-none transition-colors placeholder:text-muted/60 focus:border-black";
 
 function Section({
   number,
@@ -802,9 +897,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mb-6 rounded-lg border border-line bg-white p-5">
-      <h2 className="mb-4 flex items-center gap-3 font-black uppercase tracking-tight text-lg text-ink">
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-ink text-sm text-white">
+    <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-[0_1px_0_rgba(10,10,10,0.03)] sm:p-6">
+      <h2 className="mb-5 flex items-center gap-3 font-black uppercase tracking-tight text-lg text-ink">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink text-sm text-white shadow-sm">
           {number}
         </span>
         {title}
@@ -847,10 +942,10 @@ function ChoiceButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-lg border px-4 py-4 font-bold uppercase tracking-wide text-sm transition-colors ${
+      className={`rounded-lg border px-4 py-4 font-bold uppercase tracking-wide text-sm transition-all duration-200 ${
         active
-          ? "border-black bg-black text-white"
-          : "border-line bg-white text-ink hover:border-black"
+          ? "border-black bg-black text-white shadow-sm"
+          : "border-line bg-white text-ink hover:-translate-y-0.5 hover:border-black"
       }`}
     >
       {children}
@@ -876,10 +971,10 @@ function PaymentCard({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-4 text-left transition-colors ${
+      className={`flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-4 text-left transition-all duration-200 ${
         active
-          ? "border-black bg-black text-white"
-          : "border-line bg-white text-ink hover:border-black"
+          ? "border-black bg-black text-white shadow-sm"
+          : "border-line bg-white text-ink hover:-translate-y-0.5 hover:border-black"
       }`}
     >
       <span className="min-w-0">
@@ -897,7 +992,7 @@ function PaymentCard({
       {badge && (
         <span
           className={`shrink-0 rounded-full px-3 py-1 font-black uppercase tracking-wide text-xs ${
-            active ? "bg-white text-black" : "bg-green-100 text-green-700"
+            active ? "bg-white text-black" : "border border-line bg-cream text-ink"
           }`}
         >
           {badge}
@@ -909,7 +1004,7 @@ function PaymentCard({
 
 function ErrorNote({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-4 rounded-lg border border-black bg-white px-4 py-3 text-sm font-bold text-ink">
+    <p className="mt-4 rounded-lg border border-black bg-white px-4 py-3 text-sm font-bold text-ink shadow-sm">
       {children}
     </p>
   );

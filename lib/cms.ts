@@ -6,6 +6,7 @@
 // Missing keys fall back to a provided default and log a warning (never crash).
 
 import { prisma } from "@/lib/db";
+import { isAuthenticated } from "@/lib/auth";
 import type { SiteSection } from "@prisma/client";
 import { cookies } from "next/headers";
 import {
@@ -133,7 +134,7 @@ export function getSiteText(
 }
 
 export async function isPreview(): Promise<boolean> {
-  return cookies().get("cms-preview")?.value === "1";
+  return cookies().get("cms-preview")?.value === "1" && isAuthenticated();
 }
 
 export async function getText(

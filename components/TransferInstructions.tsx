@@ -16,12 +16,22 @@ export default function TransferInstructions({
   whatsappNumber,
   shortId,
   total,
+  labels = {},
 }: {
   alias: string;
   cbu: string;
   whatsappNumber: string;
   shortId: string;
   total: number;
+  labels?: {
+    alias?: string;
+    cbu?: string;
+    copy?: string;
+    copied?: string;
+    whatsapp?: string;
+    missingData?: string;
+    reserved?: string;
+  };
 }) {
   const waDigits = (whatsappNumber || "").replace(/[^0-9]/g, "");
   const waMsg = `Hola! Te envío el comprobante de transferencia del pedido #${shortId} por ${formatPrice(
@@ -35,15 +45,28 @@ export default function TransferInstructions({
     <div className="mt-5 space-y-3">
       {/* Alias */}
       {alias && (
-        <CopyField label="Alias" value={alias} big />
+        <CopyField
+          label={labels.alias ?? "Alias"}
+          value={alias}
+          copyLabel={labels.copy}
+          copiedLabel={labels.copied}
+          big
+        />
       )}
       {/* CBU */}
-      {cbu && <CopyField label="CBU" value={cbu} />}
+      {cbu && (
+        <CopyField
+          label={labels.cbu ?? "CBU"}
+          value={cbu}
+          copyLabel={labels.copy}
+          copiedLabel={labels.copied}
+        />
+      )}
 
       {!alias && !cbu && (
         <p className="rounded-lg border border-dashed border-line bg-white px-4 py-4 text-center text-sm text-muted">
-          Los datos de transferencia todavía no están cargados. Escribinos por
-          WhatsApp y te los pasamos.
+          {labels.missingData ??
+            "Los datos de transferencia todavía no están cargados. Escribinos por WhatsApp y te los pasamos."}
         </p>
       )}
 
@@ -55,11 +78,11 @@ export default function TransferInstructions({
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-5 text-center font-black uppercase tracking-widest text-base text-white transition-colors hover:bg-green-700"
       >
         <span aria-hidden>📲</span>
-        Enviar comprobante por WhatsApp
+        {labels.whatsapp ?? "Enviar comprobante por WhatsApp"}
       </a>
       <p className="text-center text-xs text-muted">
-        Tu pedido queda reservado. Lo confirmamos cuando recibamos el
-        comprobante.
+        {labels.reserved ??
+          "Tu pedido queda reservado. Lo confirmamos cuando recibamos el comprobante."}
       </p>
     </div>
   );
@@ -68,10 +91,14 @@ export default function TransferInstructions({
 function CopyField({
   label,
   value,
+  copyLabel = "Copiar",
+  copiedLabel = "¡Copiado!",
   big,
 }: {
   label: string;
   value: string;
+  copyLabel?: string;
+  copiedLabel?: string;
   big?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
@@ -105,7 +132,7 @@ function CopyField({
           onClick={copy}
           className="shrink-0 rounded-lg bg-black px-4 py-2.5 font-bold uppercase tracking-widest text-xs text-white"
         >
-          {copied ? "¡Copiado!" : "Copiar"}
+          {copied ? copiedLabel : copyLabel}
         </button>
       </div>
     </div>
