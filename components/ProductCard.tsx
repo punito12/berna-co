@@ -68,7 +68,7 @@ export default function ProductCard({
           /public/images/productos/. */}
       <Link
         href={`/producto/${product.slug}`}
-        className="relative block aspect-[3/4] w-full overflow-hidden bg-cream"
+        className="relative block aspect-[2/3] w-full overflow-hidden bg-cream"
         aria-label={`Ver ${product.name}`}
       >
         {/* Placeholder name sits BEHIND the photo (-z-10). Only visible when
@@ -208,7 +208,8 @@ export default function ProductCard({
                       {formatPrice(c.price)}
                     </span>
                     <span className="text-[11px] font-bold uppercase tracking-wide">
-                      {c.label}
+                      <span className="sm:hidden">{c.label === "transferencia" ? "transf." : c.label}</span>
+                      <span className="hidden sm:inline">{c.label}</span>
                     </span>
                   </span>
                 ))}
