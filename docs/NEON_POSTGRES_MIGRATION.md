@@ -1,32 +1,40 @@
-# Plan Phase 1: migracion segura SQLite -> Neon Postgres
+# Plan: migracion segura SQLite -> Neon Postgres
 
-Este documento prepara la migracion futura a Neon Postgres sin cambiar el
-runtime actual. En esta fase el proyecto sigue usando SQLite local para
-desarrollo.
+Este documento registra la migracion de Berna&co desde SQLite local hacia Neon
+Postgres. La importacion de datos a Neon staging ya fue verificada, y el repo
+quedo preparado para construir/deployar en Vercel usando Postgres.
 
-## Decision de Phase 1
+## Estado actual para Vercel
 
-- `prisma/schema.prisma` queda con `provider = "sqlite"` por ahora.
-- `prisma/migrations/migration_lock.toml` queda con `provider = "sqlite"`.
-- Las migraciones SQLite existentes se conservan como historial local.
-- No se corre `prisma migrate dev`, `db:reset`, ni migraciones contra Neon.
-- No se importan datos todavia.
+- `prisma/schema.prisma` queda con `provider = "postgresql"`.
+- Vercel debe usar un `DATABASE_URL` de Neon/Postgres.
+- El desarrollo local tambien debe usar una base Neon/Postgres si se trabaja
+  sobre esta rama.
+- `prisma/dev.db` se conserva solo como backup/fuente historica de la migracion
+  SQLite. No debe ser la base activa de esta rama.
+- `prisma/migrations/migration_lock.toml` sigue apuntando a `sqlite` porque
+  pertenece al historial de migraciones local anterior. No usar esas
+  migraciones SQLite contra Neon.
+- No correr `db:reset`, `prisma migrate dev`, seeds ni imports sobre Neon sin
+  una fase aprobada explicitamente.
 
-Cambiar el provider a `postgresql` ahora romperia el flujo local actual porque:
+## Por que Vercel requiere provider Postgres
 
-- `.env` apunta a `DATABASE_URL="file:./dev.db"`.
-- Las migraciones existentes contienen SQL especifico de SQLite.
-- `migration_lock.toml` esta bloqueado a SQLite.
-- El equipo todavia necesita leer y verificar los datos reales de `prisma/dev.db`
-  antes de migrarlos.
+En Vercel el entorno usa `DATABASE_URL=postgresql://...` de Neon. Prisma valida
+la URL contra el `provider` declarado en `prisma/schema.prisma`; si el provider
+queda en `sqlite` pero la URL es Postgres, `prisma generate`, `next build` o el
+runtime pueden fallar. Por eso el repo debe quedar en `provider = "postgresql"`
+para deployar con Neon.
 
 ## Estado actual relevante
 
-- Base local: `prisma/dev.db`.
+- Base historica local: `prisma/dev.db`.
+- Base activa esperada: Neon Postgres via `DATABASE_URL`.
 - Prisma schema: `prisma/schema.prisma`.
-- Provider actual: `sqlite`.
+- Provider actual: `postgresql`.
 - Migraciones actuales: `prisma/migrations/*/migration.sql`.
-- Lock actual: `prisma/migrations/migration_lock.toml`.
+- Lock actual: `prisma/migrations/migration_lock.toml` conserva `sqlite` por
+  historial; no representa el baseline Postgres.
 - Seeds:
   - `prisma/seed.ts`
   - `prisma/seed-cms.ts`
@@ -34,7 +42,23 @@ Cambiar el provider a `postgresql` ahora romperia el flujo local actual porque:
 
 Los modelos usan mayormente tipos portables (`String`, `Int`, `Float`,
 `Boolean`, `DateTime`). Los campos con JSON de negocio/CMS estan guardados como
-`String`, lo cual reduce el riesgo de incompatibilidad para la primera migracion.
+`String`, lo cual redujo el riesgo de incompatibilidad durante la migracion.
+
+## Variables necesarias en Vercel
+
+Configurar estas variables sin comillas extra y sin exponer secretos:
+
+```env
+DATABASE_URL=postgresql://...
+ADMIN_PASSWORD=...
+MERCADOPAGO_ACCESS_TOKEN=...
+NEXT_PUBLIC_BASE_URL=https://dominio-o-preview.vercel.app
+BLOB_READ_WRITE_TOKEN=...
+```
+
+Para Mercado Pago, `NEXT_PUBLIC_BASE_URL` debe coincidir con el dominio publico
+que recibe los redirects y webhooks. En Preview puede apuntar al dominio Preview
+de Vercel; en Production, al dominio real.
 
 ## Estrategia recomendada de baseline Postgres
 

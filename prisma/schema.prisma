@@ -1,13 +1,13 @@
 // Berna&co data model. See docs/ROADMAP "Modelo de datos".
-// SQLite has no native enums, so enum-like fields are stored as String and
-// validated in application code (lib/). Allowed values are documented inline.
+// Enum-like fields are stored as String for portability and validated in
+// application code (lib/). Allowed values are documented inline.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
