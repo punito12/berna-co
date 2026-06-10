@@ -73,7 +73,7 @@ export default function Catalog({
 
   return (
     <section id="productos" className="bg-cream">
-      <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:py-24">
         <Reveal as="header" className="mb-10 text-center sm:mb-12">
           <p
             className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
@@ -115,7 +115,7 @@ export default function Catalog({
           ))}
         </Reveal>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
           {visible.map((product, i) => (
             <Reveal key={product.id} delay={(i % 3) * 90}>
               <ProductCard

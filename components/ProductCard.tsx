@@ -68,7 +68,7 @@ export default function ProductCard({
           /public/images/productos/. */}
       <Link
         href={`/producto/${product.slug}`}
-        className="relative block aspect-[2/3] w-full overflow-hidden bg-cream"
+        className="relative block aspect-square w-full overflow-hidden bg-cream sm:aspect-[2/3]"
         aria-label={`Ver ${product.name}`}
       >
         {/* Placeholder name sits BEHIND the photo (-z-10). Only visible when
@@ -114,32 +114,32 @@ export default function ProductCard({
         </span>
       </Link>
 
-      <div className="flex flex-1 flex-col p-5 sm:p-6">
+      <div className="flex flex-1 flex-col p-3 sm:p-5 md:p-6">
         <Link href={`/producto/${product.slug}`}>
-          <h3 className="font-black uppercase tracking-tight text-xl leading-tight text-ink transition-colors hover:text-muted">
+          <h3 className="font-black uppercase tracking-tight text-base leading-tight text-ink transition-colors hover:text-muted sm:text-xl">
             {product.name}
           </h3>
         </Link>
         <p className="mt-0.5 font-bold uppercase tracking-wide text-xs text-muted">
           {formatWeight(product.weightGrams)}
         </p>
-          <p className="mt-3 text-sm leading-relaxed text-muted">
+        <p className="mt-3 hidden text-sm leading-relaxed text-muted sm:block">
           {product.description}
         </p>
 
         <Link
           href={`/producto/${product.slug}`}
-          className="mt-2 inline-block font-bold uppercase tracking-widest text-[11px] text-ink underline-offset-4 hover:underline"
+          className="mt-2 hidden font-bold uppercase tracking-widest text-[11px] text-ink underline-offset-4 hover:underline sm:inline-block"
         >
           Ver detalle y fotos →
         </Link>
 
         {/* Empanado selector (pills) */}
-        <div className="mt-4">
+        <div className="mt-3 sm:mt-4">
           <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
             {chooseBreadcrumbLabel}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {product.breadcrumbs.map((code) => {
               const active = code === selected;
               return (
@@ -148,7 +148,7 @@ export default function ProductCard({
                   type="button"
                   onClick={() => setSelected(code)}
                   aria-pressed={active}
-                  className={`rounded-full border border-black px-3 py-1.5 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
+                  className={`rounded-full border border-black px-2.5 py-1 font-bold uppercase tracking-wide text-[11px] transition-all duration-200 sm:px-3 sm:py-1.5 sm:text-xs ${
                     active
                       ? "bg-black text-white shadow-sm"
                       : "bg-white text-black hover:-translate-y-0.5 hover:bg-cream"
@@ -164,10 +164,10 @@ export default function ProductCard({
         {/* Price + add button pinned to the bottom of the card. The promo
             badges live over the photo (top-left); here we only show the price,
             with the original struck through when there's a % promo. */}
-        <div className="mt-auto pt-5">
+        <div className="mt-auto pt-4 sm:pt-5">
           {selPromoPercent > 0 ? (
             <p className="flex items-baseline gap-2">
-              <span className="font-black text-2xl text-accent">
+              <span className="font-black text-xl text-accent sm:text-2xl">
                 {formatPrice(promoPriceFor(product, selected))}
               </span>
               <span className="text-sm text-muted line-through">
@@ -175,7 +175,7 @@ export default function ProductCard({
               </span>
             </p>
           ) : (
-            <p className="font-black text-2xl text-black">
+            <p className="font-black text-xl text-black sm:text-2xl">
               {formatPrice(priceFor(product, selected))}
             </p>
           )}
@@ -219,7 +219,7 @@ export default function ProductCard({
             type="button"
             onClick={handleAdd}
             disabled={selectedOutOfStock}
-            className="mt-4 w-full overflow-hidden bg-black px-4 py-3.5 font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted"
+            className="mt-3 w-full overflow-hidden bg-black px-4 py-3 font-bold uppercase tracking-widest text-xs text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:mt-4 sm:py-3.5 sm:text-sm"
           >
             {selectedOutOfStock
             ? outOfStockLabel
