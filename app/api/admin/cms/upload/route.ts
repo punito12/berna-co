@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { isAuthenticated } from "@/lib/auth";
+import { uploadImageToBlob, UploadError } from "@/lib/uploads";
 
 // Generic CMS image upload. multipart/form-data with field "file" and an
-// optional "folder" (allowlisted). Returns { url }. Admin-only.
+// optional "folder" (allowlisted). Returns { url }. Admin-only. New uploads go
+// to Vercel Blob; existing /images/... URLs remain valid static fallbacks.
 const MAX_BYTES = 6 * 1024 * 1024;
 const ALLOWED = new Map<string, string>([
   ["image/jpeg", "jpg"],
@@ -29,35 +29,32 @@ export async function POST(request: Request) {
   if (!(file instanceof File))
     return NextResponse.json({ error: "Falta el archivo." }, { status: 400 });
 
-  const ext = ALLOWED.get(file.type);
-  if (!ext)
-    return NextResponse.json(
-      { error: "Formato no permitido. Subí JPG, PNG, WEBP o SVG." },
-      { status: 400 }
-    );
-  if (file.size > MAX_BYTES)
-    return NextResponse.json(
-      { error: "La imagen es muy pesada (máximo 6 MB)." },
-      { status: 400 }
-    );
-
   const folderRaw = String(form.get("folder") ?? "");
   const folder = FOLDERS.has(folderRaw) ? folderRaw : "";
-  const name = `cms-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const segments = ["public", "images", ...(folder ? [folder] : [])];
-  const dir = path.join(process.cwd(), ...segments);
+  const blobFolder = folder === "branding" ? "branding" : "cms";
   try {
-    await mkdir(dir, { recursive: true });
-    const bytes = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(dir, name), bytes);
+    const url = await uploadImageToBlob({
+      file,
+      allowedTypes: ALLOWED,
+      maxBytes: MAX_BYTES,
+      folder: blobFolder,
+      namePrefix: folder === "branding" ? "branding" : "cms",
+    });
+    return NextResponse.json({ url });
   } catch (error) {
+    if (error instanceof UploadError) {
+      const message =
+        error.message === "Formato de imagen no permitido."
+          ? "Formato no permitido. Subí JPG, PNG, WEBP o SVG."
+          : error.message === "La imagen es muy pesada."
+          ? "La imagen es muy pesada (máximo 6 MB)."
+          : error.message;
+      return NextResponse.json({ error: message }, { status: error.status });
+    }
     console.error("cms upload error:", error);
     return NextResponse.json(
       { error: "No pudimos guardar la imagen." },
       { status: 500 }
     );
   }
-
-  const url = `/images/${folder ? `${folder}/` : ""}${name}`;
-  return NextResponse.json({ url });
 }

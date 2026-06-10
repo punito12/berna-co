@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { isAuthenticated } from "@/lib/auth";
+import { uploadImageToBlob, UploadError } from "@/lib/uploads";
 
 // Accepts an image upload (multipart/form-data, field "file") and stores it in
-// /public/images/productos/ with a unique filename. Returns { url } pointing at
-// the saved file. Admin-only.
+// Vercel Blob under productos/. Returns { url } pointing at the public file.
+// Existing /images/... product URLs keep working as static fallbacks.
 
 const MAX_BYTES = 6 * 1024 * 1024; // 6 MB
 const ALLOWED = new Map<string, string>([
@@ -31,34 +30,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Falta el archivo." }, { status: 400 });
   }
 
-  const ext = ALLOWED.get(file.type);
-  if (!ext) {
-    return NextResponse.json(
-      { error: "Formato no permitido. Subí una imagen JPG, PNG o WEBP." },
-      { status: 400 }
-    );
-  }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json(
-      { error: "La imagen es muy pesada (máximo 6 MB)." },
-      { status: 400 }
-    );
-  }
-
-  // Unique filename so re-uploads don't collide or get cached stale.
-  const name = `prod-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const dir = path.join(process.cwd(), "public", "images", "productos");
   try {
-    await mkdir(dir, { recursive: true });
-    const bytes = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(dir, name), bytes);
+    const url = await uploadImageToBlob({
+      file,
+      allowedTypes: ALLOWED,
+      maxBytes: MAX_BYTES,
+      folder: "productos",
+      namePrefix: "prod",
+    });
+    return NextResponse.json({ url });
   } catch (error) {
+    if (error instanceof UploadError) {
+      const message =
+        error.message === "Formato de imagen no permitido."
+          ? "Formato no permitido. Subí una imagen JPG, PNG o WEBP."
+          : error.message === "La imagen es muy pesada."
+          ? "La imagen es muy pesada (máximo 6 MB)."
+          : error.message;
+      return NextResponse.json({ error: message }, { status: error.status });
+    }
     console.error("upload error:", error);
     return NextResponse.json(
       { error: "No pudimos guardar la imagen. Probá de nuevo." },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({ url: `/images/productos/${name}` });
 }
