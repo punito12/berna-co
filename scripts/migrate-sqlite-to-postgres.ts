@@ -192,8 +192,20 @@ function argEnabled(name: string): boolean {
 
 function currentPrismaProvider(): string {
   const schema = readFileSync("prisma/schema.prisma", "utf8");
-  const match = schema.match(/provider\s*=\s*"([^"]+)"/);
+  const datasource = schema.match(/datasource\s+db\s*\{([\s\S]*?)\}/);
+  const match = datasource?.[1].match(/provider\s*=\s*"([^"]+)"/);
   return match?.[1] ?? "";
+}
+
+function describeTargetUrl(rawUrl: string): string {
+  try {
+    const url = new URL(rawUrl);
+    const protocol = url.protocol.replace(":", "");
+    const host = url.hostname.includes("neon") ? "neon" : "other";
+    return `${protocol}://${host}/[redacted]`;
+  } catch {
+    return "[invalid target url]";
+  }
 }
 
 function sqliteJson<T>(dbPath: string, sql: string): T[] {
@@ -299,7 +311,7 @@ async function main() {
   }
 
   console.log("SQLite source:", sourcePath);
-  console.log("Target Postgres:", targetUrl.replace(/:\/\/.*@/, "://***@"));
+  console.log("Target Postgres:", describeTargetUrl(targetUrl));
   console.log("Tablas planificadas:");
   for (const plan of TABLES) {
     console.log(`- ${plan.table}: ${sourceCounts.get(plan.table) ?? 0}`);
