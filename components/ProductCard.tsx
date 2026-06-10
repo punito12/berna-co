@@ -281,13 +281,15 @@ export default function ProductCard({
                     type="button"
                     onClick={() => !outOfStock && handleSheetSelect(code)}
                     disabled={outOfStock}
-                    className="flex w-full items-center justify-between rounded-lg border border-line px-4 py-3.5 font-bold uppercase tracking-wide text-sm text-ink transition-colors hover:border-ink hover:bg-cream disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex w-full flex-col items-start rounded-lg border border-line px-4 py-3.5 transition-colors hover:border-ink hover:bg-cream disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    <span>{BREADCRUMB_LABELS[code] ?? code}</span>
+                    <span className="font-bold uppercase tracking-wide text-sm text-ink">
+                      {BREADCRUMB_LABELS[code] ?? code}
+                    </span>
                     {outOfStock ? (
-                      <span className="text-xs text-muted">{outOfStockLabel}</span>
+                      <span className="mt-0.5 text-xs text-muted">{outOfStockLabel}</span>
                     ) : (
-                      <span className="font-black text-ink">
+                      <span className="mt-0.5 font-black text-base text-ink">
                         {formatPrice(priceFor(product, code))}
                       </span>
                     )}
