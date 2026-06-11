@@ -357,12 +357,15 @@ export default function CheckoutPage() {
         return;
       }
 
-      clearCart();
-      // Mercado Pago: redirect to the hosted checkout.
+      // Mercado Pago: redirect WITHOUT clearing the cart yet. The cart is cleared
+      // in /pedido/confirmado once the payment succeeds. If the payment fails and
+      // the user comes back, the cart is still intact so they can retry or change
+      // payment method.
       if (paymentMethod === "MERCADOPAGO" && data.paymentUrl) {
         window.location.href = data.paymentUrl;
         return;
       }
+      clearCart();
       // Transferencia: show the transfer instructions + WhatsApp screen.
       if (paymentMethod === "TRANSFERENCIA") {
         router.push(`/pedido/transferencia?id=${data.id}`);

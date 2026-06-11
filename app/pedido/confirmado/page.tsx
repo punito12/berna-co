@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import BernaLogo from "@/components/BernaLogo";
+import ClearCartOnMount from "@/components/ClearCartOnMount";
 import { BREADCRUMB_LABELS, formatPrice } from "@/lib/products";
 import {
   deliveryTypeLabel,
@@ -70,6 +71,8 @@ export default async function ConfirmadoPage({
 
   return (
     <>
+      {/* Clear cart now that payment succeeded (MP redirects here on success). */}
+      <ClearCartOnMount />
       <main className="min-h-screen bg-cream px-4 py-12 sm:py-16">
         <div className="mx-auto max-w-xl">
           <div className="text-center">
