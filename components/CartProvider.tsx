@@ -12,7 +12,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { promoPriceFor, promoTypeFor, type ProductForUI } from "@/lib/products";
+import {
+  promoPriceFor,
+  promoTypeFor,
+  stockFor,
+  type ProductForUI,
+} from "@/lib/products";
 import { quantityPromoDiscount } from "@/lib/discounts";
 
 // One line in the cart. Same product with a different empanado = separate line.
@@ -24,6 +29,7 @@ export type CartLine = {
   price: number; // unit price already with the product's % promo applied
   promoType: string; // "" | "2x1" | "3x2" for the quantity promo
   quantity: number;
+  maxStock?: number;
   weightGrams: number; // unit weight, for the volume (kg) discount
 };
 
@@ -37,7 +43,7 @@ type CartContextValue = {
   // false until the saved cart has been read from localStorage. Lets pages
   // avoid flashing an "empty cart" message before hydration finishes.
   hydrated: boolean;
-  addToCart: (product: ProductForUI, breadcrumbType: string) => void;
+  addToCart: (product: ProductForUI, breadcrumbType: string) => boolean;
   changeQuantity: (key: string, delta: number) => void;
   clearCart: () => void;
   // Refreshes unit prices + promos against the live products (used by checkout
@@ -47,8 +53,8 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-// Bumped to v2: lines now carry promoType (older saved carts lacked it).
-const STORAGE_KEY = "berna-cart-v2";
+// Bumped to v3: lines now carry maxStock so frontend controls can cap quantity.
+const STORAGE_KEY = "berna-cart-v3";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
@@ -84,9 +90,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCart = useCallback(
     (product: ProductForUI, breadcrumbType: string) => {
       const key = `${product.id}__${breadcrumbType}`;
+      const maxStock = Math.max(0, Math.floor(stockFor(product, breadcrumbType)));
+      if (!product.available || maxStock <= 0) return false;
+      const currentLine = linesRef.current.find((line) => line.key === key);
+      if (currentLine && currentLine.quantity >= maxStock) return false;
       setLines((prev) => {
         const existing = prev.find((line) => line.key === key);
         if (existing) {
+          if (existing.quantity >= maxStock) return prev;
           return prev.map((line) =>
             line.key === key
               ? { ...line, quantity: line.quantity + 1 }
@@ -103,10 +114,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             price: promoPriceFor(product, breadcrumbType),
             promoType: promoTypeFor(product, breadcrumbType),
             quantity: 1,
+            maxStock,
             weightGrams: product.weightGrams ?? 0,
           },
         ];
       });
+      return true;
     },
     []
   );
@@ -114,11 +127,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const changeQuantity = useCallback((key: string, delta: number) => {
     setLines((prev) =>
       prev
-        .map((line) =>
-          line.key === key
-            ? { ...line, quantity: line.quantity + delta }
-            : line
-        )
+        .map((line) => {
+          if (line.key !== key) return line;
+          const raw = line.quantity + delta;
+          const max = Number.isFinite(line.maxStock)
+            ? Math.max(0, Math.floor(line.maxStock ?? 0))
+            : Number.POSITIVE_INFINITY;
+          return { ...line, quantity: Math.min(Math.max(0, raw), max) };
+        })
         .filter((line) => line.quantity > 0)
     );
   }, []);
@@ -149,6 +165,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             unitPrice: number;
             promoType: string;
             available: boolean;
+            maxStock: number;
             weightGrams?: number;
           }
         >;
@@ -162,10 +179,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               ...l,
               price: info.unitPrice,
               promoType: info.promoType,
+              maxStock: info.maxStock,
+              quantity: Math.min(l.quantity, Math.max(0, info.maxStock)),
               weightGrams: info.weightGrams ?? l.weightGrams ?? 0,
             };
           })
-          .filter((l) => data.prices[l.key]?.available !== false)
+          .filter(
+            (l) =>
+              data.prices[l.key]?.available !== false &&
+              l.quantity > 0 &&
+              (data.prices[l.key]?.maxStock ?? 0) > 0
+          )
       );
     } catch {
       // Network issue — keep the saved prices; the server validates at checkout.

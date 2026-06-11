@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import {
   promoPriceFor,
   promoTypeFor,
+  stockFor,
   type ProductForUI,
 } from "@/lib/products";
 
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       unitPrice: number;
       promoType: string;
       available: boolean;
+      maxStock: number;
       weightGrams: number;
     }
   > = {};
@@ -43,6 +45,7 @@ export async function POST(request: Request) {
         unitPrice: 0,
         promoType: "",
         available: false,
+        maxStock: 0,
         weightGrams: 0,
       };
       continue;
@@ -56,11 +59,15 @@ export async function POST(request: Request) {
       promoType: p.promoType,
       promoPercentByBreadcrumb: safeMap(p.promoPercents),
       promoTypeByBreadcrumb: safeStrMap(p.promoTypes),
+      stock: p.stock,
+      stocksByBreadcrumb: safeMap(p.stocks),
     } as unknown as ProductForUI;
+    const maxStock = stockFor(ui, line.breadcrumbType);
     prices[key] = {
       unitPrice: promoPriceFor(ui, line.breadcrumbType),
       promoType: promoTypeFor(ui, line.breadcrumbType),
-      available: true,
+      available: maxStock > 0,
+      maxStock,
       weightGrams: p.weightGrams,
     };
   }

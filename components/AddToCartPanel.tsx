@@ -28,18 +28,22 @@ export default function AddToCartPanel({
     outOfStock?: string;
   };
 }) {
-  const { addToCart } = useCart();
+  const { addToCart, lines } = useCart();
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
   // Stock of the currently selected empanado.
   const stock = stockFor(product, selected);
-  const outOfStock = stock <= 0;
+  const inCart =
+    lines.find((line) => line.key === `${product.id}__${selected}`)?.quantity ??
+    0;
+  const maxAddable = Math.max(0, stock - inCart);
+  const outOfStock = stock <= 0 || maxAddable <= 0;
 
   // When the empanado changes, clamp the quantity to that variant's stock.
   useEffect(() => {
-    setQty((q) => Math.min(Math.max(1, q), Math.max(1, stock)));
-  }, [selected, stock]);
+    setQty((q) => Math.min(Math.max(1, q), Math.max(1, maxAddable)));
+  }, [selected, maxAddable]);
 
   function handleAdd() {
     if (outOfStock) return;
@@ -95,8 +99,8 @@ export default function AddToCartPanel({
           </span>
           <button
             type="button"
-            onClick={() => setQty((q) => Math.min(stock, q + 1))}
-            disabled={qty >= stock}
+            onClick={() => setQty((q) => Math.min(maxAddable, q + 1))}
+            disabled={qty >= maxAddable || outOfStock}
             aria-label="Agregar uno"
             className="h-9 w-9 rounded-full border border-black bg-white font-bold text-ink transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
           >
@@ -117,14 +121,18 @@ export default function AddToCartPanel({
           className="mt-4 w-full bg-black px-4 py-4 font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted"
         >
           {outOfStock
-            ? labels.outOfStock ?? "Sin stock"
+            ? stock <= 0
+              ? labels.outOfStock ?? "Sin stock"
+              : `Solo quedan ${stock} disponibles`
             : justAdded
             ? "Agregado al carrito ✓"
             : labels.addToCart ?? "Agregar al carrito"}
         </button>
         {outOfStock && (
           <p className="mt-3 text-center text-sm font-bold uppercase tracking-wide text-muted">
-            {labels.outOfStock ?? "Producto sin stock por el momento"}
+            {stock <= 0
+              ? labels.outOfStock ?? "Producto sin stock por el momento"
+              : `Ya tenés ${inCart} en el carrito. Solo quedan ${stock} disponibles.`}
           </p>
         )}
       </div>

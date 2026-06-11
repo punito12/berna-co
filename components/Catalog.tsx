@@ -187,8 +187,12 @@ export default function Catalog({
                         <button
                           type="button"
                           onClick={() => changeQuantity(line.key, 1)}
+                          disabled={
+                            typeof line.maxStock === "number" &&
+                            line.quantity >= line.maxStock
+                          }
                           aria-label="Agregar uno"
-                          className="h-8 w-8 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
+                          className="h-8 w-8 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-ink"
                         >
                           +
                         </button>

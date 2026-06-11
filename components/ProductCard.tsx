@@ -33,7 +33,7 @@ export default function ProductCard({
   chooseBreadcrumbLabel?: string;
   newLabel?: string;
 }) {
-  const { addToCart } = useCart();
+  const { addToCart, lines } = useCart();
 
   // Which empanado is selected (desktop pill selector + mobile sheet).
   const [selected, setSelected] = useState<string>(
@@ -45,14 +45,27 @@ export default function ProductCard({
 
   const cover = product.imagesByBreadcrumb[selected]?.[0] ?? product.imageUrl;
   const selectedOutOfStock = stockFor(product, selected) <= 0;
+  const selectedStock = stockFor(product, selected);
+  const selectedInCart =
+    lines.find((line) => line.key === `${product.id}__${selected}`)?.quantity ??
+    0;
+  const selectedAtLimit = selectedStock > 0 && selectedInCart >= selectedStock;
   const allOutOfStock = isProductOutOfStock(product);
   const selPromoPercent = promoPercentFor(product, selected);
   const selPromoType = promoTypeFor(product, selected);
   const hasMultipleBreadcrumbs = product.breadcrumbs.length > 1;
+  const allAtCartLimit = product.breadcrumbs.every((code) => {
+    const stock = stockFor(product, code);
+    const inCart =
+      lines.find((line) => line.key === `${product.id}__${code}`)?.quantity ??
+      0;
+    return stock <= 0 || inCart >= stock;
+  });
 
   function handleAdd() {
-    if (selectedOutOfStock) return;
-    addToCart(product, selected);
+    if (selectedOutOfStock || selectedAtLimit) return;
+    const added = addToCart(product, selected);
+    if (!added) return;
     setJustAdded(true);
     window.setTimeout(() => setJustAdded(false), 1200);
   }
@@ -70,8 +83,13 @@ export default function ProductCard({
   function handleSheetSelect(code: string) {
     setSelected(code);
     setSheetOpen(false);
-    if (stockFor(product, code) <= 0) return;
-    addToCart(product, code);
+    const stock = stockFor(product, code);
+    const inCart =
+      lines.find((line) => line.key === `${product.id}__${code}`)?.quantity ??
+      0;
+    if (stock <= 0 || inCart >= stock) return;
+    const added = addToCart(product, code);
+    if (!added) return;
     setJustAdded(true);
     window.setTimeout(() => setJustAdded(false), 1200);
   }
@@ -227,20 +245,32 @@ export default function ProductCard({
             <button
               type="button"
               onClick={handleAdd}
-              disabled={selectedOutOfStock}
+              disabled={selectedOutOfStock || selectedAtLimit}
               className="mt-3 hidden w-full overflow-hidden bg-black px-4 py-3.5 font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:mt-4 sm:block"
             >
-              {selectedOutOfStock ? outOfStockLabel : justAdded ? "Agregado ✓" : addToCartLabel}
+              {selectedOutOfStock
+                ? outOfStockLabel
+                : selectedAtLimit
+                ? `Solo quedan ${selectedStock} disponibles`
+                : justAdded
+                ? "Agregado ✓"
+                : addToCartLabel}
             </button>
 
             {/* Mobile: opens sheet if >1 breadcrumb */}
             <button
               type="button"
               onClick={handleMobileAdd}
-              disabled={allOutOfStock}
+              disabled={allOutOfStock || allAtCartLimit}
               className="mt-3 w-full overflow-hidden bg-black px-4 py-3 font-bold uppercase tracking-widest text-xs text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:hidden"
             >
-              {allOutOfStock ? outOfStockLabel : justAdded ? "Agregado ✓" : addToCartLabel}
+              {allOutOfStock
+                ? outOfStockLabel
+                : allAtCartLimit
+                ? "Sin más stock disponible"
+                : justAdded
+                ? "Agregado ✓"
+                : addToCartLabel}
             </button>
           </div>
         </div>
@@ -275,12 +305,17 @@ export default function ProductCard({
             <div className="flex flex-col gap-3">
               {product.breadcrumbs.map((code) => {
                 const outOfStock = stockFor(product, code) <= 0;
+                const stock = stockFor(product, code);
+                const inCart =
+                  lines.find((line) => line.key === `${product.id}__${code}`)
+                    ?.quantity ?? 0;
+                const atLimit = stock > 0 && inCart >= stock;
                 return (
                   <button
                     key={code}
                     type="button"
-                    onClick={() => !outOfStock && handleSheetSelect(code)}
-                    disabled={outOfStock}
+                    onClick={() => !outOfStock && !atLimit && handleSheetSelect(code)}
+                    disabled={outOfStock || atLimit}
                     className="flex w-full flex-col items-start rounded-lg border border-line px-4 py-3.5 transition-colors hover:border-ink hover:bg-cream disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <span className="font-bold uppercase tracking-wide text-sm text-ink">
@@ -288,6 +323,10 @@ export default function ProductCard({
                     </span>
                     {outOfStock ? (
                       <span className="mt-0.5 text-xs text-muted">{outOfStockLabel}</span>
+                    ) : atLimit ? (
+                      <span className="mt-0.5 text-xs text-muted">
+                        Solo quedan {stock} disponibles
+                      </span>
                     ) : (
                       <span className="mt-0.5 font-black text-base text-ink">
                         {formatPrice(priceFor(product, code))}
