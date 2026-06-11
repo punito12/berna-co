@@ -377,7 +377,9 @@ export default function CheckoutPage() {
   }
 
   // Wait for the cart to hydrate before deciding it's empty.
-  if (!hydrated) {
+  // Also suppress the empty-cart screen while submitting/redirecting — after
+  // clearCart() the lines become empty for one render before navigation lands.
+  if (!hydrated || submitting) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-cream px-4">
         {cmsTextCss && <style dangerouslySetInnerHTML={{ __html: cmsTextCss }} />}

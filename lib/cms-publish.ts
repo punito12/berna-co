@@ -392,44 +392,53 @@ export async function discardCmsDrafts() {
     prisma.siteSection.findMany(),
   ]);
 
-  await prisma.$transaction(async (tx) => {
-    if (content) {
-      await tx.siteContent.update({
+  // Batch transaction (same pattern as publishCmsDrafts) to avoid P2028 on Neon.
+  const operations: Prisma.PrismaPromise<unknown>[] = [];
+  if (content) {
+    operations.push(
+      prisma.siteContent.update({
         where: { id: "singleton" },
         data: {
           themeColorsDraft: content.themeColors,
           typographyDraft: content.typography,
           logoUrlDraft: content.logoUrl,
         },
-      });
-    }
-    for (const text of texts) {
-      await tx.siteText.update({
+      })
+    );
+  }
+  for (const text of texts) {
+    operations.push(
+      prisma.siteText.update({
         where: { key: text.key },
         data: { valueDraft: text.value, styleDraft: text.style },
-      });
-    }
-    for (const image of images) {
-      await tx.siteImage.update({
+      })
+    );
+  }
+  for (const image of images) {
+    operations.push(
+      prisma.siteImage.update({
         where: { key: image.key },
         data: { urlDraft: image.url },
-      });
+      })
+    );
+  }
+  for (const section of sections) {
+    if (isDraftOnlyBlockConfig(section.config)) {
+      operations.push(prisma.siteSection.delete({ where: { key: section.key } }));
+      continue;
     }
-    for (const section of sections) {
-      if (isDraftOnlyBlockConfig(section.config)) {
-        await tx.siteSection.delete({ where: { key: section.key } });
-        continue;
-      }
-      await tx.siteSection.update({
+    operations.push(
+      prisma.siteSection.update({
         where: { key: section.key },
         data: {
           orderDraft: section.order,
           visibleDraft: section.visible,
           configDraft: section.config,
         },
-      });
-    }
-  });
+      })
+    );
+  }
+  await prisma.$transaction(operations);
 
   return countPendingChanges();
 }

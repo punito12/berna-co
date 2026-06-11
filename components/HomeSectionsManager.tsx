@@ -81,7 +81,11 @@ const LEGACY_TEXT_KEYS: Record<string, string[]> = {
 };
 
 function legacyKeysForSection(key: string, config: CmsBlockConfig): string[] {
-  if (key === "home.about" && (config.title || config.body)) return [];
+  // If the block config already has its own content fields, the legacy SiteText
+  // keys are no longer read by the storefront — hide them to avoid duplication.
+  const hasBlockContent = !!(config.title || config.body || config.eyebrow ||
+    config.subtitle || config.ctaLabel || (config.items && config.items.length > 0));
+  if (hasBlockContent) return [];
   return LEGACY_TEXT_KEYS[key] ?? [];
 }
 
