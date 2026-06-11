@@ -1,6 +1,14 @@
 import BernaLogo from "@/components/BernaLogo";
 import NewsletterForm from "@/components/NewsletterForm";
 import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
+import Link from "next/link";
+
+const legalLinks = [
+  { href: "/envios", label: "Envíos" },
+  { href: "/cambios-devoluciones", label: "Cambios y devoluciones" },
+  { href: "/terminos", label: "Términos" },
+  { href: "/privacidad", label: "Privacidad" },
+];
 
 export default function Footer({
   slogan = "¡La vida es rica!",
@@ -73,8 +81,23 @@ export default function Footer({
 
       {/* Logo + contact */}
       <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 py-12 text-center sm:flex-row sm:justify-between sm:text-left">
+        <div className="mx-auto grid max-w-5xl gap-8 px-4 py-12 text-center sm:grid-cols-[1fr_auto_auto] sm:items-start sm:text-left">
           <BernaLogo variant="light" size="sm" src={logoUrl} />
+
+          <div className="flex flex-col items-center gap-2 sm:items-start">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-white/45">
+              Información
+            </p>
+            {legalLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-sm text-cream transition-colors hover:text-white"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
 
           <div className="flex flex-col items-center gap-2 sm:items-end">
             <a
