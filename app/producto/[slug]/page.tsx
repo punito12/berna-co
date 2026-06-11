@@ -9,6 +9,11 @@ import CmsFooter from "@/components/CmsFooter";
 import WhatsappFloat from "@/components/WhatsappFloat";
 import { getLogo, getSiteText, isPreview, loadCmsBundle } from "@/lib/cms";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
+import {
+  DEFAULT_OG_IMAGE,
+  SITE_NAME,
+  absoluteUrl,
+} from "@/lib/seo";
 
 // Per-product page title for nicer browser tabs / sharing.
 export async function generateMetadata({
@@ -17,10 +22,42 @@ export async function generateMetadata({
   params: { slug: string };
 }): Promise<Metadata> {
   const product = await getProductBySlug(params.slug);
-  if (!product) return { title: "Producto no encontrado — Berna&co" };
+  if (!product) return { title: "Producto no encontrado" };
+  const title = product.name;
+  const socialTitle = `${product.name} | ${SITE_NAME}`;
+  const description =
+    product.description ||
+    `${product.name} de Berna&co. Producto premium disponible para comprar online.`;
+  const image =
+    product.imagesByBreadcrumb[product.breadcrumbs[0] ?? "TRADITIONAL"]?.[0] ||
+    product.imageUrl ||
+    DEFAULT_OG_IMAGE;
+  const imageUrl = image.startsWith("http") ? image : absoluteUrl(image);
   return {
-    title: `${product.name} — Berna&co`,
-    description: product.description,
+    title,
+    description,
+    alternates: {
+      canonical: `/producto/${product.slug}`,
+    },
+    openGraph: {
+      type: "website",
+      url: absoluteUrl(`/producto/${product.slug}`),
+      siteName: SITE_NAME,
+      title: socialTitle,
+      description,
+      images: [
+        {
+          url: imageUrl,
+          alt: `${product.name} - ${SITE_NAME}`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: socialTitle,
+      description,
+      images: [imageUrl],
+    },
   };
 }
 

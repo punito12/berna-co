@@ -8,6 +8,14 @@ import {
   themeToCssVars,
   textStylesToCss,
 } from "@/lib/cms";
+import {
+  DEFAULT_OG_IMAGE,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TITLE,
+  absoluteUrl,
+  getSiteUrl,
+} from "@/lib/seo";
 
 // Archivo: a strong grotesque with a true black weight — carries the bold,
 // catalog-like uppercase headlines and all UI text.
@@ -30,9 +38,49 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Berna&co — Milanesas premium congeladas",
-  description:
-    "Milanesas premium artesanales, de nuestra cocina a tu freezer. LA VIDA ES RICA!",
+  metadataBase: getSiteUrl(),
+  title: {
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  alternates: {
+    canonical: "/",
+  },
+  icons: {
+    icon: [
+      { url: "/images/logo-dark.png", type: "image/png" },
+      { url: "/images/logo-light.png", type: "image/png" },
+    ],
+    apple: [{ url: "/images/logo-dark.png", type: "image/png" }],
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_AR",
+    url: absoluteUrl("/"),
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: absoluteUrl(DEFAULT_OG_IMAGE),
+        width: 1200,
+        height: 630,
+        alt: "Berna&co - carnes, milanesas y congelados premium",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [absoluteUrl(DEFAULT_OG_IMAGE)],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default async function RootLayout({
