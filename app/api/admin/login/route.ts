@@ -4,10 +4,10 @@ import { ADMIN_COOKIE, tokenForPassword, isAdminConfigured } from "@/lib/auth";
 // Validates the admin password and sets the session cookie on success.
 export async function POST(request: Request) {
   if (!isAdminConfigured()) {
+    console.error("[admin login] ADMIN_PASSWORD no está configurado.");
     return NextResponse.json(
       {
-        error:
-          "El panel no tiene contraseña configurada. Definí ADMIN_PASSWORD en .env.local.",
+        error: "No se pudo iniciar sesión.",
       },
       { status: 500 }
     );
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   const res = NextResponse.json({ ok: true });
   res.cookies.set(ADMIN_COOKIE, token, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/",
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 12, // 12 hours
