@@ -79,7 +79,7 @@ export default async function ErrorPage({
 
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
           {/* Retry with MP — only when the order exists and MP is configured */}
-          {order && mpConfigured && (
+          {order && mpConfigured && order.status !== "CANCELLED" && (
             <RetryPaymentButton
               orderId={order.id}
               label={getSiteText(cms, "checkout.error.retry_mp", "Reintentar con Mercado Pago", preview)}

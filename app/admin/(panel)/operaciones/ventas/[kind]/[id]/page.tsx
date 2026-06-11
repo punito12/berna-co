@@ -146,16 +146,7 @@ export default async function SaleDetailPage({
 
         <Card title="Pago">
           <Row label="Forma" value={sale.paymentMethodLabel} />
-          <Row
-            label="Estado"
-            value={
-              sale.paymentStatus === "PAID"
-                ? "Pagado"
-                : sale.paymentStatus === "PARTIAL"
-                ? "Parcial"
-                : "A cobrar"
-            }
-          />
+          <Row label="Estado" value={sale.paymentStatusLabel} />
           <Row label="Total" value={pesos(sale.total)} />
           {sale.paid > 0 && <Row label="Pagado" value={pesos(sale.paid)} />}
           {sale.balance > 0 && (

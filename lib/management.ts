@@ -5,6 +5,7 @@
 import { prisma } from "@/lib/db";
 import { recordManualSaleIncome } from "@/lib/cash";
 import { DEFAULT_DUE_DAYS, createPayment } from "@/lib/payments";
+import { orderPaymentListLabel } from "@/lib/mp-order-status";
 import { adjustStockForLines } from "@/lib/stock";
 
 // ---- Customers ----
@@ -522,13 +523,6 @@ function detailHref(kind: "ORDER" | "MANUAL", id: string): string {
   return `/admin/operaciones/ventas/${kind === "ORDER" ? "order" : "sale"}/${id}`;
 }
 
-// Short payment hint for a web order row (CASH = legacy efectivo).
-function webPaymentLabel(method: string): string {
-  if (method === "MERCADOPAGO") return "MP pagado";
-  if (method === "TRANSFERENCIA") return "Transferencia";
-  return "Efectivo al recibir";
-}
-
 export async function listSalesUnified(
   filters: UnifiedFilters
 ): Promise<UnifiedSale[]> {
@@ -588,7 +582,7 @@ export async function listSalesUnified(
       customerType: o.customer?.type ?? null,
       total: o.total,
       status: normalizeStatus(o.status),
-      paymentLabel: webPaymentLabel(o.paymentMethod),
+      paymentLabel: orderPaymentListLabel(o),
       itemsCount: o.items.length,
       href: detailHref("ORDER", o.id),
     });

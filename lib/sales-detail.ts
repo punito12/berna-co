@@ -6,6 +6,11 @@
 import { prisma } from "@/lib/db";
 import { INCOME_SOURCE_LABELS } from "@/lib/cash";
 import { BREADCRUMB_LABELS } from "@/lib/products";
+import {
+  effectiveOrderPaymentStatus,
+  orderPaymentMethodLabel,
+  orderPaymentStatusLabel,
+} from "@/lib/mp-order-status";
 
 export type SaleKind = "ORDER" | "MANUAL";
 
@@ -55,6 +60,7 @@ export type SaleDetail = {
   paymentMethod: string | null; // MERCADOPAGO | CASH (orders) | null (manual)
   paymentMethodLabel: string; // human label incl. "paga al recibir"
   paymentStatus: string; // PAID | PARTIAL | PENDING
+  paymentStatusLabel: string;
   dueDate: Date | null;
 
   // Money
@@ -69,14 +75,6 @@ export type SaleDetail = {
   items: SaleDetailItem[];
   payments: SaleDetailPayment[];
 };
-
-function pmLabel(method: string | null): string {
-  if (method === "MERCADOPAGO") return "Mercado Pago (pagado online)";
-  if (method === "TRANSFERENCIA") return "Transferencia bancaria";
-  if (method === "CASH" || method === "EFECTIVO")
-    return "Efectivo (paga al recibir)";
-  return "—";
-}
 
 function mapItem(it: {
   id: string;
@@ -142,6 +140,7 @@ export async function getSaleDetail(
     const recordedPaid = o.payments.reduce((a, p) => a + p.amount, 0);
     const mpPaid = o.paymentMethod === "MERCADOPAGO" && o.mpPaymentId ? o.total : 0;
     const paid = Math.max(recordedPaid, mpPaid);
+    const paymentStatus = effectiveOrderPaymentStatus(o);
     return {
       kind: "ORDER",
       id: o.id,
@@ -160,8 +159,15 @@ export async function getSaleDetail(
       scheduledDate: o.scheduledDate,
       scheduledSlot: o.scheduledSlot,
       paymentMethod: o.paymentMethod,
-      paymentMethodLabel: pmLabel(o.paymentMethod),
-      paymentStatus: o.paymentStatus,
+      paymentMethodLabel: orderPaymentMethodLabel(o),
+      paymentStatus,
+      paymentStatusLabel:
+        orderPaymentStatusLabel(o) ??
+        (paymentStatus === "PAID"
+          ? "Pagado"
+          : paymentStatus === "PARTIAL"
+          ? "Parcial"
+          : "A cobrar"),
       dueDate: o.dueDate,
       gross: gross + o.discountAmount,
       discountAmount: o.discountAmount,
@@ -210,6 +216,12 @@ export async function getSaleDetail(
     paymentMethodLabel:
       s.paymentStatus === "PAID" ? "Cobrada" : "Cuenta corriente",
     paymentStatus: s.paymentStatus,
+    paymentStatusLabel:
+      s.paymentStatus === "PAID"
+        ? "Pagado"
+        : s.paymentStatus === "PARTIAL"
+        ? "Parcial"
+        : "A cobrar",
     dueDate: s.dueDate,
     gross: s.gross,
     discountAmount: s.discountAmount,

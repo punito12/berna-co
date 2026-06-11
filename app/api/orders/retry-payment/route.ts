@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { createPreferenceForOrder, isMpConfigured } from "@/lib/mercadopago";
 
 // Creates a new Mercado Pago preference for an existing order.
@@ -22,6 +23,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Falta el orderId." }, { status: 400 });
   }
   try {
+    const order = await prisma.order.findUnique({
+      where: { id: body.orderId },
+      select: { status: true, paymentMethod: true, mpPaymentId: true },
+    });
+    if (!order) {
+      return NextResponse.json(
+        { error: "No encontramos ese pedido." },
+        { status: 404 }
+      );
+    }
+    if (order.paymentMethod !== "MERCADOPAGO") {
+      return NextResponse.json(
+        { error: "Ese pedido no usa Mercado Pago." },
+        { status: 400 }
+      );
+    }
+    if (order.status === "CANCELLED") {
+      return NextResponse.json(
+        {
+          error:
+            "Ese pedido está cancelado. Volvé al checkout para generar uno nuevo.",
+        },
+        { status: 400 }
+      );
+    }
+    if (order.mpPaymentId) {
+      return NextResponse.json(
+        { error: "Ese pedido ya tiene un pago registrado." },
+        { status: 400 }
+      );
+    }
     const pref = await createPreferenceForOrder(body.orderId);
     return NextResponse.json({ paymentUrl: pref.url });
   } catch (error) {
