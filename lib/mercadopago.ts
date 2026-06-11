@@ -6,6 +6,7 @@ import { MercadoPagoConfig, Preference, Payment } from "mercadopago";
 import { prisma } from "@/lib/db";
 import { BREADCRUMB_LABELS } from "@/lib/products";
 import { recordMpPaymentIncome } from "@/lib/cash";
+import { getSiteUrl } from "@/lib/seo";
 
 export function isMpConfigured(): boolean {
   return Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN);
@@ -19,13 +20,10 @@ function client(): MercadoPagoConfig {
   return new MercadoPagoConfig({ accessToken });
 }
 
-// Base URL for return/notification links. Set NEXT_PUBLIC_BASE_URL in prod;
-// falls back to localhost for dev.
+// Base URL for return/notification links. Must be canonical: Mercado Pago
+// should never receive localhost, preview URLs or temporary tunnels.
 function baseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") ||
-    "http://localhost:3000"
-  );
+  return getSiteUrl().origin;
 }
 
 // Creates a Checkout Pro preference for a saved order and returns the URL to
