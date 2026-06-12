@@ -163,10 +163,6 @@ export default function ProductCard({
               </span>
             )}
           </div>
-
-          <span className="absolute right-3 top-3 border border-line/80 bg-white/90 px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-ink backdrop-blur-sm">
-            {product.category}
-          </span>
         </Link>
 
         <div className="flex min-w-0 flex-1 flex-col p-2.5 pt-2 sm:p-5 md:p-6">
