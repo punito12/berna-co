@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import LegalInfoPage from "@/components/LegalInfoPage";
 import { SITE_NAME, absoluteUrl } from "@/lib/seo";
+import { loadCmsBundle, isPreview } from "@/lib/cms";
+import { isCmsPreviewRequest } from "@/lib/cms-preview";
+import { LEGAL_PAGES, resolveLegalContent } from "@/lib/cms-legal";
+
+const PAGE = LEGAL_PAGES.find((p) => p.slug === "privacidad")!;
 
 export const metadata: Metadata = {
   title: "Política de privacidad",
@@ -11,30 +16,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage({
+  searchParams,
+}: {
+  searchParams?: { preview?: string };
+}) {
+  const cms = await loadCmsBundle();
+  const preview = (await isPreview()) || isCmsPreviewRequest(searchParams?.preview);
+  const { title, intro, sections } = resolveLegalContent(PAGE, cms, preview);
+
   return (
     <LegalInfoPage
       eyebrow={SITE_NAME}
-      title="Política de privacidad"
-      intro="Usamos la información necesaria para tomar pedidos, coordinar entregas y responder consultas. Esta página resume el tratamiento de datos de forma simple."
-      sections={[
-        {
-          title: "Datos que podemos solicitar",
-          body: "Podemos pedir nombre, teléfono, email, dirección o zona de entrega, datos del pedido y cualquier información que el cliente comparta para coordinar la compra.",
-        },
-        {
-          title: "Para qué los usamos",
-          body: "Los usamos para confirmar pedidos, preparar productos, coordinar entregas, responder consultas, registrar operaciones y enviar comunicaciones solo cuando corresponda.",
-        },
-        {
-          title: "Pagos",
-          body: "Si se usan medios de pago externos, los datos de pago se procesan mediante proveedores especializados. Berna&co no necesita almacenar datos completos de tarjetas.",
-        },
-        {
-          title: "Conservación y consultas",
-          body: "Podemos conservar registros necesarios para operación, administración y atención postventa. Para consultar o pedir una corrección, contactanos por WhatsApp.",
-        },
-      ]}
+      title={title}
+      intro={intro}
+      sections={sections}
     />
   );
 }

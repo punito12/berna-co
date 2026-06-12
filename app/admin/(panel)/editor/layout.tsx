@@ -7,6 +7,7 @@ const EDITOR_TABS = [
   { href: "/admin/editor/catalogo", label: "Productos" },
   { href: "/admin/editor/ingredientes", label: "Ingredientes" },
   { href: "/admin/editor/checkout", label: "Finalizar compra" },
+  { href: "/admin/editor/legales", label: "Legales" },
   { href: "/admin/editor/footer", label: "Pie de página" },
 ];
 
