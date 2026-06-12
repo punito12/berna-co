@@ -24,8 +24,8 @@ export default function PointsOfSale({
 }) {
   return (
     <section id="puntos-de-venta" className="bg-cream">
-      <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
-        <Reveal className="mb-10 text-center">
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:py-24">
+        <Reveal className="mb-8 text-center sm:mb-10">
           <p
             className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
             data-cms-text={eyebrowKey}

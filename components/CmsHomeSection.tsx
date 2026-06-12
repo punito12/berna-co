@@ -48,11 +48,18 @@ export default function CmsHomeSection({
   if (section.key === "home.hero" || type === "hero") {
     return (
       <Hero
-        title={config.title || t("home.hero.title", "Milanesas\nPremium")}
-        subtitle={
-          config.subtitle || t("home.hero.subtitle", "de nuestra cocina a tu freezer")
+        title={
+          config.title ||
+          t("home.hero.title", "Milanesas premium\ny congelados caseros")
         }
-        cta={config.ctaLabel || t("home.hero.cta_primary", "Ver productos")}
+        subtitle={
+          config.subtitle ||
+          t(
+            "home.hero.subtitle",
+            "Elegí online, coordiná la entrega y pagá como prefieras."
+          )
+        }
+        cta={config.ctaLabel || t("home.hero.cta_primary", "Comprar ahora")}
         backgroundUrl={
           config.imageUrl || image("home.hero.background", "/images/hero.jpg")
         }
@@ -119,16 +126,16 @@ export default function CmsHomeSection({
     return (
       <section className="bg-white">
         {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-20 md:grid-cols-2 md:items-center sm:py-24">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 md:grid-cols-2 md:items-center sm:py-24">
           <div className="overflow-hidden rounded-lg border border-line bg-cream">
             {aboutImage ? (
               <img
                 src={aboutImage}
                 alt={config.imageAlt || t("home.about.title", "Berna & Co")}
-                className="h-full min-h-80 w-full object-cover"
+                className="h-full min-h-64 w-full object-cover sm:min-h-80"
               />
             ) : (
-              <div className="flex min-h-80 items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line">
+              <div className="flex min-h-64 items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line sm:min-h-80">
                 {t("home.about.title", "Berna & Co")}
               </div>
             )}
@@ -193,50 +200,50 @@ export default function CmsHomeSection({
         ? config.items
         : [
             {
-              title: t("home.features.item1.title", "Super Prácticas"),
+              title: t("home.features.item1.title", "Comprá online"),
               body: t(
                 "home.features.item1.text",
-                "Milanesas premium congeladas de forma individual."
+                "Elegí tus productos y armá el pedido en pocos pasos."
               ),
             },
             {
-              title: t("home.features.item2.title", "Marinadas 24 hs"),
+              title: t("home.features.item2.title", "Entrega coordinada"),
               body: t(
                 "home.features.item2.text",
-                "Para lograr milanesas más tiernas."
+                "Recibí en zonas disponibles o coordiná por WhatsApp."
               ),
             },
             {
-              title: t("home.features.item3.title", "Huevos agroecológicos"),
+              title: t("home.features.item3.title", "Pagos simples"),
               body: t(
                 "home.features.item3.text",
-                "Certificados, de la mejor calidad."
+                "Efectivo, transferencia o Mercado Pago según disponibilidad."
               ),
             },
             {
-              title: t("home.features.item4.title", "Directo del freezer al horno"),
+              title: t("home.features.item4.title", "Listo para freezer"),
               body: t(
                 "home.features.item4.text",
-                "Se pueden cocinar sin descongelar."
+                "Productos seleccionados para resolver comidas sin vueltas."
               ),
             },
           ];
     return (
       <section className="bg-cream">
-        <div className="mx-auto max-w-5xl px-4 py-20 sm:py-24">
-          <div className="mb-12 text-center">
+        <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
+          <div className="mb-8 text-center sm:mb-12">
             {config.eyebrow && (
               <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
                 {config.eyebrow}
               </p>
             )}
             <h2 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl">
-              {config.title || t("home.features.title", "Beneficios")}
+              {config.title || t("home.features.title", "Cómo comprar")}
             </h2>
           </div>
           <ul className="grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
             {featureItems.map((item, i) => (
-              <li key={i} className="bg-white px-6 py-10 text-center">
+              <li key={i} className="bg-white px-5 py-7 text-center sm:px-6 sm:py-10">
                 <h3 className="font-black uppercase tracking-tight text-xl text-ink">
                   {item.title}
                 </h3>
@@ -270,7 +277,7 @@ export default function CmsHomeSection({
     const imageLeft = config.imageSide !== "right";
     return (
       <section className="bg-cream">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-20 md:grid-cols-2 md:items-center">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 md:grid-cols-2 md:items-center sm:py-20">
           <BlockImage config={config} className={imageLeft ? "" : "md:order-2"} />
           <BlockCopy config={config} />
         </div>
@@ -281,7 +288,7 @@ export default function CmsHomeSection({
   if (type === "faq") {
     return (
       <section className="bg-cream">
-        <div className="mx-auto max-w-3xl px-4 py-20">
+        <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
           <h2 className="font-black uppercase tracking-tight text-4xl text-ink">
             {config.title || "Preguntas frecuentes"}
           </h2>
@@ -392,7 +399,7 @@ export default function CmsHomeSection({
 
   return (
     <section className="bg-cream">
-      <div className="mx-auto max-w-3xl px-4 py-20">
+      <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
         <BlockCopy config={config} />
       </div>
     </section>

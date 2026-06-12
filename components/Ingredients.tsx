@@ -141,8 +141,8 @@ export default function Ingredients({
   }));
   return (
     <section id="ingredientes" className="bg-cream">
-      <div className="mx-auto max-w-5xl px-4 py-20 sm:py-24">
-        <Reveal className="mb-14 text-center">
+      <div className="mx-auto max-w-5xl px-4 py-14 sm:py-24">
+        <Reveal className="mb-10 text-center sm:mb-14">
           <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
             {eyebrow}
           </p>
@@ -157,7 +157,7 @@ export default function Ingredients({
               as="li"
               key={item.title}
               delay={i * 100}
-              className="group flex flex-col items-center gap-5 bg-white px-6 py-12 text-center transition-all duration-300 hover:bg-cream sm:min-h-64"
+              className="group flex flex-col items-center gap-4 bg-white px-6 py-8 text-center transition-all duration-300 hover:bg-cream sm:min-h-64 sm:gap-5 sm:py-12"
             >
               <span className="rounded-full border border-line bg-cream/60 p-4 text-ink transition-transform duration-300 group-hover:scale-105">
                 <item.Icon />

@@ -73,8 +73,8 @@ export default function Catalog({
 
   return (
     <section id="productos" className="bg-cream">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:py-20">
-        <Reveal as="header" className="mb-10 text-center sm:mb-12">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:py-20">
+        <Reveal as="header" className="mb-8 text-center sm:mb-12">
           <p
             className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
             data-cms-text={textKeys.eyebrow}
@@ -96,7 +96,7 @@ export default function Catalog({
         </Reveal>
 
         {/* Category filter */}
-        <Reveal className="mb-10 flex flex-wrap justify-center gap-2 sm:mb-12" delay={80}>
+        <Reveal className="mb-8 flex flex-wrap justify-center gap-2 sm:mb-12" delay={80}>
           <FilterChip
             active={category === "ALL"}
             onClick={() => setCategory("ALL")}
