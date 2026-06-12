@@ -109,10 +109,10 @@ export default async function ProductPage({
         cartLabel={cartLabel}
       />
 
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+      <div className="mx-auto max-w-6xl px-4 py-5 sm:py-12">
         <Link
           href="/#productos"
-          className="mb-6 inline-flex items-center gap-2 font-bold uppercase tracking-widest text-xs text-muted transition-colors hover:text-ink"
+          className="mb-4 inline-flex items-center gap-2 font-bold uppercase tracking-widest text-xs text-muted transition-colors hover:text-ink sm:mb-6"
         >
           ‹ Volver a {productLabels.backToProducts.toLowerCase()}
         </Link>

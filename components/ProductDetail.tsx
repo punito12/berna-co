@@ -29,7 +29,7 @@ export default function ProductDetail({
   const images = product.imagesByBreadcrumb[selected] ?? [];
 
   return (
-    <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.02fr)_minmax(320px,0.98fr)] lg:gap-14">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.02fr)_minmax(320px,0.98fr)] lg:gap-14">
       {/* Gallery — `key` resets the active thumbnail when the empanado changes */}
       <ProductGallery
         key={selected}
@@ -40,22 +40,24 @@ export default function ProductDetail({
       />
 
       {/* Info + buy */}
-      <div className="lg:pt-6">
-        <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
-          {product.category}
-        </p>
-        <h1 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl">
+      <div className="lg:pt-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="rounded-full border border-line bg-white px-3 py-1 font-bold uppercase tracking-[0.22em] text-[11px] text-muted">
+            {product.category}
+          </p>
+          <p className="rounded-full border border-line bg-white px-3 py-1 font-bold uppercase tracking-wide text-[11px] text-muted">
+            {formatWeight(product.weightGrams)}
+          </p>
+        </div>
+        <h1 className="mt-3 max-w-2xl text-balance font-black uppercase tracking-tight text-4xl leading-[0.95] text-ink sm:text-6xl">
           {product.name}
         </h1>
-        <p className="mt-2 font-bold uppercase tracking-wide text-sm text-muted">
-          {formatWeight(product.weightGrams)}
-        </p>
 
         {/* Full description on the detail page; falls back to the short one.
             Rendered with RichText so **bold**, *italic* and "- " bullets show. */}
         <RichText
           text={product.longDescription?.trim() || product.description}
-          className="mt-6 border-y border-line py-6 font-serif text-lg leading-relaxed text-ink/80 [&_p]:mt-2 first:[&_p]:mt-0"
+          className="mt-5 border-y border-line py-5 font-serif text-base leading-relaxed text-ink/80 sm:mt-6 sm:py-6 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
         />
 
         <AddToCartPanel
