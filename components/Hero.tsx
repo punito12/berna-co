@@ -78,26 +78,6 @@ export default function Hero({
           ↓
         </span>
       </a>
-
-      <div
-        className="mt-8 grid w-full max-w-3xl animate-fade-up grid-cols-1 gap-px overflow-hidden rounded-lg border border-white/15 bg-white/15 text-left text-white shadow-[0_18px_40px_rgba(0,0,0,0.18)] sm:grid-cols-3"
-        style={{ animationDelay: "620ms" }}
-      >
-        {[
-          ["01", "Elegí tus productos"],
-          ["02", "Coordiná la entrega"],
-          ["03", "Pagá como prefieras"],
-        ].map(([step, text]) => (
-          <div key={step} className="bg-black/25 px-4 py-3 backdrop-blur-sm">
-            <span className="text-[10px] font-black uppercase tracking-[0.24em] text-cream/65">
-              {step}
-            </span>
-            <p className="mt-1 font-bold uppercase tracking-tight text-sm">
-              {text}
-            </p>
-          </div>
-        ))}
-      </div>
     </section>
   );
 }
