@@ -5,10 +5,26 @@ import { prisma } from "@/lib/db";
 import CmsTextField from "@/components/CmsTextField";
 
 const ECOMMERCE_LABEL_GROUPS = [
-  { id: "payment", title: "Chips de pago" },
-  { id: "cart", title: "Botones y carrito" },
-  { id: "stock", title: "Mensajes de stock" },
-  { id: "detail", title: "Detalle de producto" },
+  {
+    id: "payment",
+    title: "Chips de pago",
+    description: "Etiquetas cortas que aparecen en las cards de producto.",
+  },
+  {
+    id: "cart",
+    title: "Botones y carrito",
+    description: "Textos de la barra del carrito y sus acciones principales.",
+  },
+  {
+    id: "stock",
+    title: "Mensajes de stock",
+    description: "Avisos que ayudan al cliente cuando quedan pocas unidades.",
+  },
+  {
+    id: "detail",
+    title: "Detalle de producto",
+    description: "Textos del selector, estado y llamados a ver más información.",
+  },
 ] as const;
 
 // Human labels for the catalog text keys.
@@ -41,50 +57,77 @@ export default async function EditorCatalogoPage() {
   const generalTexts = texts.filter((text) => !ecommerceLabelKeys.has(text.key));
 
   return (
-    <div>
-      <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
-        Productos
-      </h2>
-      <p className="mb-4 text-sm leading-6 text-muted">
-        Editá los textos generales que acompañan la grilla de productos y la
-        experiencia de compra.
-      </p>
-      <div className="space-y-3">
-        {generalTexts.map((t) => (
-          <CmsTextField
-            key={t.key}
-            textKey={t.key}
-            label={LABELS[t.key] ?? humanizeCmsKey(t.key)}
-            published={t.value}
-            draft={t.valueDraft}
-            style={t.style}
-            styleDraft={t.styleDraft}
-            maxLength={t.maxLength}
-            multiline={t.maxLength > 80}
-            allowStyle={!isStyleLockedLabel(t.key)}
-          />
-        ))}
-      </div>
+    <div className="space-y-8">
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+        <div className="mb-5 flex flex-col gap-2 border-b border-line pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+              Catálogo público
+            </p>
+            <h2 className="font-black uppercase tracking-tight text-2xl text-ink">
+              Productos
+            </h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-muted">
+            Editá los textos generales que acompañan la grilla. Los cambios se
+            guardan como borrador hasta que publiques.
+          </p>
+        </div>
+        <div className="grid gap-3">
+          {generalTexts.map((t) => (
+            <CmsTextField
+              key={t.key}
+              textKey={t.key}
+              label={LABELS[t.key] ?? humanizeCmsKey(t.key)}
+              published={t.value}
+              draft={t.valueDraft}
+              style={t.style}
+              styleDraft={t.styleDraft}
+              maxLength={t.maxLength}
+              multiline={t.maxLength > 80}
+              allowStyle={!isStyleLockedLabel(t.key)}
+            />
+          ))}
+        </div>
+      </section>
 
-      <section className="mt-8">
-        <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
-          Textos de cards y carrito
-        </h2>
-        <p className="mb-4 text-sm text-muted">
-          Textos repetidos en productos, chips de pago, carrito y detalle de
-          producto.
-        </p>
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+        <div className="mb-5 border-b border-line pb-4">
+          <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+            Ecommerce
+          </p>
+          <h2 className="font-black uppercase tracking-tight text-2xl text-ink">
+            Textos de cards y carrito
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+            Estos labels se repiten en productos, chips de pago, carrito y
+            detalle. Mantienen el diseño fijo para que la compra siga clara.
+          </p>
+        </div>
         <div className="space-y-6">
           {ECOMMERCE_LABEL_GROUPS.map((group) => {
             const groupLabels = CATALOG_CMS_LABELS.filter(
               (label) => label.group === group.id
             );
             return (
-              <section key={group.id}>
-                <h3 className="mb-3 font-black uppercase tracking-wide text-sm text-ink">
-                  {group.title}
-                </h3>
-                <div className="space-y-3">
+              <section
+                key={group.id}
+                className="rounded-xl border border-line bg-cream/30 p-4"
+              >
+                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="font-black uppercase tracking-wide text-sm text-ink">
+                      {group.title}
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-muted">
+                      {group.description}
+                    </p>
+                  </div>
+                  <span className="w-fit rounded-full border border-line bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-muted">
+                    {groupLabels.length} campos
+                  </span>
+                </div>
+                <div className="grid gap-3">
                   {groupLabels.map((label) => {
                     const text = textByKey.get(label.key);
                     if (!text) return null;

@@ -28,18 +28,31 @@ export default async function EditorLegalesPage() {
   const byKey = new Map(rows.map((r) => [r.key, r]));
 
   return (
-    <div>
-      <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
-        Legales
-      </h2>
-      <p className="mb-6 text-sm text-muted">
-        Editá el contenido de las páginas de información del sitio. En el campo
-        “Contenido”, cada sección empieza con su título en la primera línea y el
-        texto debajo; dejá una línea en blanco para separar una sección de la
-        siguiente.
-      </p>
+    <div className="space-y-8">
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+              Confianza y legales
+            </p>
+            <h2 className="font-black uppercase tracking-tight text-2xl text-ink">
+              Páginas legales
+            </h2>
+          </div>
+          <p className="max-w-2xl text-sm leading-6 text-muted">
+            Editá el contenido de las páginas de información del sitio. Cada
+            página mantiene su ruta pública y se publica junto con el resto del
+            CMS.
+          </p>
+        </div>
+        <div className="mt-4 rounded-xl border border-line bg-cream/35 p-4 text-sm leading-6 text-muted">
+          En el campo “Contenido”, cada sección empieza con su título en la
+          primera línea y el texto debajo. Dejá una línea en blanco para separar
+          una sección de la siguiente.
+        </div>
+      </section>
 
-      <div className="space-y-8">
+      <div className="space-y-5">
         {LEGAL_PAGES.map((page) => {
           const title = byKey.get(page.titleKey);
           const intro = byKey.get(page.introKey);
@@ -47,15 +60,23 @@ export default async function EditorLegalesPage() {
           return (
             <section
               key={page.slug}
-              className="rounded-lg border border-line bg-white p-4"
+              className="rounded-2xl border border-line bg-white p-5 shadow-sm"
             >
-              <h3 className="mb-1 font-black uppercase tracking-tight text-lg text-ink">
-                {PAGE_NAMES[page.slug] ?? page.fallbackTitle}
-              </h3>
-              <p className="mb-4 text-xs text-muted">
-                Página pública: {page.route}
-              </p>
-              <div className="space-y-3">
+              <div className="mb-4 flex flex-col gap-2 border-b border-line pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-black uppercase tracking-tight text-lg text-ink">
+                    {PAGE_NAMES[page.slug] ?? page.fallbackTitle}
+                  </h3>
+                  <p className="mt-1 text-sm leading-6 text-muted">
+                    Página pública:{" "}
+                    <span className="font-bold text-ink">{page.route}</span>
+                  </p>
+                </div>
+                <span className="w-fit rounded-full border border-line bg-cream px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-muted">
+                  3 campos
+                </span>
+              </div>
+              <div className="grid gap-3">
                 {title && (
                   <CmsTextField
                     textKey={page.titleKey}

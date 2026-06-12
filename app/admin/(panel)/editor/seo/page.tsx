@@ -4,7 +4,7 @@ export default function EditorSeoPage() {
   return (
     <CmsComingSoonCard
       title="SEO y compartir"
-      description="Próximamente vas a poder editar acá cómo aparece la web en Google y al compartirla por WhatsApp o redes sociales."
+      description="Esta sección todavía no es editable: se implementa en la próxima fase. Acá vas a poder editar cómo aparece la web en Google y al compartirla por WhatsApp o redes sociales."
       items={[
         "Título general del sitio",
         "Descripción para Google",

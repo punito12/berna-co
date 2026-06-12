@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import CmsTextField from "@/components/CmsTextField";
 import { humanizeCmsKey } from "@/lib/cms-labels";
-import { INGREDIENT_CMS_TEXTS } from "@/lib/ingredients";
+import { INGREDIENT_CMS_TEXTS, INGREDIENT_PAGES } from "@/lib/ingredients";
 
 const INGREDIENT_TEXT_LABELS: Record<string, string> = {
   "ingredient.huevos.title": "Huevos · título",
@@ -56,30 +56,100 @@ export default async function EditorIngredientesPage() {
       INGREDIENT_CMS_TEXTS.findIndex((text) => text.key === a.key) -
       INGREDIENT_CMS_TEXTS.findIndex((text) => text.key === b.key)
   );
+  const byKey = new Map(ingredientTexts.map((text) => [text.key, text]));
 
   return (
-    <div>
-      <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
-        Ingredientes
-      </h2>
-      <p className="mb-4 text-sm text-muted">
-        Editá los textos de las páginas que se abren desde “Nuestros
-        ingredientes” en la página de inicio.
-      </p>
-      <div className="space-y-3">
-        {ingredientTexts.map((text) => (
-          <CmsTextField
-            key={text.key}
-            textKey={text.key}
-            label={INGREDIENT_TEXT_LABELS[text.key] ?? humanizeCmsKey(text.key)}
-            published={text.value}
-            draft={text.valueDraft}
-            style={text.style}
-            styleDraft={text.styleDraft}
-            maxLength={text.maxLength}
-            multiline={text.maxLength > 100}
-          />
-        ))}
+    <div className="space-y-8">
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+              Home / Nuestros ingredientes
+            </p>
+            <h2 className="font-black uppercase tracking-tight text-2xl text-ink">
+              Páginas de ingredientes
+            </h2>
+          </div>
+          <p className="max-w-2xl text-sm leading-6 text-muted">
+            Editá el contenido de las páginas que se abren al tocar cada card de
+            “Nuestros ingredientes”. La home conserva solo el resumen clickeable.
+          </p>
+        </div>
+      </section>
+
+      <div className="space-y-5">
+        {INGREDIENT_PAGES.map((page) => {
+          const title = byKey.get(page.titleKey);
+          const intro = byKey.get(page.introKey);
+          const body = byKey.get(page.bodyKey);
+          return (
+            <section
+              key={page.slug}
+              className="rounded-2xl border border-line bg-white p-5 shadow-sm"
+            >
+              <div className="mb-4 flex flex-col gap-2 border-b border-line pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-black uppercase tracking-tight text-lg text-ink">
+                    {page.fallbackTitle}
+                  </h3>
+                  <p className="mt-1 text-sm leading-6 text-muted">
+                    Página pública:{" "}
+                    <span className="font-bold text-ink">{page.href}</span>
+                  </p>
+                </div>
+                <span className="w-fit rounded-full border border-line bg-cream px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-muted">
+                  3 campos
+                </span>
+              </div>
+              <div className="grid gap-3">
+                {title && (
+                  <CmsTextField
+                    textKey={page.titleKey}
+                    label={
+                      INGREDIENT_TEXT_LABELS[page.titleKey] ??
+                      humanizeCmsKey(page.titleKey)
+                    }
+                    published={title.value}
+                    draft={title.valueDraft}
+                    style={title.style}
+                    styleDraft={title.styleDraft}
+                    maxLength={title.maxLength}
+                  />
+                )}
+                {intro && (
+                  <CmsTextField
+                    textKey={page.introKey}
+                    label={
+                      INGREDIENT_TEXT_LABELS[page.introKey] ??
+                      humanizeCmsKey(page.introKey)
+                    }
+                    published={intro.value}
+                    draft={intro.valueDraft}
+                    style={intro.style}
+                    styleDraft={intro.styleDraft}
+                    maxLength={intro.maxLength}
+                    multiline
+                  />
+                )}
+                {body && (
+                  <CmsTextField
+                    textKey={page.bodyKey}
+                    label={
+                      INGREDIENT_TEXT_LABELS[page.bodyKey] ??
+                      humanizeCmsKey(page.bodyKey)
+                    }
+                    published={body.value}
+                    draft={body.valueDraft}
+                    style={body.style}
+                    styleDraft={body.styleDraft}
+                    maxLength={body.maxLength}
+                    multiline
+                  />
+                )}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </div>
   );

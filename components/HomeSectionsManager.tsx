@@ -52,6 +52,50 @@ const BLOCK_STYLE_LABELS: Record<string, string> = {
   ctaLabel: "Botón",
 };
 
+const OWNER_BLOCK_LABELS: Record<CmsBlockType, string> = {
+  hero: "Portada principal",
+  rich_text: "Texto libre",
+  products_grid: "Productos",
+  features: "Beneficios",
+  image_text: "Imagen + texto",
+  faq: "Preguntas frecuentes",
+  cta: "Llamado a la acción",
+  newsletter: "Newsletter",
+  map: "Mapa",
+  footer: "Pie de página",
+};
+
+const OWNER_BLOCK_DESCRIPTIONS: Record<CmsBlockType, string> = {
+  hero: "Primera impresión del sitio: título, subtítulo, imagen y botón.",
+  rich_text: "Una sección simple para contar algo de la marca.",
+  products_grid: "La grilla donde el cliente ve y elige productos.",
+  features: "Columnas cortas para destacar ingredientes o beneficios.",
+  image_text: "Contenido con una imagen grande y texto de apoyo.",
+  faq: "Preguntas frecuentes con respuestas desplegables.",
+  cta: "Un bloque corto para invitar a una acción concreta.",
+  newsletter: "Suscripción para recibir novedades.",
+  map: "Mapa o puntos de venta visibles en el inicio.",
+  footer: "Cierre del sitio con contacto y links.",
+};
+
+const SECTION_NAMES: Record<string, string> = {
+  "home.hero": "Portada principal",
+  "home.products": "Productos",
+  "home.ingredients": "Ingredientes",
+  "home.about": "Nuestra historia",
+  "home.pos": "Puntos de venta",
+  "home.footer": "Pie de página",
+};
+
+const SECTION_DESCRIPTIONS: Record<string, string> = {
+  "home.hero": "Lo primero que ve el cliente al entrar.",
+  "home.products": "La sección donde aparecen los productos disponibles.",
+  "home.ingredients": "Cards de ingredientes que llevan a sus páginas.",
+  "home.about": "Historia o presentación de la marca.",
+  "home.pos": "Mapa o información de puntos de venta.",
+  "home.footer": "Cierre global del sitio.",
+};
+
 type Section = {
   key: string;
   type: string;
@@ -89,6 +133,18 @@ function legacyKeysForSection(key: string, config: CmsBlockConfig): string[] {
     config.subtitle || config.ctaLabel || (config.items && config.items.length > 0));
   if (hasBlockContent) return [];
   return LEGACY_TEXT_KEYS[key] ?? [];
+}
+
+function sectionDisplayName(
+  sectionKey: string,
+  type: CmsBlockType,
+  config: CmsBlockConfig
+): string {
+  return config.title || SECTION_NAMES[sectionKey] || OWNER_BLOCK_LABELS[type];
+}
+
+function sectionDescription(sectionKey: string, type: CmsBlockType): string {
+  return SECTION_DESCRIPTIONS[sectionKey] || OWNER_BLOCK_DESCRIPTIONS[type];
 }
 
 function notifyDraftChanged() {
@@ -225,112 +281,136 @@ export default function HomeSectionsManager({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-line bg-white p-4">
-        <p className="font-bold uppercase tracking-widest text-[11px] text-muted">
-          Nueva sección
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <select
-            value={newType}
-            onChange={(e) => setNewType(e.target.value as CmsBlockType)}
-            className="rounded border border-line bg-white px-3 py-2 text-sm text-ink"
-          >
-            {CMS_BLOCK_TYPES.filter((type) => type !== "footer").map((type) => (
-              <option key={type} value={type}>
-                {CMS_BLOCK_LABELS[type]}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={createSection}
-            disabled={busy !== null}
-            className="bg-black px-4 py-2 text-xs font-bold uppercase tracking-widest text-white disabled:opacity-50"
-          >
-            {busy === "create" ? "Creando..." : "Crear"}
-          </button>
+      <div className="rounded-2xl border border-line bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="font-black uppercase tracking-widest text-[11px] text-muted">
+              Agregar al inicio
+            </p>
+            <p className="mt-1 max-w-xl text-sm leading-6 text-muted">
+              Sumá una sección nueva como borrador. No se ve en el sitio hasta
+              publicar.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <select
+              value={newType}
+              onChange={(e) => setNewType(e.target.value as CmsBlockType)}
+              className="rounded-full border border-line bg-white px-4 py-2 text-sm font-bold text-ink"
+            >
+              {CMS_BLOCK_TYPES.filter((type) => type !== "footer").map((type) => (
+                <option key={type} value={type}>
+                  {OWNER_BLOCK_LABELS[type]}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={createSection}
+              disabled={busy !== null}
+              className="rounded-full bg-ink px-5 py-2 text-xs font-black uppercase tracking-widest text-white disabled:opacity-50"
+            >
+              {busy === "create" ? "Creando..." : "Crear sección"}
+            </button>
+          </div>
         </div>
       </div>
 
-      <p className="text-sm text-muted">
-        Arrastrá para reordenar. Editá una sección para cambiar su contenido.
-        Todo se guarda como borrador hasta publicar.
-      </p>
+      <div className="rounded-2xl border border-line bg-cream/45 px-4 py-3 text-sm leading-6 text-muted">
+        <span className="font-bold text-ink">Cómo ordenar:</span> arrastrá las
+        secciones con el ícono de puntos. Los cambios quedan privados hasta
+        publicar.
+      </div>
 
-      {sections.map((section) => {
+      {sections.map((section, index) => {
         const type = normalizeBlockType(section.type, section.key);
         const open = editing === section.key;
         const config = parseBlockConfig(section.configDraft);
         const legacyKeys = legacyKeysForSection(section.key, config);
+        const displayName = sectionDisplayName(section.key, type, config);
+        const description = sectionDescription(section.key, type);
         return (
-          <div
+          <article
             key={section.key}
             draggable
             onDragStart={() => setDragKey(section.key)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => onDrop(section.key)}
-            className={`rounded-lg border bg-white ${
+            className={`rounded-2xl border bg-white shadow-sm transition-colors ${
               dragKey === section.key ? "border-black opacity-60" : "border-line"
-            } ${!section.visibleDraft ? "opacity-60" : ""}`}
+            } ${!section.visibleDraft ? "opacity-70" : ""}`}
           >
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="cursor-grab select-none text-muted" title="Arrastrar">
+            <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  className="cursor-grab select-none rounded-full border border-line bg-cream px-2 py-1 text-muted"
+                  title="Arrastrar"
+                >
                   ⠿
                 </span>
-                <div>
-                  <p className="font-bold uppercase tracking-tight text-ink">
-                    {config.title || CMS_BLOCK_LABELS[type]}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-muted">
+                    Sección {index + 1} · {OWNER_BLOCK_LABELS[type]}
                   </p>
-                  <p className="text-[11px] uppercase tracking-widest text-muted">
-                    {CMS_BLOCK_LABELS[type]}
+                  <p className="mt-1 truncate font-black uppercase tracking-tight text-lg leading-none text-ink">
+                    {displayName}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-muted">
+                    {description}
                   </p>
                 </div>
                 {!section.visibleDraft && (
-                  <span className="rounded bg-cream px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
+                  <span className="rounded-full bg-cream px-3 py-1 text-[10px] font-black uppercase tracking-wide text-muted">
                     Oculta
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => toggleVisible(section.key, !section.visibleDraft)}
-                  className="font-bold uppercase tracking-widest text-[11px] text-muted hover:text-ink"
+                  className="rounded-full border border-line bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-muted hover:border-ink hover:text-ink"
                 >
                   {section.visibleDraft ? "Ocultar" : "Mostrar"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditing(open ? null : section.key)}
-                  className="font-bold uppercase tracking-widest text-[11px] text-ink hover:underline"
+                  className="rounded-full bg-ink px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white"
                 >
                   {open ? "Cerrar" : "Editar"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => duplicateSection(section.key)}
-                  disabled={busy !== null}
-                  className="font-bold uppercase tracking-widest text-[11px] text-muted hover:text-ink disabled:opacity-40"
-                >
-                  Duplicar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteSection(section.key)}
-                  disabled={busy !== null || section.key === "home.footer"}
-                  className="font-bold uppercase tracking-widest text-[11px] text-muted hover:text-ink disabled:opacity-40"
-                >
-                  Borrar
-                </button>
+                <details className="relative">
+                  <summary className="cursor-pointer list-none rounded-full border border-line bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-muted hover:border-ink hover:text-ink">
+                    Más
+                  </summary>
+                  <div className="absolute right-0 z-10 mt-2 w-44 rounded-xl border border-line bg-white p-2 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => duplicateSection(section.key)}
+                      disabled={busy !== null}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-[11px] font-black uppercase tracking-widest text-ink hover:bg-cream disabled:opacity-40"
+                    >
+                      Duplicar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteSection(section.key)}
+                      disabled={busy !== null || section.key === "home.footer"}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-[11px] font-black uppercase tracking-widest text-muted hover:bg-cream hover:text-ink disabled:opacity-40"
+                    >
+                      Borrar
+                    </button>
+                  </div>
+                </details>
               </div>
             </div>
             {open && (
-              <div className="space-y-4 border-t border-line p-4">
+              <div className="space-y-4 border-t border-line bg-cream/25 p-4 sm:p-5">
                 {legacyKeys.length > 0 && (
                   <div className="space-y-3">
                     <p className="font-bold uppercase tracking-widest text-[11px] text-muted">
-                    Textos principales
+                      Textos principales
                     </p>
                     {legacyKeys.map((tk) => {
                       const t = textByKey.get(tk);
@@ -360,7 +440,7 @@ export default function HomeSectionsManager({
                 )}
               </div>
             )}
-          </div>
+          </article>
         );
       })}
     </div>
@@ -415,11 +495,19 @@ function BlockConfigEditor({
   }
 
   return (
-    <div className="rounded-lg border border-line bg-cream/30 p-4">
-      <p className="font-bold uppercase tracking-widest text-[11px] text-muted">
-        Contenido de la sección
-      </p>
-      <div className="mt-3 grid gap-3">
+    <div className="rounded-2xl border border-line bg-white p-4 shadow-sm">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-black uppercase tracking-widest text-[11px] text-muted">
+            Contenido de la sección
+          </p>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            Editá estos campos y guardá la sección. Después usá vista previa
+            para revisar antes de publicar.
+          </p>
+        </div>
+      </div>
+      <div className="grid gap-3">
         {["hero", "products_grid", "features", "image_text", "map"].includes(type) && (
           <TextInput
             label="Bajada"
@@ -504,7 +592,7 @@ function BlockConfigEditor({
             onChange={(faqs) => update({ ...draft, faqs })}
           />
         )}
-        <details className="rounded border border-line bg-white p-3">
+        <details className="rounded-xl border border-line bg-cream/35 p-3">
           <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-widest text-muted">
             Opciones avanzadas de diseño
           </summary>
@@ -527,9 +615,9 @@ function BlockConfigEditor({
         type="button"
         onClick={() => onSave(draft)}
         disabled={saving}
-        className="mt-4 bg-black px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-white disabled:opacity-50"
+        className="mt-4 rounded-full bg-ink px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-white disabled:opacity-50"
       >
-        Guardar bloque
+        Guardar sección
       </button>
     </div>
   );

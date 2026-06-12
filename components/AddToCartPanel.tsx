@@ -185,7 +185,7 @@ export default function AddToCartPanel({
           type="button"
           onClick={handleAdd}
           disabled={outOfStock}
-          className="w-full bg-black px-4 py-4 font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted"
+          className="w-full bg-button px-4 py-4 font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted"
         >
           {outOfStock
             ? stock <= 0

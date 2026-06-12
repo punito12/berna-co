@@ -14,10 +14,23 @@ function parse<T>(raw: string, fb: T): T {
 export default async function EditorIdentidadPage() {
   const content = await getSiteContentAdmin();
   return (
-    <div>
-      <h2 className="mb-4 font-black uppercase tracking-tight text-xl text-ink">
-        Marca y estilos
-      </h2>
+    <div className="space-y-8">
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+              Identidad visual
+            </p>
+            <h2 className="font-black uppercase tracking-tight text-2xl text-ink">
+              Marca y estilos
+            </h2>
+          </div>
+          <p className="max-w-2xl text-sm leading-6 text-muted">
+            Ajustá colores, tipografía y logo global. Los cambios se guardan
+            como borrador hasta que publiques.
+          </p>
+        </div>
+      </section>
       <IdentityEditor
         colorsDraft={parse(content.themeColorsDraft, DEFAULT_THEME)}
         typographyDraft={parse(content.typographyDraft, DEFAULT_TYPOGRAPHY)}

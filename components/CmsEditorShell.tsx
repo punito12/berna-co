@@ -3,62 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import EditorStatusBar from "@/components/EditorStatusBar";
-
-const EDITOR_NAV = [
-  {
-    href: "/admin/editor/home",
-    label: "Inicio",
-    description: "Hero, secciones y contenido principal",
-  },
-  {
-    href: "/admin/editor/catalogo",
-    label: "Productos",
-    description: "Grilla, cards, filtros y textos de venta",
-  },
-  {
-    href: "/admin/editor/ingredientes",
-    label: "Ingredientes",
-    description: "Cards del inicio y páginas de detalle",
-  },
-  {
-    href: "/admin/editor/checkout",
-    label: "Finalizar compra",
-    description: "Pasos, ayuda, entrega, pago y mensajes",
-  },
-  {
-    href: "/admin/editor/confianza",
-    label: "Confianza",
-    description: "Cómo comprar, envíos, FAQ y conservación",
-  },
-  {
-    href: "/admin/editor/legales",
-    label: "Legales",
-    description: "Términos, privacidad, envíos y cambios",
-  },
-  {
-    href: "/admin/editor/identidad",
-    label: "Marca y estilos",
-    description: "Logo, colores, tipografías y previews",
-  },
-  {
-    href: "/admin/editor/seo",
-    label: "SEO y compartir",
-    description: "Google, WhatsApp y redes sociales",
-  },
-  {
-    href: "/admin/editor/footer",
-    label: "Pie de página",
-    description: "Contacto, redes y links del footer",
-  },
-];
-
-function currentSection(pathname: string) {
-  return (
-    EDITOR_NAV.find(
-      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
-    ) ?? EDITOR_NAV[0]
-  );
-}
+import {
+  CMS_EDITOR_NAV,
+  currentCmsEditorSection,
+} from "@/lib/cms-editor-nav";
 
 export default function CmsEditorShell({
   children,
@@ -66,7 +14,7 @@ export default function CmsEditorShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const current = currentSection(pathname);
+  const current = currentCmsEditorSection(pathname);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -100,7 +48,7 @@ export default function CmsEditorShell({
             className="border-b border-line bg-white p-3 lg:border-b-0 lg:border-r"
           >
             <div className="flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-1 lg:overflow-visible lg:pb-0">
-              {EDITOR_NAV.map((item) => {
+              {CMS_EDITOR_NAV.map((item) => {
                 const active =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (

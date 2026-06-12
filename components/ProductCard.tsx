@@ -268,7 +268,7 @@ export default function ProductCard({
               type="button"
               onClick={handleAdd}
               disabled={selectedOutOfStock || selectedAtLimit}
-              className="mt-3 hidden w-full overflow-hidden bg-black px-4 py-3.5 font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:mt-4 sm:block"
+              className="mt-3 hidden w-full overflow-hidden bg-button px-4 py-3.5 font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:mt-4 sm:block"
             >
               {selectedOutOfStock
                 ? outOfStockLabel
@@ -284,7 +284,7 @@ export default function ProductCard({
               type="button"
               onClick={handleMobileAdd}
               disabled={allOutOfStock || allAtCartLimit}
-              className="mt-3 w-full overflow-hidden bg-black px-4 py-3 font-bold uppercase tracking-widest text-xs text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:hidden"
+              className="mt-3 w-full overflow-hidden bg-button px-4 py-3 font-bold uppercase tracking-widest text-xs text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:hidden"
             >
               {allOutOfStock
                 ? outOfStockLabel

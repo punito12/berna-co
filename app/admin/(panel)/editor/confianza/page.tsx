@@ -4,7 +4,7 @@ export default function EditorConfianzaPage() {
   return (
     <CmsComingSoonCard
       title="Confianza"
-      description="Próximamente vas a poder editar acá los bloques que ayudan al cliente a entender cómo comprar y qué esperar antes de hacer un pedido."
+      description="Esta sección todavía no es editable: se implementa en la próxima fase. Acá vas a poder editar cómo comprar, preguntas frecuentes, envíos, zonas, conservación de congelados y medios de pago."
       items={[
         "Cómo comprar",
         "Preguntas frecuentes",

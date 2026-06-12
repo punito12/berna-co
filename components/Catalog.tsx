@@ -235,7 +235,7 @@ export default function Catalog({
               <div className="mx-auto max-w-6xl px-4 py-4">
                 <Link
                   href="/checkout"
-                  className="block w-full bg-black px-4 py-4 text-center font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0"
+                  className="block w-full bg-button px-4 py-4 text-center font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0"
                 >
                   {cartContinueLabel}
                 </Link>

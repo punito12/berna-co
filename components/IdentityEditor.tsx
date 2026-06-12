@@ -136,16 +136,29 @@ export default function IdentityEditor({
   const mutedOnCream = contrastRatio(colors.muted, colors.cream);
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       {savingMsg && (
-        <p className="text-sm font-bold text-green-700">{savingMsg}</p>
+        <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-700">
+          {savingMsg}
+        </p>
       )}
 
       {/* Colors */}
-      <section>
-        <h2 className="mb-3 font-black uppercase tracking-tight text-xl text-ink">
-          Colores
-        </h2>
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+        <div className="mb-5 flex flex-col gap-2 border-b border-line pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+              Paleta global
+            </p>
+            <h2 className="font-black uppercase tracking-tight text-xl text-ink">
+              Colores
+            </h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-muted">
+            Usá colores con buen contraste para que la tienda siga siendo
+            legible en mobile y desktop.
+          </p>
+        </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {[
             "ink",
@@ -196,7 +209,7 @@ export default function IdentityEditor({
 
         {/* Live preview */}
         <div
-          className="mt-4 rounded-lg border border-line p-5"
+          className="mt-4 rounded-xl border border-line p-5"
           style={{ background: colors.cream }}
         >
           <p
@@ -211,7 +224,7 @@ export default function IdentityEditor({
           <div className="mt-3 flex gap-2">
             <span
               className="rounded px-4 py-2 font-bold uppercase tracking-widest text-xs"
-              style={{ background: colors.ink, color: "#fff" }}
+              style={{ background: colors.buttonBg, color: colors.buttonText }}
             >
               Botón
             </span>
@@ -226,10 +239,21 @@ export default function IdentityEditor({
       </section>
 
       {/* Typography */}
-      <section>
-        <h2 className="mb-3 font-black uppercase tracking-tight text-xl text-ink">
-          Tipografía
-        </h2>
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+        <div className="mb-5 flex flex-col gap-2 border-b border-line pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+              Fuentes globales
+            </p>
+            <h2 className="font-black uppercase tracking-tight text-xl text-ink">
+              Tipografía
+            </h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-muted">
+            Estos ajustes afectan títulos y textos principales del sitio cuando
+            se publican.
+          </p>
+        </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <FontSelect
             label="Títulos"
@@ -269,7 +293,7 @@ export default function IdentityEditor({
           )}&display=swap`}
           rel="stylesheet"
         />
-        <div className="mt-4 rounded-lg border border-line bg-white p-5">
+        <div className="mt-4 rounded-xl border border-line bg-cream/30 p-5">
           <p
             className="uppercase tracking-tight text-3xl"
             style={{
@@ -289,11 +313,21 @@ export default function IdentityEditor({
       </section>
 
       {/* Logo */}
-      <section>
-        <h2 className="mb-3 font-black uppercase tracking-tight text-xl text-ink">
-          Logo
-        </h2>
-        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-line bg-white p-4">
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+        <div className="mb-5 flex flex-col gap-2 border-b border-line pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+              Imagen de marca
+            </p>
+            <h2 className="font-black uppercase tracking-tight text-xl text-ink">
+              Logo
+            </h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-muted">
+            Si no hay logo cargado, el sitio usa el logo actual como fallback.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-line bg-cream/30 p-4">
           <div
             className="flex h-20 w-40 items-center justify-center rounded border border-line bg-cream/40"
           >
@@ -304,7 +338,7 @@ export default function IdentityEditor({
               <span className="text-xs text-muted">Sin logo</span>
             )}
           </div>
-          <label className="cursor-pointer bg-black px-4 py-2 font-bold uppercase tracking-widest text-xs text-white">
+          <label className="cursor-pointer rounded bg-black px-4 py-2 font-bold uppercase tracking-widest text-xs text-white">
             Subir logo
             <input
               type="file"
