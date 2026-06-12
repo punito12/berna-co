@@ -103,6 +103,24 @@ function declarations(style: CmsTextStyle, mobile = false): string {
     .join(";");
 }
 
+// Turns a CmsTextStyle into a React inline-style object for the in-editor quick
+// preview. Uses the DESKTOP size. Display-only — never affects what's saved or
+// how the public site renders (that goes through textStyleCssRule).
+export function cmsTextStyleToInlineCss(
+  style: CmsTextStyle
+): Record<string, string> {
+  const css: Record<string, string> = {};
+  if (style.fontFamily) css.fontFamily = `"${style.fontFamily}", sans-serif`;
+  if (style.fontSize) css.fontSize = style.fontSize;
+  if (style.fontWeight) css.fontWeight = style.fontWeight;
+  if (style.italic) css.fontStyle = "italic";
+  if (style.underline) css.textDecoration = "underline";
+  if (style.uppercase) css.textTransform = "uppercase";
+  if (style.lineHeight) css.lineHeight = style.lineHeight;
+  if (style.letterSpacing) css.letterSpacing = style.letterSpacing;
+  return css;
+}
+
 export function textStyleCssRule(key: string, style: CmsTextStyle): string {
   const base = declarations(style);
   const mobile = style.fontSizeMobile ? declarations(style, true) : "";

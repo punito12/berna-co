@@ -18,6 +18,7 @@ import {
   type CmsTextStyle,
 } from "@/lib/cms-text-styles";
 import { humanizeCmsKey } from "@/lib/cms-labels";
+import CmsStylePreview from "@/components/CmsStylePreview";
 
 const FONT_OPTIONS = [
   "",
@@ -512,6 +513,9 @@ function BlockConfigEditor({
               <BlockTextStyleControls
                 key={part}
                 label={BLOCK_STYLE_LABELS[part] ?? humanizeCmsKey(part)}
+                sampleText={
+                  (draft[part as keyof CmsBlockConfig] as string | undefined) ?? ""
+                }
                 value={draft.textStyles?.[part] ?? {}}
                 onChange={(style) => updateTextStyle(part, style)}
               />
@@ -684,10 +688,12 @@ function FaqRepeater({
 
 function BlockTextStyleControls({
   label,
+  sampleText,
   value,
   onChange,
 }: {
   label: string;
+  sampleText: string;
   value: CmsTextStyle;
   onChange: (value: CmsTextStyle) => void;
 }) {
@@ -758,6 +764,7 @@ function BlockTextStyleControls({
           }
         />
       </div>
+      <CmsStylePreview text={sampleText} style={value} />
     </div>
   );
 }

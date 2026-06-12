@@ -143,12 +143,22 @@ export default function CmsHomeSection({
             )}
           </div>
           <div>
-            <p
-              className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
-              {...cmsTextAttrs("home.hero.eyebrow")}
-            >
-              {config.eyebrow || t("home.hero.eyebrow", "LA VIDA ES RICA!")}
-            </p>
+            {(() => {
+              // "Nuestra historia" eyebrow: uses its own (optional) text. No
+              // hardcoded "LA VIDA ES RICA!" fallback — only renders if there's
+              // actual content (block config or an explicit CMS value).
+              const aboutEyebrow =
+                config.eyebrow || t("home.about.eyebrow", "");
+              if (!aboutEyebrow) return null;
+              return (
+                <p
+                  className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
+                  {...cmsTextAttrs("home.about.eyebrow")}
+                >
+                  {aboutEyebrow}
+                </p>
+              );
+            })()}
             <h2
               className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
               {...cmsTextAttrs("home.about.title")}

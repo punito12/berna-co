@@ -6,6 +6,7 @@ import {
   sanitizeTextStyle,
   type CmsTextStyle,
 } from "@/lib/cms-text-styles";
+import CmsStylePreview from "@/components/CmsStylePreview";
 
 const FONT_OPTIONS = [
   "",
@@ -302,6 +303,7 @@ export default function CmsTextField({
             }
           />
         </div>
+        <CmsStylePreview text={value} style={textStyle} />
         <button
           type="button"
           onClick={restoreStyle}
