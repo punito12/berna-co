@@ -138,7 +138,10 @@ export async function getSaleDetail(
     // For MP orders the payment is the order itself (no Payment rows); treat an
     // approved MP order as fully paid. Cash orders are paid on delivery.
     const recordedPaid = o.payments.reduce((a, p) => a + p.amount, 0);
-    const mpPaid = o.paymentMethod === "MERCADOPAGO" && o.mpPaymentId ? o.total : 0;
+    const mpPaid =
+      o.paymentMethod === "MERCADOPAGO" && o.mpPaymentId && o.status !== "CANCELLED"
+        ? o.total
+        : 0;
     const paid = Math.max(recordedPaid, mpPaid);
     const paymentStatus = effectiveOrderPaymentStatus(o);
     return {

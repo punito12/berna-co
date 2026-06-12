@@ -7,6 +7,14 @@ import { prisma } from "@/lib/db";
 import { BREADCRUMB_LABELS } from "@/lib/products";
 import { recordMpPaymentIncome } from "@/lib/cash";
 import { getSiteUrl } from "@/lib/seo";
+import { setSaleStatus } from "@/lib/sale-actions";
+
+const MP_FAILED_STATUSES = new Set([
+  "rejected",
+  "cancelled",
+  "refunded",
+  "charged_back",
+]);
 
 export function isMpConfigured(): boolean {
   return Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN);
@@ -99,80 +107,27 @@ export async function syncPaymentToOrder(paymentId: string): Promise<void> {
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { items: true },
+    select: {
+      id: true,
+      status: true,
+      paymentMethod: true,
+      total: true,
+      customerName: true,
+      mpPaymentId: true,
+    },
   });
   if (!order) return;
 
-  // approved -> CONFIRMED; rejected/cancelled -> CANCELLED; else leave PENDING.
-  let status: string | null = null;
-  if (payment.status === "approved") status = "CONFIRMED";
-  else if (payment.status === "rejected" || payment.status === "cancelled")
-    status = "CANCELLED";
+  const paymentStatus = String(payment.status ?? "");
 
-  const isApproved = payment.status === "approved";
-
-  // If this newly cancels the order, give the reserved stock back (once).
-  const newlyCancelled = status === "CANCELLED" && order.status !== "CANCELLED";
-
-  await prisma.$transaction(async (tx) => {
-    await tx.order.update({
-      where: { id: orderId },
+  if (paymentStatus === "approved") {
+    await prisma.order.update({
+      where: { id: order.id },
       data: {
         mpPaymentId: String(payment.id),
-        ...(status ? { status } : {}),
+        status: "CONFIRMED",
       },
     });
-
-    if (newlyCancelled) {
-      // Restock per (product, empanado). Stock is a JSON map per breadcrumb.
-      const byProduct = new Map<string, Map<string, number>>();
-      for (const it of order.items) {
-        if (!byProduct.has(it.productId)) byProduct.set(it.productId, new Map());
-        const m = byProduct.get(it.productId)!;
-        m.set(it.breadcrumbType, (m.get(it.breadcrumbType) ?? 0) + it.quantity);
-      }
-      for (const [productId, perBreadcrumb] of byProduct) {
-        const product = await tx.product.findUnique({
-          where: { id: productId },
-          select: { stocks: true },
-        });
-        if (!product) continue;
-        let stocks: Record<string, number> = {};
-        try {
-          stocks = JSON.parse(product.stocks);
-        } catch {
-          stocks = {};
-        }
-        for (const [breadcrumb, qty] of perBreadcrumb) {
-          stocks[breadcrumb] = (stocks[breadcrumb] ?? 0) + qty;
-        }
-        const total = Object.values(stocks).reduce((a, b) => a + b, 0);
-        await tx.product.update({
-          where: { id: productId },
-          data: { stocks: JSON.stringify(stocks), stock: total },
-        });
-        // Audit: log the restock as an ADJUSTMENT linked to this order.
-        for (const [breadcrumb, qty] of perBreadcrumb) {
-          await tx.stockMovement.create({
-            data: {
-              productId,
-              breadcrumbType: breadcrumb,
-              quantity: qty, // positive: stock returns
-              type: "ADJUSTMENT",
-              referenceType: "ORDER",
-              referenceId: orderId,
-              notes: "Reintegro por cancelación de pedido",
-            },
-          });
-        }
-      }
-    }
-  });
-
-  // Record the income in Caja once the payment is approved. We read MP's real
-  // money_release_date so the box can mark it PENDING until the money is
-  // actually released. Deduped by paymentId, so safe across webhook retries.
-  if (isApproved) {
     const releaseRaw = (payment as { money_release_date?: string })
       .money_release_date;
     const releaseDate = releaseRaw ? new Date(releaseRaw) : null;
@@ -194,5 +149,49 @@ export async function syncPaymentToOrder(paymentId: string): Promise<void> {
     } catch (e) {
       console.error("recordMpPaymentIncome failed:", e);
     }
+    return;
+  }
+
+  if (MP_FAILED_STATUSES.has(paymentStatus)) {
+    await cancelMercadoPagoOrderInternally({
+      orderId: order.id,
+      mpPaymentId: String(payment.id),
+    });
+  }
+}
+
+// Used by the Mercado Pago failure return when MP does not send payment_id in
+// the URL. It only cancels the internal reserved order and restores stock; it
+// does not call Mercado Pago refunds.
+export async function cancelUnpaidMercadoPagoOrder(orderId: string): Promise<void> {
+  await cancelMercadoPagoOrderInternally({ orderId });
+}
+
+async function cancelMercadoPagoOrderInternally({
+  orderId,
+  mpPaymentId,
+}: {
+  orderId: string;
+  mpPaymentId?: string;
+}): Promise<void> {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { status: true, paymentMethod: true, mpPaymentId: true },
+  });
+  if (!order || order.paymentMethod !== "MERCADOPAGO") return;
+
+  // If it is already approved/paid, never infer a refund from an internal
+  // cancellation. Refunds need an explicit Mercado Pago refund flow.
+  if (order.mpPaymentId && !mpPaymentId) return;
+
+  if (order.status !== "CANCELLED") {
+    await setSaleStatus("ORDER", orderId, "CANCELLED");
+  }
+
+  if (mpPaymentId && order.mpPaymentId !== mpPaymentId) {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { mpPaymentId },
+    });
   }
 }

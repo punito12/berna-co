@@ -3,7 +3,11 @@ import { prisma } from "@/lib/db";
 import BernaLogo from "@/components/BernaLogo";
 import CmsFooter from "@/components/CmsFooter";
 import RetryPaymentButton from "@/components/RetryPaymentButton";
-import { syncPaymentToOrder, isMpConfigured } from "@/lib/mercadopago";
+import {
+  cancelUnpaidMercadoPagoOrder,
+  syncPaymentToOrder,
+  isMpConfigured,
+} from "@/lib/mercadopago";
 import { getLogo, getSiteText, isPreview, loadCmsBundle } from "@/lib/cms";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
@@ -26,6 +30,12 @@ export default async function ErrorPage({
       await syncPaymentToOrder(mpPaymentId);
     } catch (e) {
       console.error("sync on error failed:", e);
+    }
+  } else if (searchParams.id) {
+    try {
+      await cancelUnpaidMercadoPagoOrder(searchParams.id);
+    } catch (e) {
+      console.error("cancel unpaid MP order on error failed:", e);
     }
   }
 
