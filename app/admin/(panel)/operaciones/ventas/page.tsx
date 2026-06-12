@@ -245,7 +245,7 @@ export default async function PedidosYVentasPage({
                     )}
                   </Cell>
                   <Cell href={r.href}>
-                    <span className="text-xs text-muted">{r.paymentLabel}</span>
+                    <PaymentBadge label={r.paymentLabel} tone={r.paymentTone} />
                   </Cell>
                   <Cell href={r.href}>
                     <span className="text-muted">
@@ -302,6 +302,31 @@ function Chip({
     >
       {children}
     </Link>
+  );
+}
+
+const PAYMENT_BADGE_STYLES: Record<string, string> = {
+  success: "border-green-200 bg-green-50 text-green-800",
+  warning: "border-amber-200 bg-amber-50 text-amber-900",
+  danger: "border-red-200 bg-red-50 text-red-800",
+  neutral: "border-line bg-cream text-muted",
+};
+
+function PaymentBadge({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: string;
+}) {
+  return (
+    <span
+      className={`inline-flex max-w-[180px] items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+        PAYMENT_BADGE_STYLES[tone] ?? PAYMENT_BADGE_STYLES.neutral
+      }`}
+    >
+      {label}
+    </span>
   );
 }
 

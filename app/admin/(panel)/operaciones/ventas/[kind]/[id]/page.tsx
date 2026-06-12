@@ -86,6 +86,13 @@ export default async function SaleDetailPage({
         </div>
       </div>
 
+      <PaymentStatusBox
+        method={sale.paymentMethodLabel}
+        status={sale.paymentStatusLabel}
+        tone={sale.paymentTone}
+        note={sale.paymentNote}
+      />
+
       {/* Actions (client) */}
       <SaleDetailActions
         kind={sale.kind}
@@ -242,6 +249,48 @@ export default async function SaleDetailPage({
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+const PAYMENT_BOX_STYLES: Record<string, string> = {
+  success: "border-green-200 bg-green-50 text-green-900",
+  warning: "border-amber-200 bg-amber-50 text-amber-950",
+  danger: "border-red-200 bg-red-50 text-red-900",
+  neutral: "border-line bg-white text-ink",
+};
+
+function PaymentStatusBox({
+  method,
+  status,
+  tone,
+  note,
+}: {
+  method: string;
+  status: string;
+  tone: string;
+  note: string | null;
+}) {
+  return (
+    <div
+      className={`mb-4 rounded-lg border px-4 py-3 ${
+        PAYMENT_BOX_STYLES[tone] ?? PAYMENT_BOX_STYLES.neutral
+      }`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] opacity-70">
+            Estado de pago
+          </p>
+          <p className="mt-1 text-lg font-black uppercase tracking-tight">
+            {status}
+          </p>
+        </div>
+        <span className="rounded-full border border-current/20 bg-white/60 px-3 py-1 text-[11px] font-black uppercase tracking-wide">
+          {method}
+        </span>
+      </div>
+      {note && <p className="mt-2 text-sm font-bold opacity-80">{note}</p>}
     </div>
   );
 }

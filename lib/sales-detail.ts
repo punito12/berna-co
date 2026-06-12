@@ -8,8 +8,10 @@ import { INCOME_SOURCE_LABELS } from "@/lib/cash";
 import { BREADCRUMB_LABELS } from "@/lib/products";
 import {
   effectiveOrderPaymentStatus,
+  orderPaymentBadgeTone,
   orderPaymentMethodLabel,
   orderPaymentStatusLabel,
+  type PaymentBadgeTone,
 } from "@/lib/mp-order-status";
 
 export type SaleKind = "ORDER" | "MANUAL";
@@ -61,6 +63,8 @@ export type SaleDetail = {
   paymentMethodLabel: string; // human label incl. "paga al recibir"
   paymentStatus: string; // PAID | PARTIAL | PENDING
   paymentStatusLabel: string;
+  paymentTone: PaymentBadgeTone;
+  paymentNote: string | null;
   dueDate: Date | null;
 
   // Money
@@ -171,6 +175,11 @@ export async function getSaleDetail(
           : paymentStatus === "PARTIAL"
           ? "Parcial"
           : "A cobrar"),
+      paymentTone: orderPaymentBadgeTone(o),
+      paymentNote:
+        o.paymentMethod === "MERCADOPAGO" && !o.mpPaymentId && o.status !== "CANCELLED"
+          ? "Stock reservado hasta que el pago se apruebe o se cancele."
+          : null,
       dueDate: o.dueDate,
       gross: gross + o.discountAmount,
       discountAmount: o.discountAmount,
@@ -225,6 +234,8 @@ export async function getSaleDetail(
         : s.paymentStatus === "PARTIAL"
         ? "Parcial"
         : "A cobrar",
+    paymentTone: s.paymentStatus === "PAID" ? "success" : "warning",
+    paymentNote: null,
     dueDate: s.dueDate,
     gross: s.gross,
     discountAmount: s.discountAmount,

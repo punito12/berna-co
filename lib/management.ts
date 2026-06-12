@@ -5,7 +5,11 @@
 import { prisma } from "@/lib/db";
 import { recordManualSaleIncome } from "@/lib/cash";
 import { DEFAULT_DUE_DAYS, createPayment } from "@/lib/payments";
-import { orderPaymentListLabel } from "@/lib/mp-order-status";
+import {
+  orderPaymentBadgeTone,
+  orderPaymentListLabel,
+  type PaymentBadgeTone,
+} from "@/lib/mp-order-status";
 import { adjustStockForLines } from "@/lib/stock";
 
 // ---- Customers ----
@@ -499,6 +503,7 @@ export type UnifiedSale = {
   total: number;
   status: string; // CONFIRMED | DELIVERED | CANCELLED
   paymentLabel: string; // short payment hint for the row
+  paymentTone: PaymentBadgeTone;
   itemsCount: number;
   href: string; // detail page
 };
@@ -583,6 +588,7 @@ export async function listSalesUnified(
       total: o.total,
       status: normalizeStatus(o.status),
       paymentLabel: orderPaymentListLabel(o),
+      paymentTone: orderPaymentBadgeTone(o),
       itemsCount: o.items.length,
       href: detailHref("ORDER", o.id),
     });
@@ -598,6 +604,7 @@ export async function listSalesUnified(
       total: s.net,
       status: normalizeStatus(s.deliveryStatus),
       paymentLabel: s.paymentStatus === "PAID" ? "Cobrada" : "Cta. corriente",
+      paymentTone: s.paymentStatus === "PAID" ? "success" : "warning",
       itemsCount: s.items.length,
       href: detailHref("MANUAL", s.id),
     });
