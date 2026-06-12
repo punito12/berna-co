@@ -182,6 +182,7 @@ export default function EditorStatusBar() {
         return;
       }
       setMessage("Borradores descartados.");
+      window.dispatchEvent(new Event("cms:drafts-discarded"));
       await refresh();
       router.refresh();
     } finally {

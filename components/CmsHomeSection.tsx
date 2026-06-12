@@ -29,12 +29,14 @@ export default function CmsHomeSection({
   section,
   cms,
   preview,
+  previewToken,
   products,
   payCfg,
 }: {
   section: SectionView;
   cms: CmsBundle;
   preview: boolean;
+  previewToken?: string;
   products: ProductForUI[];
   payCfg: PaymentDiscounts;
 }) {
@@ -190,6 +192,7 @@ export default function CmsHomeSection({
           config.items?.[2]?.title ||
           t("home.ingredients.item3", "Peceto de pastura")
         }
+        previewToken={preview ? previewToken : undefined}
       />
     );
   }

@@ -83,6 +83,20 @@ export default function CmsTextField({
     setSavedStyle(next);
   }, [styleDraft]);
 
+  useEffect(() => {
+    const resetToPublished = () => {
+      const nextStyle = parseTextStyle(style ?? "{}");
+      setValue(published);
+      setSavedValue(published);
+      setTextStyle(nextStyle);
+      setSavedStyle(nextStyle);
+      setSavedTick(false);
+    };
+    window.addEventListener("cms:drafts-discarded", resetToPublished);
+    return () =>
+      window.removeEventListener("cms:drafts-discarded", resetToPublished);
+  }, [published, style]);
+
   async function save() {
     if (value === savedValue) return; // nothing new
     setSaving(true);

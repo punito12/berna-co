@@ -54,6 +54,7 @@ export default async function HomePage({
           section={section}
           cms={cms}
           preview={preview}
+          previewToken={searchParams?.preview}
           products={products}
           payCfg={payCfg}
         />

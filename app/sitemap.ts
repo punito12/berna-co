@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { INGREDIENT_PAGES } from "@/lib/ingredients";
 import { getAvailableProducts } from "@/lib/products";
 import { getSiteUrl } from "@/lib/seo";
 
@@ -27,6 +28,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "weekly" as const,
       priority: page.priority,
+    })),
+    ...INGREDIENT_PAGES.map((page) => ({
+      url: new URL(page.href, siteUrl).toString(),
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.55,
     })),
     ...products.map((product) => ({
       url: new URL(`/producto/${product.slug}`, siteUrl).toString(),

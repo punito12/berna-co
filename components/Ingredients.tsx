@@ -1,4 +1,6 @@
 import Reveal from "@/components/Reveal";
+import { INGREDIENT_PAGES } from "@/lib/ingredients";
+import Link from "next/link";
 
 // "Nuestros ingredientes" — three pillars, each with a hand-drawn line icon in
 // the brand's black/line style. Title only (no body copy).
@@ -81,7 +83,7 @@ function ChickenIcon() {
 function PecetoPasturaIcon() {
   return (
     <img
-      src="/images/icons/peceto-de-pastura-vaca-original.svg"
+      src="/icons/peceto-pastura.svg"
       alt=""
       aria-hidden="true"
       className="h-16 w-16 scale-150 object-contain"
@@ -97,16 +99,21 @@ export default function Ingredients({
   item1 = "Huevos de gallinas libres",
   item2 = "Pollo pastoril",
   item3 = "Peceto de pastura",
+  previewToken,
 }: {
   eyebrow?: string;
   title?: string;
   item1?: string;
   item2?: string;
   item3?: string;
+  previewToken?: string;
 }) {
   const ITEMS = [item1, item2, item3].map((t, i) => ({
     title: t,
     Icon: ICONS[i],
+    href: previewToken
+      ? `${INGREDIENT_PAGES[i].href}?preview=${encodeURIComponent(previewToken)}`
+      : INGREDIENT_PAGES[i].href,
   }));
   return (
     <section id="ingredientes" className="bg-cream">
@@ -126,14 +133,23 @@ export default function Ingredients({
               as="li"
               key={item.title}
               delay={i * 100}
-              className="group flex flex-col items-center gap-4 bg-white px-6 py-8 text-center transition-all duration-300 hover:bg-cream sm:min-h-64 sm:gap-5 sm:py-12"
+              className="group bg-white text-center transition-all duration-300 hover:bg-cream sm:min-h-64"
             >
-              <span className="rounded-full border border-line bg-cream/60 p-4 text-ink transition-transform duration-300 group-hover:scale-105">
-                <item.Icon />
-              </span>
-              <h3 className="font-black uppercase tracking-tight text-xl text-ink">
-                {item.title}
-              </h3>
+              <Link
+                href={item.href}
+                className="flex h-full flex-col items-center gap-4 px-6 py-8 outline-none transition-colors focus-visible:bg-cream sm:gap-5 sm:py-12"
+                aria-label={`Ver beneficios de ${item.title}`}
+              >
+                <span className="rounded-full border border-line bg-cream/60 p-4 text-ink transition-transform duration-300 group-hover:scale-105">
+                  <item.Icon />
+                </span>
+                <h3 className="font-black uppercase tracking-tight text-xl text-ink">
+                  {item.title}
+                </h3>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-tomato transition-colors group-hover:text-ink">
+                  Ver beneficios
+                </span>
+              </Link>
             </Reveal>
           ))}
         </ul>

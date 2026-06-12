@@ -28,6 +28,17 @@ export default function CmsImageField({
     setSavedUrl(draft);
   }, [draft]);
 
+  useEffect(() => {
+    const resetToPublished = () => {
+      setUrl(published);
+      setSavedUrl(published);
+      setSavedTick(false);
+    };
+    window.addEventListener("cms:drafts-discarded", resetToPublished);
+    return () =>
+      window.removeEventListener("cms:drafts-discarded", resetToPublished);
+  }, [published]);
+
   async function save(nextUrl = url) {
     if (nextUrl === savedUrl) return;
     setSaving(true);
