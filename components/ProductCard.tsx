@@ -95,7 +95,7 @@ export default function ProductCard({
   }
 
   const priceDisplay = selPromoPercent > 0 ? (
-    <p className="flex items-baseline gap-2">
+    <p className="flex min-w-0 flex-wrap items-baseline gap-2">
       <span className="font-black text-xl text-accent sm:text-2xl">
         {formatPrice(promoPriceFor(product, selected))}
       </span>
@@ -123,7 +123,7 @@ export default function ProductCard({
 
   return (
     <>
-      <article className="group flex h-full flex-col overflow-hidden rounded-lg border border-line bg-white shadow-[0_1px_0_rgba(10,10,10,0.03)] transition-all duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_22px_55px_rgba(10,10,10,0.10)]">
+      <article className="group flex h-full min-w-0 max-w-full flex-col overflow-hidden rounded-lg border border-line bg-white shadow-[0_1px_0_rgba(10,10,10,0.03)] transition-all duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_22px_55px_rgba(10,10,10,0.10)]">
         {/* Photo */}
         <Link
           href={`/producto/${product.slug}`}
@@ -169,9 +169,9 @@ export default function ProductCard({
           </span>
         </Link>
 
-        <div className="flex flex-1 flex-col p-2.5 pt-2 sm:p-5 md:p-6">
+        <div className="flex min-w-0 flex-1 flex-col p-2.5 pt-2 sm:p-5 md:p-6">
           <Link href={`/producto/${product.slug}`}>
-            <h3 className="font-black uppercase tracking-tight text-base leading-tight text-ink transition-colors hover:text-muted sm:text-xl">
+            <h3 className="break-words font-black uppercase tracking-tight text-base leading-tight text-ink transition-colors hover:text-muted sm:text-xl">
               {product.name}
             </h3>
           </Link>
@@ -221,11 +221,11 @@ export default function ProductCard({
             {priceDisplay}
 
             {paymentChips.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-2 flex min-w-0 max-w-full flex-wrap gap-1.5">
                 {paymentChips.map((c) => (
                   <span
                     key={c.label}
-                    className="inline-flex items-baseline gap-1 rounded-full border border-line bg-cream px-2.5 py-1 text-ink"
+                    className="inline-flex max-w-full items-baseline gap-1 rounded-full border border-line bg-cream px-2 py-1 text-ink sm:px-2.5"
                   >
                     <span className="font-black text-sm">
                       {formatPrice(c.price)}

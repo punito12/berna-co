@@ -115,9 +115,9 @@ export default function Catalog({
           ))}
         </Reveal>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
           {visible.map((product, i) => (
-            <Reveal key={product.id} delay={(i % 3) * 90}>
+            <Reveal key={product.id} className="min-w-0" delay={(i % 3) * 90}>
               <ProductCard
                 product={product}
                 efectivoPct={efectivoPct}
