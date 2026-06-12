@@ -10,6 +10,8 @@ type ProductDetailLabels = {
   chooseBreadcrumb?: string;
   addToCart?: string;
   outOfStock?: string;
+  lowStock?: string;
+  addedDetail?: string;
 };
 
 // Two-column product detail. Holds the selected empanado so the gallery (left)

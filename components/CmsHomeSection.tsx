@@ -92,10 +92,35 @@ export default function CmsHomeSection({
         )}
         addToCartLabel={t("catalog.product.add_to_cart", "Agregar al carrito")}
         chooseBreadcrumbLabel={t(
-          "catalog.product.choose_breadcrumb",
-          "Empanado"
+          "catalog.product.breadcrumb_label",
+          t("catalog.product.choose_breadcrumb", "Empanado")
         )}
         newLabel={t("catalog.badge.new", "New")}
+        paymentCashLabel={t("catalog.product.payment_cash_label", "efectivo")}
+        paymentTransferLabel={t(
+          "catalog.product.payment_transfer_label",
+          "transferencia"
+        )}
+        paymentTransferShortLabel={t(
+          "catalog.product.payment_transfer_short_label",
+          "transf."
+        )}
+        viewDetailLabel={t(
+          "catalog.product.view_detail_label",
+          "Ver detalle y fotos →"
+        )}
+        cartShowLabel={t("catalog.cart.show_label", "Ver carrito")}
+        cartHideLabel={t("catalog.cart.hide_label", "Ocultar carrito")}
+        cartContinueLabel={t("catalog.cart.continue_label", "Continuar")}
+        lowStockLabel={t(
+          "catalog.product.low_stock_label",
+          "Solo quedan {count} disponibles"
+        )}
+        addedLabel={t("catalog.product.added_label", "Agregado ✓")}
+        noMoreStockLabel={t(
+          "catalog.product.no_more_stock_label",
+          "Sin más stock disponible"
+        )}
         categoryLabels={{
           CARNE: t("catalog.filter.carne", "Carne"),
           POLLO: t("catalog.filter.pollo", "Pollo"),

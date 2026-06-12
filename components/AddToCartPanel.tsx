@@ -12,6 +12,7 @@ import {
   stockFor,
   type ProductForUI,
 } from "@/lib/products";
+import { renderCmsTemplate } from "@/lib/catalog-cms-labels";
 
 // The interactive buying controls on the product detail page: empanado picker,
 // quantity, price and add-to-cart. The selected empanado is controlled by the
@@ -29,6 +30,9 @@ export default function AddToCartPanel({
     chooseBreadcrumb?: string;
     addToCart?: string;
     outOfStock?: string;
+    lowStock?: string;
+    added?: string;
+    addedDetail?: string;
   };
 }) {
   const { addToCart, lines } = useCart();
@@ -186,16 +190,22 @@ export default function AddToCartPanel({
           {outOfStock
             ? stock <= 0
               ? labels.outOfStock ?? "Sin stock"
-              : `Solo quedan ${stock} disponibles`
+              : renderCmsTemplate(
+                  labels.lowStock ?? "Solo quedan {count} disponibles",
+                  { count: stock }
+                )
             : justAdded
-            ? "Agregado al carrito ✓"
+            ? labels.addedDetail ?? "Agregado al carrito ✓"
             : labels.addToCart ?? "Agregar al carrito"}
         </button>
         {outOfStock && (
           <p className="mt-3 text-center text-sm font-bold uppercase tracking-wide text-muted">
             {stock <= 0
               ? labels.outOfStock ?? "Producto sin stock por el momento"
-              : `Ya tenés ${inCart} en el carrito. Solo quedan ${stock} disponibles.`}
+              : `Ya tenés ${inCart} en el carrito. ${renderCmsTemplate(
+                  labels.lowStock ?? "Solo quedan {count} disponibles",
+                  { count: stock }
+                )}.`}
           </p>
         )}
       </div>

@@ -15,6 +15,7 @@ import {
   isProductOutOfStock,
   type ProductForUI,
 } from "@/lib/products";
+import { renderCmsTemplate } from "@/lib/catalog-cms-labels";
 
 export default function ProductCard({
   product,
@@ -24,6 +25,13 @@ export default function ProductCard({
   addToCartLabel = "Agregar al carrito",
   chooseBreadcrumbLabel = "Empanado",
   newLabel = "New",
+  paymentCashLabel = "efectivo",
+  paymentTransferLabel = "transferencia",
+  paymentTransferShortLabel = "transf.",
+  viewDetailLabel = "Ver detalle y fotos →",
+  lowStockLabel = "Solo quedan {count} disponibles",
+  addedLabel = "Agregado ✓",
+  noMoreStockLabel = "Sin más stock disponible",
 }: {
   product: ProductForUI;
   efectivoPct?: number;
@@ -32,6 +40,13 @@ export default function ProductCard({
   addToCartLabel?: string;
   chooseBreadcrumbLabel?: string;
   newLabel?: string;
+  paymentCashLabel?: string;
+  paymentTransferLabel?: string;
+  paymentTransferShortLabel?: string;
+  viewDetailLabel?: string;
+  lowStockLabel?: string;
+  addedLabel?: string;
+  noMoreStockLabel?: string;
 }) {
   const { addToCart, lines } = useCart();
 
@@ -60,6 +75,9 @@ export default function ProductCard({
       lines.find((line) => line.key === `${product.id}__${code}`)?.quantity ??
       0;
     return stock <= 0 || inCart >= stock;
+  });
+  const selectedLowStockLabel = renderCmsTemplate(lowStockLabel, {
+    count: selectedStock,
   });
 
   function handleAdd() {
@@ -113,11 +131,19 @@ export default function ProductCard({
     const base = selPromoPercent > 0
       ? promoPriceFor(product, selected)
       : priceFor(product, selected);
-    const chips: { price: number; label: string }[] = [];
+    const chips: { price: number; label: string; shortLabel: string }[] = [];
     if (efectivoPct > 0)
-      chips.push({ price: Math.round((base * (100 - efectivoPct)) / 100), label: "efectivo" });
+      chips.push({
+        price: Math.round((base * (100 - efectivoPct)) / 100),
+        label: paymentCashLabel,
+        shortLabel: paymentCashLabel,
+      });
     if (transferenciaPct > 0)
-      chips.push({ price: Math.round((base * (100 - transferenciaPct)) / 100), label: "transferencia" });
+      chips.push({
+        price: Math.round((base * (100 - transferenciaPct)) / 100),
+        label: paymentTransferLabel,
+        shortLabel: paymentTransferShortLabel,
+      });
     return chips;
   })();
 
@@ -182,7 +208,7 @@ export default function ProductCard({
             href={`/producto/${product.slug}`}
             className="mt-2 hidden font-bold uppercase tracking-widest text-[11px] text-ink underline-offset-4 hover:underline sm:inline-block"
           >
-            Ver detalle y fotos →
+            {viewDetailLabel}
           </Link>
 
           {/* Empanado selector — desktop only */}
@@ -228,7 +254,7 @@ export default function ProductCard({
                     </span>
                     <span className="text-[11px] font-bold uppercase tracking-wide">
                       <span className="sm:hidden">
-                        {c.label === "transferencia" ? "transf." : c.label}
+                        {c.shortLabel}
                       </span>
                       <span className="hidden sm:inline">{c.label}</span>
                     </span>
@@ -247,9 +273,9 @@ export default function ProductCard({
               {selectedOutOfStock
                 ? outOfStockLabel
                 : selectedAtLimit
-                ? `Solo quedan ${selectedStock} disponibles`
+                ? selectedLowStockLabel
                 : justAdded
-                ? "Agregado ✓"
+                ? addedLabel
                 : addToCartLabel}
             </button>
 
@@ -263,9 +289,9 @@ export default function ProductCard({
               {allOutOfStock
                 ? outOfStockLabel
                 : allAtCartLimit
-                ? "Sin más stock disponible"
+                ? noMoreStockLabel
                 : justAdded
-                ? "Agregado ✓"
+                ? addedLabel
                 : addToCartLabel}
             </button>
           </div>
@@ -321,7 +347,7 @@ export default function ProductCard({
                       <span className="mt-0.5 text-xs text-muted">{outOfStockLabel}</span>
                     ) : atLimit ? (
                       <span className="mt-0.5 text-xs text-muted">
-                        Solo quedan {stock} disponibles
+                        {renderCmsTemplate(lowStockLabel, { count: stock })}
                       </span>
                     ) : (
                       <span className="mt-0.5 font-black text-base text-ink">

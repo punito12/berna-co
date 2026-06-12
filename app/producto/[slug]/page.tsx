@@ -79,8 +79,8 @@ export default async function ProductPage({
     backToProducts: getSiteText(cms, "catalog.page_title", "productos", preview),
     chooseBreadcrumb: getSiteText(
       cms,
-      "catalog.product.choose_breadcrumb",
-      "Empanado",
+      "catalog.product.breadcrumb_label",
+      getSiteText(cms, "catalog.product.choose_breadcrumb", "Empanado", preview),
       preview
     ),
     addToCart: getSiteText(
@@ -91,8 +91,20 @@ export default async function ProductPage({
     ),
     outOfStock: getSiteText(
       cms,
-      "catalog.product.out_of_stock",
-      "Sin stock",
+      "catalog.product.out_of_stock_label_detail",
+      getSiteText(cms, "catalog.product.out_of_stock", "Sin stock", preview),
+      preview
+    ),
+    lowStock: getSiteText(
+      cms,
+      "catalog.product.low_stock_label",
+      "Solo quedan {count} disponibles",
+      preview
+    ),
+    addedDetail: getSiteText(
+      cms,
+      "catalog.product.added_detail_label",
+      "Agregado al carrito ✓",
       preview
     ),
   };

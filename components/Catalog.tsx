@@ -27,6 +27,16 @@ export default function Catalog({
   addToCartLabel = "Agregar al carrito",
   chooseBreadcrumbLabel = "Empanado",
   newLabel = "New",
+  paymentCashLabel = "efectivo",
+  paymentTransferLabel = "transferencia",
+  paymentTransferShortLabel = "transf.",
+  viewDetailLabel = "Ver detalle y fotos →",
+  cartShowLabel = "Ver carrito",
+  cartHideLabel = "Ocultar carrito",
+  cartContinueLabel = "Continuar",
+  lowStockLabel = "Solo quedan {count} disponibles",
+  addedLabel = "Agregado ✓",
+  noMoreStockLabel = "Sin más stock disponible",
   textKeys = {},
 }: {
   products: ProductForUI[];
@@ -41,6 +51,16 @@ export default function Catalog({
   addToCartLabel?: string;
   chooseBreadcrumbLabel?: string;
   newLabel?: string;
+  paymentCashLabel?: string;
+  paymentTransferLabel?: string;
+  paymentTransferShortLabel?: string;
+  viewDetailLabel?: string;
+  cartShowLabel?: string;
+  cartHideLabel?: string;
+  cartContinueLabel?: string;
+  lowStockLabel?: string;
+  addedLabel?: string;
+  noMoreStockLabel?: string;
   textKeys?: Partial<Record<
     | "eyebrow"
     | "title"
@@ -126,6 +146,13 @@ export default function Catalog({
                 addToCartLabel={addToCartLabel}
                 chooseBreadcrumbLabel={chooseBreadcrumbLabel}
                 newLabel={newLabel}
+                paymentCashLabel={paymentCashLabel}
+                paymentTransferLabel={paymentTransferLabel}
+                paymentTransferShortLabel={paymentTransferShortLabel}
+                viewDetailLabel={viewDetailLabel}
+                lowStockLabel={lowStockLabel}
+                addedLabel={addedLabel}
+                noMoreStockLabel={noMoreStockLabel}
               />
             </Reveal>
           ))}
@@ -146,7 +173,7 @@ export default function Catalog({
               <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-ink px-2 text-xs text-white shadow-sm">
                 {totalItems}
               </span>
-              {open ? "Ocultar carrito" : "Ver carrito"}
+              {open ? cartHideLabel : cartShowLabel}
             </button>
             <span className="font-black text-xl text-ink">
               {formatPrice(totalPrice)}
@@ -210,7 +237,7 @@ export default function Catalog({
                   href="/checkout"
                   className="block w-full bg-black px-4 py-4 text-center font-bold uppercase tracking-widest text-sm text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0"
                 >
-                  Continuar
+                  {cartContinueLabel}
                 </Link>
               </div>
             </div>

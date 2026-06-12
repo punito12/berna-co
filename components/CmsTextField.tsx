@@ -48,6 +48,7 @@ export default function CmsTextField({
   styleDraft,
   maxLength,
   multiline = false,
+  allowStyle = true,
 }: {
   textKey: string;
   label: string;
@@ -57,6 +58,7 @@ export default function CmsTextField({
   styleDraft?: string;
   maxLength: number;
   multiline?: boolean;
+  allowStyle?: boolean;
 }) {
   const [value, setValue] = useState(draft);
   const [savedValue, setSavedValue] = useState(draft);
@@ -227,6 +229,7 @@ export default function CmsTextField({
           <span className="text-[10px] font-bold text-green-700">✓ Guardado</span>
         )}
       </div>
+      {allowStyle && (
       <details className="mt-3 border-t border-line pt-3">
         <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-widest text-muted">
           Opciones avanzadas de diseño
@@ -313,6 +316,7 @@ export default function CmsTextField({
           Restaurar estilo publicado
         </button>
       </details>
+      )}
     </div>
   );
 }
