@@ -127,7 +127,7 @@ export default function ProductCard({
         {/* Photo */}
         <Link
           href={`/producto/${product.slug}`}
-          className="relative block aspect-[4/5] w-full overflow-hidden bg-cream sm:aspect-[2/3]"
+          className="relative block aspect-[4/5] w-full overflow-hidden bg-white sm:aspect-[2/3]"
           aria-label={`Ver ${product.name}`}
         >
           <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line">
