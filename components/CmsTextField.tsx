@@ -228,7 +228,7 @@ export default function CmsTextField({
       </div>
       <details className="mt-3 border-t border-line pt-3">
         <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-widest text-muted">
-          Estilo del texto
+          Opciones avanzadas de diseño
         </summary>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <StyleSelect

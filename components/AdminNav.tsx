@@ -65,13 +65,7 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
   },
   {
     title: "Editor del sitio",
-    links: [
-      { href: "/admin/editor/identidad", label: "Identidad visual" },
-      { href: "/admin/editor/home", label: "Páginas · Home" },
-      { href: "/admin/editor/catalogo", label: "Páginas · Catálogo" },
-      { href: "/admin/editor/checkout", label: "Páginas · Checkout" },
-      { href: "/admin/editor/footer", label: "Footer y contacto" },
-    ],
+    links: [{ href: "/admin/editor/home", label: "Editar sitio web" }],
   },
   {
     title: "Configuración",

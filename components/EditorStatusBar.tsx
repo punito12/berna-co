@@ -141,7 +141,7 @@ export default function EditorStatusBar() {
   async function publish() {
     if (count === 0) return;
     if (hasSafetyIssues) {
-      setMessage("Modo seguro: corregí los problemas antes de publicar.");
+      setMessage("Revisá esto antes de publicar: hay cambios que necesitan corrección.");
       return;
     }
     const ok = window.confirm(
@@ -291,7 +291,7 @@ export default function EditorStatusBar() {
                 <li>1. Editá textos, colores, logo y secciones: todo queda en borrador.</li>
                 <li>2. Usá preview para revisar drafts sin cambiar el sitio público.</li>
                 <li>3. Publicar copia el borrador al sitio y guarda una versión.</li>
-                <li>4. El modo seguro bloquea valores rotos antes de publicar.</li>
+                <li>4. Antes de publicar, te avisamos si algo quedó incompleto o con errores.</li>
                 <li>5. Historial, revertir y backup te dejan volver atrás.</li>
                 <li>6. Si salís con cambios pendientes, el navegador te avisa.</li>
               </ol>
@@ -326,7 +326,7 @@ export default function EditorStatusBar() {
           {message && (
             <p
               className={`mt-2 text-xs font-bold ${
-                message.includes("No ") || message.includes("Modo seguro")
+                message.includes("No ") || message.includes("Revisá esto")
                   ? "text-amber-800"
                   : "text-green-700"
               }`}
@@ -337,7 +337,11 @@ export default function EditorStatusBar() {
           {hasSafetyIssues && (
             <div className="mt-3 rounded border border-amber-200 bg-amber-50 p-3">
               <p className="text-[11px] font-black uppercase tracking-widest text-amber-900">
-                Modo seguro activo
+                Revisá esto antes de publicar
+              </p>
+              <p className="mt-1 text-xs text-amber-900">
+                Hay cambios que necesitan revisión para evitar publicar
+                contenido incompleto o con errores.
               </p>
               <div className="mt-2 space-y-1">
                 {issues.map((issue) => (

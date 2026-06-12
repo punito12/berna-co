@@ -1,4 +1,5 @@
 import { listTextsByCategory } from "@/lib/cms-admin";
+import { humanizeCmsKey } from "@/lib/cms-labels";
 import CmsTextField from "@/components/CmsTextField";
 
 const LABELS: Record<string, string> = {
@@ -27,7 +28,7 @@ export default async function EditorFooterPage() {
             <CmsTextField
               key={t.key}
               textKey={t.key}
-              label={LABELS[t.key] ?? t.key}
+              label={LABELS[t.key] ?? humanizeCmsKey(t.key)}
               published={t.value}
               draft={t.valueDraft}
               style={t.style}

@@ -1,5 +1,6 @@
 import { listTextsByCategory } from "@/lib/cms-admin";
 import { ensureCheckoutCmsTexts } from "@/lib/cms-checkout-texts";
+import { humanizeCmsKey } from "@/lib/cms-labels";
 import CmsTextField from "@/components/CmsTextField";
 
 // Human-readable Spanish labels for every checkout CMS key, prefixed by group
@@ -139,7 +140,7 @@ export default async function EditorCheckoutPage() {
           <CmsTextField
             key={t.key}
             textKey={t.key}
-            label={LABELS[t.key] ?? t.key}
+            label={LABELS[t.key] ?? humanizeCmsKey(t.key)}
             published={t.value}
             draft={t.valueDraft}
             style={t.style}

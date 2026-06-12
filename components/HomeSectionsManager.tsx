@@ -17,6 +17,7 @@ import {
   sanitizeTextStyle,
   type CmsTextStyle,
 } from "@/lib/cms-text-styles";
+import { humanizeCmsKey } from "@/lib/cms-labels";
 
 const FONT_OPTIONS = [
   "",
@@ -337,7 +338,7 @@ export default function HomeSectionsManager({
                         <CmsTextField
                           key={tk}
                           textKey={tk}
-                          label={tk.split(".").slice(-1)[0]}
+                          label={humanizeCmsKey(tk)}
                           published={t.value}
                           draft={t.valueDraft}
                           style={t.style}
@@ -504,13 +505,13 @@ function BlockConfigEditor({
         )}
         <details className="rounded border border-line bg-white p-3">
           <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-widest text-muted">
-            Estilos de textos del bloque
+            Opciones avanzadas de diseño
           </summary>
           <div className="mt-3 grid gap-4">
             {["eyebrow", "title", "subtitle", "body", "ctaLabel"].map((part) => (
               <BlockTextStyleControls
                 key={part}
-                label={BLOCK_STYLE_LABELS[part] ?? part}
+                label={BLOCK_STYLE_LABELS[part] ?? humanizeCmsKey(part)}
                 value={draft.textStyles?.[part] ?? {}}
                 onChange={(style) => updateTextStyle(part, style)}
               />

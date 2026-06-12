@@ -1,4 +1,5 @@
 import { listTextsByCategory } from "@/lib/cms-admin";
+import { humanizeCmsKey } from "@/lib/cms-labels";
 import CmsTextField from "@/components/CmsTextField";
 
 // Human labels for the catalog text keys.
@@ -23,7 +24,7 @@ export default async function EditorCatalogoPage() {
           <CmsTextField
             key={t.key}
             textKey={t.key}
-            label={LABELS[t.key] ?? t.key}
+            label={LABELS[t.key] ?? humanizeCmsKey(t.key)}
             published={t.value}
             draft={t.valueDraft}
             style={t.style}

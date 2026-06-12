@@ -2,42 +2,9 @@ import { listSectionsAdmin } from "@/lib/cms-admin";
 import { prisma } from "@/lib/db";
 import HomeSectionsManager from "@/components/HomeSectionsManager";
 import CmsImageField from "@/components/CmsImageField";
-import CmsTextField from "@/components/CmsTextField";
-import { INGREDIENT_CMS_TEXTS } from "@/lib/ingredients";
-
-const INGREDIENT_TEXT_LABELS: Record<string, string> = {
-  "ingredient.huevos.title": "Huevos · título",
-  "ingredient.huevos.intro": "Huevos · intro",
-  "ingredient.huevos.body": "Huevos · texto",
-  "ingredient.pollo.title": "Pollo Pastoril · título",
-  "ingredient.pollo.intro": "Pollo Pastoril · intro",
-  "ingredient.pollo.body": "Pollo Pastoril · texto",
-  "ingredient.peceto.title": "Peceto de Pastura · título",
-  "ingredient.peceto.intro": "Peceto de Pastura · intro",
-  "ingredient.peceto.body": "Peceto de Pastura · texto",
-};
-
-async function ensureIngredientCmsTexts() {
-  await prisma.$transaction(
-    INGREDIENT_CMS_TEXTS.map((text) =>
-      prisma.siteText.upsert({
-        where: { key: text.key },
-        update: { maxLength: text.maxLength, category: text.category },
-        create: {
-          key: text.key,
-          value: text.value,
-          valueDraft: text.value,
-          maxLength: text.maxLength,
-          category: text.category,
-        },
-      })
-    )
-  );
-}
+import { humanizeCmsKey } from "@/lib/cms-labels";
 
 export default async function EditorHomePage() {
-  await ensureIngredientCmsTexts();
-
   const [sections, texts, images] = await Promise.all([
     listSectionsAdmin("home"),
     // Home + catalog texts (the products section reuses catalog texts).
@@ -58,14 +25,6 @@ export default async function EditorHomePage() {
       orderBy: { key: "asc" },
     }),
   ]);
-  const ingredientTextKeys = new Set(INGREDIENT_CMS_TEXTS.map((text) => text.key));
-  const ingredientTexts = texts
-    .filter((text) => ingredientTextKeys.has(text.key))
-    .sort(
-      (a, b) =>
-        INGREDIENT_CMS_TEXTS.findIndex((text) => text.key === a.key) -
-        INGREDIENT_CMS_TEXTS.findIndex((text) => text.key === b.key)
-    );
 
   return (
     <div>
@@ -82,30 +41,6 @@ export default async function EditorHomePage() {
         }))}
         texts={texts}
       />
-      <section className="mt-8">
-        <h2 className="mb-4 font-black uppercase tracking-tight text-xl text-ink">
-          Páginas de ingredientes
-        </h2>
-        <p className="mb-4 text-sm text-muted">
-          Estos textos aparecen en las páginas que se abren desde “Nuestros
-          ingredientes”.
-        </p>
-        <div className="space-y-3">
-          {ingredientTexts.map((text) => (
-            <CmsTextField
-              key={text.key}
-              textKey={text.key}
-              label={INGREDIENT_TEXT_LABELS[text.key] ?? text.key}
-              published={text.value}
-              draft={text.valueDraft}
-              style={text.style}
-              styleDraft={text.styleDraft}
-              maxLength={text.maxLength}
-              multiline={text.maxLength > 100}
-            />
-          ))}
-        </div>
-      </section>
       {images.length > 0 && (
         <section className="mt-8">
           <h2 className="mb-4 font-black uppercase tracking-tight text-xl text-ink">
@@ -119,7 +54,7 @@ export default async function EditorHomePage() {
                 label={
                   image.key === "home.hero.background"
                     ? "Hero · imagen de fondo"
-                    : image.key
+                    : humanizeCmsKey(image.key)
                 }
                 published={image.url}
                 draft={image.urlDraft}

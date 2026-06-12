@@ -2,11 +2,12 @@ import SubTabs from "@/components/SubTabs";
 import EditorStatusBar from "@/components/EditorStatusBar";
 
 const EDITOR_TABS = [
-  { href: "/admin/editor/identidad", label: "Identidad" },
-  { href: "/admin/editor/home", label: "Home" },
-  { href: "/admin/editor/catalogo", label: "Catálogo" },
-  { href: "/admin/editor/checkout", label: "Checkout" },
-  { href: "/admin/editor/footer", label: "Footer" },
+  { href: "/admin/editor/identidad", label: "Marca y colores" },
+  { href: "/admin/editor/home", label: "Página de inicio" },
+  { href: "/admin/editor/catalogo", label: "Productos" },
+  { href: "/admin/editor/ingredientes", label: "Ingredientes" },
+  { href: "/admin/editor/checkout", label: "Finalizar compra" },
+  { href: "/admin/editor/footer", label: "Pie de página" },
 ];
 
 // Shared layout for the site editor: title, sub-tabs, and the always-visible
