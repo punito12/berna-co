@@ -8,15 +8,14 @@ const LABELS: Record<string, string> = {
   "footer.email": "Email de contacto",
   "footer.whatsapp": "WhatsApp",
   "footer.copyright": "Copyright",
-  "legal.terms": "Términos y condiciones",
-  "legal.privacy": "Política de privacidad",
 };
 
+// Nota: las páginas legales (/terminos, /privacidad, /envios,
+// /cambios-devoluciones) hoy son contenido fijo en código y NO leen del CMS.
+// Por eso no se muestran acá: evitamos campos que parezcan editables sin serlo.
+// La conexión real de las legales al CMS queda para una tarea P1.
 export default async function EditorFooterPage() {
-  const [footer, legal] = await Promise.all([
-    listTextsByCategory("footer"),
-    listTextsByCategory("legal"),
-  ]);
+  const footer = await listTextsByCategory("footer");
   return (
     <div className="space-y-8">
       <section>
@@ -34,26 +33,6 @@ export default async function EditorFooterPage() {
               style={t.style}
               styleDraft={t.styleDraft}
               maxLength={t.maxLength}
-            />
-          ))}
-        </div>
-      </section>
-      <section>
-        <h2 className="mb-4 font-black uppercase tracking-tight text-xl text-ink">
-          Páginas legales
-        </h2>
-        <div className="space-y-3">
-          {legal.map((t) => (
-            <CmsTextField
-              key={t.key}
-              textKey={t.key}
-              label={LABELS[t.key] ?? t.key}
-              published={t.value}
-              draft={t.valueDraft}
-              style={t.style}
-              styleDraft={t.styleDraft}
-              maxLength={t.maxLength}
-              multiline
             />
           ))}
         </div>

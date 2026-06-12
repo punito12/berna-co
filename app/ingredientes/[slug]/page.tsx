@@ -101,7 +101,7 @@ export default async function IngredientDetailPage({
       </header>
 
       <section className="mx-auto max-w-5xl px-4 py-12 sm:py-16">
-        <p className="mb-4 text-xs font-black uppercase tracking-[0.28em] text-tomato">
+        <p className="mb-4 text-xs font-black uppercase tracking-[0.28em] text-accent">
           {SITE_NAME} · Ingredientes
         </p>
         <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
@@ -148,7 +148,7 @@ export default async function IngredientDetailPage({
                 ? `/?preview=${encodeURIComponent(searchParams.preview)}#productos`
                 : "/#productos"
             }
-            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-tomato px-5 text-sm font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-tomato/90 sm:mt-0"
+            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-accent/90 sm:mt-0"
           >
             Ver productos
           </Link>

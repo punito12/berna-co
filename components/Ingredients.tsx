@@ -143,10 +143,10 @@ export default function Ingredients({
                 <span className="rounded-full border border-line bg-cream/60 p-4 text-ink transition-transform duration-300 group-hover:scale-105">
                   <item.Icon />
                 </span>
-                <h3 className="font-black uppercase tracking-tight text-xl text-ink">
+                <h3 className="flex min-h-[3.5rem] items-center justify-center font-black uppercase tracking-tight text-xl leading-tight text-ink">
                   {item.title}
                 </h3>
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-tomato transition-colors group-hover:text-ink">
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-accent transition-colors group-hover:text-ink">
                   Ver beneficios
                 </span>
               </Link>

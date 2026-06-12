@@ -37,7 +37,7 @@ export default function LegalInfoPage({
       </header>
 
       <section className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
-        <p className="mb-4 text-xs font-black uppercase tracking-[0.28em] text-tomato">
+        <p className="mb-4 text-xs font-black uppercase tracking-[0.28em] text-accent">
           {eyebrow}
         </p>
         <h1 className="max-w-3xl font-display text-4xl font-black leading-none sm:text-6xl">
@@ -77,7 +77,7 @@ export default function LegalInfoPage({
             href={`https://wa.me/${BUSINESS_WHATSAPP}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-tomato px-5 text-sm font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-tomato/90 sm:mt-0"
+            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-accent/90 sm:mt-0"
           >
             Consultar
           </a>
