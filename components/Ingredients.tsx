@@ -79,56 +79,49 @@ function ChickenIcon() {
 }
 
 function CowIcon() {
-  // Pasture beef icon: side-profile animal, matching the chicken's line style.
+  // Cow face icon: clear and friendly, matching the line style of the set.
   return (
     <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
-      {/* body */}
+      {/* ears */}
       <path
-        d="M13 36c0-8 7-14 18-14h12c7 0 12 5 12 12 0 8-6 14-16 14H24c-7 0-11-4-11-12Z"
+        d="M21 25c-6-5-12-5-16-1 3 5 9 7 16 5m22-4c6-5 12-5 16-1-3 5-9 7-16 5"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      {/* horns */}
+      <path
+        d="M24 18c-4-4-5-9-2-13 2 4 5 7 9 8m9 5c4-4 5-9 2-13-2 4-5 7-9 8"
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* head + muzzle */}
+      {/* face */}
       <path
-        d="M45 24c3-5 8-7 13-4-2 5-5 8-10 8"
+        d="M19 25c0-8 5-13 13-13s13 5 13 13c0 6-2 10-5 13 3 2 5 5 5 9 0 6-5 10-13 10s-13-4-13-10c0-4 2-7 5-9-3-3-5-7-5-13Z"
         stroke="currentColor"
         strokeWidth="2.5"
-        strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* horn + ear */}
+      {/* muzzle */}
       <path
-        d="M48 21c1-4 4-7 8-8-1 4-3 6-6 8m-6 1-4-5"
+        d="M23 44c2-4 5-6 9-6s7 2 9 6c-1 5-4 8-9 8s-8-3-9-8Z"
         stroke="currentColor"
         strokeWidth="2.5"
-        strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* back + belly detail */}
+      {/* soft markings */}
       <path
-        d="M20 30c5-3 13-3 19 0m-20 9h19"
+        d="M25 21c-2 2-3 5-3 9m17-9c2 2 3 5 3 9m-14 17h8"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
       />
-      {/* legs + tail */}
-      <path
-        d="M24 48v7m14-7v7m-17 0h6m8 0h6M13 34l-5-4m0 0 2 6"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="52" cy="23" r="1.4" fill="currentColor" />
-      {/* pasture line */}
-      <path
-        d="M9 58h9m31 0h6M15 54l-3 4m38-4 3 4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+      <circle cx="27" cy="31" r="1.8" fill="currentColor" />
+      <circle cx="37" cy="31" r="1.8" fill="currentColor" />
+      <circle cx="29" cy="45" r="1.3" fill="currentColor" />
+      <circle cx="35" cy="45" r="1.3" fill="currentColor" />
     </svg>
   );
 }
