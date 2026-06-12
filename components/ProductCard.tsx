@@ -127,7 +127,7 @@ export default function ProductCard({
         {/* Photo */}
         <Link
           href={`/producto/${product.slug}`}
-          className="relative block aspect-[2/3] w-full overflow-hidden bg-cream"
+          className="relative block aspect-[4/5] w-full overflow-hidden bg-cream sm:aspect-[2/3]"
           aria-label={`Ver ${product.name}`}
         >
           <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line">
@@ -169,7 +169,7 @@ export default function ProductCard({
           </span>
         </Link>
 
-        <div className="flex flex-1 flex-col p-3 sm:p-5 md:p-6">
+        <div className="flex flex-1 flex-col p-2.5 pt-2 sm:p-5 md:p-6">
           <Link href={`/producto/${product.slug}`}>
             <h3 className="font-black uppercase tracking-tight text-base leading-tight text-ink transition-colors hover:text-muted sm:text-xl">
               {product.name}
@@ -217,7 +217,7 @@ export default function ProductCard({
           </div>
 
           {/* Price + CTA */}
-          <div className="mt-auto pt-4 sm:pt-5">
+          <div className="mt-auto pt-3 sm:pt-5">
             {priceDisplay}
 
             {paymentChips.length > 0 && (
