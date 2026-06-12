@@ -54,7 +54,7 @@ function formatDate(iso: string): string {
 }
 
 // Top status bar of the site editor: pending count + preview/publish/discard
-// actions + version history.
+// actions. More delicate tools live under "Opciones avanzadas".
 export default function EditorStatusBar() {
   const router = useRouter();
   const [pending, setPending] = useState<Pending>(null);
@@ -279,20 +279,20 @@ export default function EditorStatusBar() {
   }
 
   return (
-    <div className="sticky top-4 z-30 mb-6 rounded-lg border border-line bg-white px-4 py-3 shadow-sm">
+    <div className="sticky top-4 z-30 mb-6 rounded-2xl border border-line bg-white px-4 py-3 shadow-sm">
       {tourOpen && (
-        <div className="mb-4 rounded-lg border border-ink bg-cream p-4">
+        <div className="mb-4 rounded-xl border border-ink bg-cream p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="font-black uppercase tracking-tight text-lg text-ink">
-                Tour rápido del editor
+                Cómo funciona el editor
               </p>
               <ol className="mt-3 grid gap-2 text-sm text-muted sm:grid-cols-2">
-                <li>1. Editá textos, colores, logo y secciones: todo queda en borrador.</li>
-                <li>2. Usá preview para revisar drafts sin cambiar el sitio público.</li>
-                <li>3. Publicar copia el borrador al sitio y guarda una versión.</li>
-                <li>4. Antes de publicar, te avisamos si algo quedó incompleto o con errores.</li>
-                <li>5. Historial, revertir y backup te dejan volver atrás.</li>
+                <li>1. Editá contenido y diseño: todo queda privado.</li>
+                <li>2. Revisá la vista previa antes de publicar.</li>
+                <li>3. Publicar hace visibles los cambios en el sitio.</li>
+                <li>4. Te avisamos si algo importante necesita revisión.</li>
+                <li>5. Podés volver atrás desde opciones avanzadas.</li>
                 <li>6. Si salís con cambios pendientes, el navegador te avisa.</li>
               </ol>
             </div>
@@ -318,7 +318,7 @@ export default function EditorStatusBar() {
               : "Sin cambios pendientes"}
           </span>
           <p className="mt-1 text-[11px] uppercase tracking-widest text-muted">
-            Editás un borrador · el público ve lo publicado
+            Estás editando una versión privada · el público ve lo publicado
           </p>
           {count > 0 && (
             <p className="mt-2 text-xs text-muted">Resumen: {summary}</p>
@@ -361,7 +361,7 @@ export default function EditorStatusBar() {
             disabled={busy !== null}
             className="rounded border border-line bg-white px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-ink hover:border-black disabled:opacity-40"
           >
-            {busy === "preview" ? "Abriendo..." : "Ver preview"}
+            {busy === "preview" ? "Abriendo..." : "Vista previa"}
           </button>
           <button
             type="button"
@@ -384,68 +384,78 @@ export default function EditorStatusBar() {
 
       <details className="mt-4 border-t border-line pt-3">
         <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-widest text-muted">
-          Backup del CMS
+          Opciones avanzadas
         </summary>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={downloadBackup}
-            disabled={busy !== null}
-            className="rounded border border-line bg-white px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-ink hover:border-black disabled:opacity-40"
-          >
-            {busy === "backup" ? "Preparando..." : "Descargar backup"}
-          </button>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={busy !== null}
-            className="rounded border border-line bg-white px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-muted hover:border-black hover:text-ink disabled:opacity-40"
-          >
-            {busy === "import" ? "Importando..." : "Importar backup"}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) importBackup(file);
-            }}
-          />
-        </div>
-      </details>
-
-      <details className="mt-4 border-t border-line pt-3">
-        <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-widest text-muted">
-          Historial de versiones
-        </summary>
-        <div className="mt-3 space-y-2">
-          {versions.length === 0 ? (
-            <p className="text-sm text-muted">Todavía no hay publicaciones.</p>
-          ) : (
-            versions.map((version) => (
-              <div
-                key={version.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded border border-line px-3 py-2"
+        <div className="mt-3 grid gap-4 lg:grid-cols-2">
+          <section className="rounded-xl border border-line bg-cream/35 p-3">
+            <p className="font-black uppercase tracking-wide text-[11px] text-ink">
+              Copia de seguridad
+            </p>
+            <p className="mt-1 text-xs leading-5 text-muted">
+              Usalo solo para guardar o restaurar todo el contenido del editor.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={downloadBackup}
+                disabled={busy !== null}
+                className="rounded border border-line bg-white px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-ink hover:border-black disabled:opacity-40"
               >
-                <span className="text-sm text-ink">
-                  {formatDate(version.publishedAt)}
-                  <span className="ml-2 text-xs text-muted">
-                    {version.publishedBy}
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => revert(version)}
-                  disabled={busy !== null}
-                  className="text-[10px] font-bold uppercase tracking-widest text-ink hover:underline disabled:opacity-40"
-                >
-                  {busy === version.id ? "Restaurando..." : "Revertir"}
-                </button>
-              </div>
-            ))
-          )}
+                {busy === "backup" ? "Preparando..." : "Descargar copia"}
+              </button>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={busy !== null}
+                className="rounded border border-line bg-white px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-muted hover:border-black hover:text-ink disabled:opacity-40"
+              >
+                {busy === "import" ? "Importando..." : "Importar copia"}
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) importBackup(file);
+                }}
+              />
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-line bg-cream/35 p-3">
+            <p className="font-black uppercase tracking-wide text-[11px] text-ink">
+              Historial de publicaciones
+            </p>
+            <div className="mt-3 space-y-2">
+              {versions.length === 0 ? (
+                <p className="text-sm text-muted">Todavía no hay publicaciones.</p>
+              ) : (
+                versions.map((version) => (
+                  <div
+                    key={version.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded border border-line bg-white px-3 py-2"
+                  >
+                    <span className="text-sm text-ink">
+                      {formatDate(version.publishedAt)}
+                      <span className="ml-2 text-xs text-muted">
+                        {version.publishedBy}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => revert(version)}
+                      disabled={busy !== null}
+                      className="text-[10px] font-bold uppercase tracking-widest text-ink hover:underline disabled:opacity-40"
+                    >
+                      {busy === version.id ? "Restaurando..." : "Revertir"}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
         </div>
       </details>
     </div>

@@ -4,6 +4,13 @@ import { CATALOG_CMS_LABELS } from "@/lib/catalog-cms-labels";
 import { prisma } from "@/lib/db";
 import CmsTextField from "@/components/CmsTextField";
 
+const ECOMMERCE_LABEL_GROUPS = [
+  { id: "payment", title: "Chips de pago" },
+  { id: "cart", title: "Botones y carrito" },
+  { id: "stock", title: "Mensajes de stock" },
+  { id: "detail", title: "Detalle de producto" },
+] as const;
+
 // Human labels for the catalog text keys.
 const LABELS: Record<string, string> = {
   "catalogo.eyebrow": "Bajada (arriba del título)",
@@ -29,13 +36,21 @@ function isStyleLockedLabel(key: string) {
 export default async function EditorCatalogoPage() {
   await ensureCatalogCmsLabels();
   const texts = await listTextsByCategory("catalogo");
+  const textByKey = new Map(texts.map((text) => [text.key, text]));
+  const ecommerceLabelKeys = new Set(CATALOG_CMS_LABELS.map((label) => label.key));
+  const generalTexts = texts.filter((text) => !ecommerceLabelKeys.has(text.key));
+
   return (
     <div>
-      <h2 className="mb-4 font-black uppercase tracking-tight text-xl text-ink">
-        Textos del catálogo
+      <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
+        Productos
       </h2>
+      <p className="mb-4 text-sm leading-6 text-muted">
+        Editá los textos generales que acompañan la grilla de productos y la
+        experiencia de compra.
+      </p>
       <div className="space-y-3">
-        {texts.map((t) => (
+        {generalTexts.map((t) => (
           <CmsTextField
             key={t.key}
             textKey={t.key}
@@ -50,6 +65,50 @@ export default async function EditorCatalogoPage() {
           />
         ))}
       </div>
+
+      <section className="mt-8">
+        <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
+          Textos de cards y carrito
+        </h2>
+        <p className="mb-4 text-sm text-muted">
+          Textos repetidos en productos, chips de pago, carrito y detalle de
+          producto.
+        </p>
+        <div className="space-y-6">
+          {ECOMMERCE_LABEL_GROUPS.map((group) => {
+            const groupLabels = CATALOG_CMS_LABELS.filter(
+              (label) => label.group === group.id
+            );
+            return (
+              <section key={group.id}>
+                <h3 className="mb-3 font-black uppercase tracking-wide text-sm text-ink">
+                  {group.title}
+                </h3>
+                <div className="space-y-3">
+                  {groupLabels.map((label) => {
+                    const text = textByKey.get(label.key);
+                    if (!text) return null;
+                    return (
+                      <CmsTextField
+                        key={text.key}
+                        textKey={text.key}
+                        label={label.label}
+                        published={text.value}
+                        draft={text.valueDraft}
+                        style={text.style}
+                        styleDraft={text.styleDraft}
+                        maxLength={text.maxLength}
+                        multiline={text.maxLength > 80}
+                        allowStyle={false}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
@@ -87,8 +146,7 @@ async function ensureCatalogCmsLabels() {
   await prisma.$transaction(
     CATALOG_CMS_LABELS.map((label) => {
       const defaultValue = defaultValueFor(label);
-      return (
-      prisma.siteText.upsert({
+      return prisma.siteText.upsert({
         where: { key: label.key },
         update: { maxLength: label.maxLength, category: label.category },
         create: {
@@ -98,8 +156,7 @@ async function ensureCatalogCmsLabels() {
           maxLength: label.maxLength,
           category: label.category,
         },
-      })
-      );
+      });
     })
   );
 }

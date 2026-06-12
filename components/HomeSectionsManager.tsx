@@ -187,7 +187,7 @@ export default function HomeSectionsManager({
   }
 
   async function deleteSection(key: string) {
-    const ok = window.confirm("Vas a borrar esta sección del CMS.");
+    const ok = window.confirm("Vas a borrar esta sección del sitio.");
     if (!ok) return;
     setBusy(key);
     try {
@@ -253,8 +253,8 @@ export default function HomeSectionsManager({
       </div>
 
       <p className="text-sm text-muted">
-        Arrastrá para reordenar. Editá una sección para cambiar su configuración
-        de bloque. Todo se guarda como borrador hasta publicar.
+        Arrastrá para reordenar. Editá una sección para cambiar su contenido.
+        Todo se guarda como borrador hasta publicar.
       </p>
 
       {sections.map((section) => {
@@ -283,7 +283,7 @@ export default function HomeSectionsManager({
                     {config.title || CMS_BLOCK_LABELS[type]}
                   </p>
                   <p className="text-[11px] uppercase tracking-widest text-muted">
-                    {CMS_BLOCK_LABELS[type]} · {section.key}
+                    {CMS_BLOCK_LABELS[type]}
                   </p>
                 </div>
                 {!section.visibleDraft && (
@@ -330,7 +330,7 @@ export default function HomeSectionsManager({
                 {legacyKeys.length > 0 && (
                   <div className="space-y-3">
                     <p className="font-bold uppercase tracking-widest text-[11px] text-muted">
-                      Campos heredados
+                    Textos principales
                     </p>
                     {legacyKeys.map((tk) => {
                       const t = textByKey.get(tk);
@@ -417,7 +417,7 @@ function BlockConfigEditor({
   return (
     <div className="rounded-lg border border-line bg-cream/30 p-4">
       <p className="font-bold uppercase tracking-widest text-[11px] text-muted">
-        Configuración del bloque
+        Contenido de la sección
       </p>
       <div className="mt-3 grid gap-3">
         {["hero", "products_grid", "features", "image_text", "map"].includes(type) && (

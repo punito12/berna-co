@@ -27,10 +27,16 @@ export default async function EditorHomePage() {
   ]);
 
   return (
-    <div>
-      <h2 className="mb-4 font-black uppercase tracking-tight text-xl text-ink">
-        Secciones del Home
-      </h2>
+    <div className="space-y-8">
+      <section>
+        <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
+          Página de inicio
+        </h2>
+        <p className="mb-4 text-sm leading-6 text-muted">
+          Organizá las secciones que ve el cliente al entrar al sitio.
+          Reordená, ocultá o editá contenido sin publicar hasta revisar la
+          vista previa.
+        </p>
       <HomeSectionsManager
         initialSections={sections.map((s) => ({
           key: s.key,
@@ -41,11 +47,16 @@ export default async function EditorHomePage() {
         }))}
         texts={texts}
       />
+      </section>
       {images.length > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-4 font-black uppercase tracking-tight text-xl text-ink">
-            Imágenes del Home
+        <section>
+          <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
+            Imágenes principales
           </h2>
+          <p className="mb-4 text-sm leading-6 text-muted">
+            Estas imágenes acompañan las secciones visibles de la página de
+            inicio.
+          </p>
           <div className="space-y-3">
             {images.map((image) => (
               <CmsImageField
@@ -53,7 +64,7 @@ export default async function EditorHomePage() {
                 imageKey={image.key}
                 label={
                   image.key === "home.hero.background"
-                    ? "Hero · imagen de fondo"
+                    ? "Inicio · imagen principal"
                     : humanizeCmsKey(image.key)
                 }
                 published={image.url}

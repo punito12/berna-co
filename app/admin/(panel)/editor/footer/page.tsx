@@ -21,7 +21,7 @@ export default async function EditorFooterPage() {
     <div className="space-y-8">
       <section>
         <h2 className="mb-4 font-black uppercase tracking-tight text-xl text-ink">
-          Footer y contacto
+          Pie de página y contacto
         </h2>
         <div className="space-y-3">
           {footer.map((t) => (

@@ -30,12 +30,12 @@ export default async function EditorLegalesPage() {
   return (
     <div>
       <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
-        Páginas legales
+        Legales
       </h2>
       <p className="mb-6 text-sm text-muted">
         Editá el contenido de las páginas de información del sitio. En el campo
-        “Contenido”, cada bloque empieza con su título en la primera línea y el
-        texto debajo; dejá una línea en blanco para separar un bloque del
+        “Contenido”, cada sección empieza con su título en la primera línea y el
+        texto debajo; dejá una línea en blanco para separar una sección de la
         siguiente.
       </p>
 

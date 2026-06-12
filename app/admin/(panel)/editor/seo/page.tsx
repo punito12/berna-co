@@ -1,0 +1,18 @@
+import CmsComingSoonCard from "@/components/CmsComingSoonCard";
+
+export default function EditorSeoPage() {
+  return (
+    <CmsComingSoonCard
+      title="SEO y compartir"
+      description="Próximamente vas a poder editar acá cómo aparece la web en Google y al compartirla por WhatsApp o redes sociales."
+      items={[
+        "Título general del sitio",
+        "Descripción para Google",
+        "Imagen para compartir",
+        "Preview de WhatsApp/redes",
+        "SEO de productos",
+        "SEO de ingredientes",
+      ]}
+    />
+  );
+}

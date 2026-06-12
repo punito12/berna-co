@@ -16,7 +16,7 @@ export default async function EditorIdentidadPage() {
   return (
     <div>
       <h2 className="mb-4 font-black uppercase tracking-tight text-xl text-ink">
-        Identidad visual
+        Marca y estilos
       </h2>
       <IdentityEditor
         colorsDraft={parse(content.themeColorsDraft, DEFAULT_THEME)}

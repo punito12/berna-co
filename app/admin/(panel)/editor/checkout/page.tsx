@@ -126,10 +126,11 @@ export default async function EditorCheckoutPage() {
   return (
     <div>
       <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
-        Textos del checkout
+        Finalizar compra
       </h2>
       <p className="mb-4 text-sm text-muted">
-        En el mensaje de WhatsApp podés usar{" "}
+        Editá los textos que ve el cliente durante el checkout. En el mensaje
+        de WhatsApp podés usar{" "}
         <code className="rounded bg-cream px-1">{"{pedidoId}"}</code>,{" "}
         <code className="rounded bg-cream px-1">{"{total}"}</code> y{" "}
         <code className="rounded bg-cream px-1">{"{cliente}"}</code>, que se

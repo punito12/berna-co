@@ -60,10 +60,10 @@ export default async function EditorIngredientesPage() {
   return (
     <div>
       <h2 className="mb-2 font-black uppercase tracking-tight text-xl text-ink">
-        Páginas de ingredientes
+        Ingredientes
       </h2>
       <p className="mb-4 text-sm text-muted">
-        Estos textos aparecen en las páginas que se abren desde “Nuestros
+        Editá los textos de las páginas que se abren desde “Nuestros
         ingredientes” en la página de inicio.
       </p>
       <div className="space-y-3">
