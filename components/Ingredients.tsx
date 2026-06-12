@@ -78,55 +78,18 @@ function ChickenIcon() {
   );
 }
 
-function CowIcon() {
-  // Cow face icon: clear and friendly, matching the line style of the set.
+function PecetoPasturaIcon() {
   return (
-    <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
-      {/* ears */}
-      <path
-        d="M21 25c-6-5-12-5-16-1 3 5 9 7 16 5m22-4c6-5 12-5 16-1-3 5-9 7-16 5"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      {/* horns */}
-      <path
-        d="M24 18c-4-4-5-9-2-13 2 4 5 7 9 8m9 5c4-4 5-9 2-13-2 4-5 7-9 8"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* face */}
-      <path
-        d="M19 25c0-8 5-13 13-13s13 5 13 13c0 6-2 10-5 13 3 2 5 5 5 9 0 6-5 10-13 10s-13-4-13-10c0-4 2-7 5-9-3-3-5-7-5-13Z"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      {/* muzzle */}
-      <path
-        d="M23 44c2-4 5-6 9-6s7 2 9 6c-1 5-4 8-9 8s-8-3-9-8Z"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      {/* soft markings */}
-      <path
-        d="M25 21c-2 2-3 5-3 9m17-9c2 2 3 5 3 9m-14 17h8"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <circle cx="27" cy="31" r="1.8" fill="currentColor" />
-      <circle cx="37" cy="31" r="1.8" fill="currentColor" />
-      <circle cx="29" cy="45" r="1.3" fill="currentColor" />
-      <circle cx="35" cy="45" r="1.3" fill="currentColor" />
-    </svg>
+    <img
+      src="/images/icons/peceto-de-pastura-vaca-original.svg"
+      alt=""
+      aria-hidden="true"
+      className="h-16 w-16 scale-150 object-contain"
+    />
   );
 }
 
-const ICONS = [EggIcon, ChickenIcon, CowIcon];
+const ICONS = [EggIcon, ChickenIcon, PecetoPasturaIcon];
 
 export default function Ingredients({
   eyebrow = "Lo que hay adentro",
