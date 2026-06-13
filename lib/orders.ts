@@ -109,7 +109,11 @@ export async function createOrder(
 
   // The chosen time slot must be an active one (same for all zones).
   const activeSlot = await prisma.deliverySlot.findFirst({
-    where: { label: input.scheduledSlot, available: true },
+    where: {
+      label: input.scheduledSlot,
+      available: true,
+      scheduleType: input.deliveryType,
+    },
   });
   if (!activeSlot) {
     throw new OrderValidationError("Ese horario no está disponible.");
@@ -150,12 +154,15 @@ export async function createOrder(
     deliveryCoords = { lat: geo.lat, lng: geo.lng };
     deliveryZone = zone;
   } else {
-    // PICKUP (not enabled yet) still uses the global delivery days.
     const enabledDay = await prisma.availableDeliveryDay.findFirst({
-      where: { dayOfWeek: scheduledDate.getDay(), available: true },
+      where: {
+        dayOfWeek: scheduledDate.getDay(),
+        available: true,
+        scheduleType: "PICKUP",
+      },
     });
     if (!enabledDay) {
-      throw new OrderValidationError("Ese día no hay entregas disponibles.");
+      throw new OrderValidationError("Ese día no hay retiros disponibles.");
     }
   }
 
@@ -298,6 +305,7 @@ export async function createOrder(
           quantityPromo + kgDiscount + codeDiscount + methodDiscount,
         total,
         mpPaymentId: null,
+        paymentStatus: "PENDING",
         items: { create: itemsToCreate },
       },
       select: { id: true },

@@ -338,12 +338,64 @@ export async function deleteProduct(id: string) {
 
 // ---- Delivery config ----
 
+async function ensureScheduleDefaults() {
+  const [deliveryDays, pickupDays, deliverySlots, pickupSlots] =
+    await Promise.all([
+      prisma.availableDeliveryDay.findMany({
+        where: { scheduleType: "DELIVERY" },
+      }),
+      prisma.availableDeliveryDay.findMany({
+        where: { scheduleType: "PICKUP" },
+      }),
+      prisma.deliverySlot.findMany({ where: { scheduleType: "DELIVERY" } }),
+      prisma.deliverySlot.findMany({ where: { scheduleType: "PICKUP" } }),
+    ]);
+
+  const pickupDaySet = new Set(pickupDays.map((d) => d.dayOfWeek));
+  const deliveryDayByWeekday = new Map(
+    deliveryDays.map((d) => [d.dayOfWeek, d.available])
+  );
+  const missingDays = Array.from({ length: 7 }, (_, dayOfWeek) => dayOfWeek)
+    .filter((dayOfWeek) => !pickupDaySet.has(dayOfWeek))
+    .map((dayOfWeek) => ({
+      dayOfWeek,
+      scheduleType: "PICKUP",
+      available: deliveryDayByWeekday.get(dayOfWeek) ?? false,
+    }));
+
+  const pickupSlotLabels = new Set(pickupSlots.map((s) => s.label));
+  const missingSlots = deliverySlots
+    .filter((slot) => !pickupSlotLabels.has(slot.label))
+    .map((slot) => ({
+      label: slot.label,
+      available: slot.available,
+      scheduleType: "PICKUP",
+    }));
+
+  if (missingDays.length > 0) {
+    await prisma.availableDeliveryDay.createMany({ data: missingDays });
+  }
+  if (missingSlots.length > 0) {
+    await prisma.deliverySlot.createMany({ data: missingSlots });
+  }
+}
+
 export async function getDeliveryConfig() {
+  await ensureScheduleDefaults();
   const [days, slots] = await Promise.all([
     prisma.availableDeliveryDay.findMany({ orderBy: { dayOfWeek: "asc" } }),
-    prisma.deliverySlot.findMany(),
+    prisma.deliverySlot.findMany({ orderBy: { label: "asc" } }),
   ]);
-  return { days, slots };
+  return {
+    delivery: {
+      days: days.filter((day) => day.scheduleType === "DELIVERY"),
+      slots: slots.filter((slot) => slot.scheduleType === "DELIVERY"),
+    },
+    pickup: {
+      days: days.filter((day) => day.scheduleType === "PICKUP"),
+      slots: slots.filter((slot) => slot.scheduleType === "PICKUP"),
+    },
+  };
 }
 
 export async function setDayAvailability(id: string, available: boolean) {

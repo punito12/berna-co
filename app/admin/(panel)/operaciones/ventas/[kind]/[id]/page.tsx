@@ -138,7 +138,11 @@ export default async function SaleDetailPage({
             {sale.deliveryType && (
               <Row
                 label="Tipo"
-                value={sale.deliveryType === "DELIVERY" ? "Envío" : "Retiro"}
+                value={
+                  sale.deliveryType === "DELIVERY"
+                    ? "Envío a domicilio"
+                    : "Pasar a retirar"
+                }
               />
             )}
             {sale.address && <Row label="Dirección" value={sale.address} />}

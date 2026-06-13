@@ -64,6 +64,10 @@ export default function CheckoutPage() {
   }, []);
   const ct = (key: string, fb: string) => cms[key] || fb;
   const cmsText = (key: string) => ({ "data-cms-text": key });
+  const pickupOptionLabel = () => {
+    const label = ct("checkout.step2.pickup_option", "Pasar a retirar");
+    return label.trim() === "Retiro en local" ? "Pasar a retirar" : label;
+  };
 
   // --- form state ---
   const [name, setName] = useState("");
@@ -100,6 +104,7 @@ export default function CheckoutPage() {
   // --- zone (address → coordinates → polygon) state ---
   // options holds the enabled weekdays + slots for the covered zone.
   const [options, setOptions] = useState<DeliveryOptions | null>(null);
+  const [loadingPickupOptions, setLoadingPickupOptions] = useState(false);
   const [zoneName, setZoneName] = useState<string | null>(null);
   const [checkingZone, setCheckingZone] = useState(false);
   const [zoneError, setZoneError] = useState<string | null>(null);
@@ -230,7 +235,9 @@ export default function CheckoutPage() {
         dataLines.push(`${ct("checkout.step2.address_label", "Dirección")}: ${addressParts.join(", ")}`);
       }
     } else {
-      dataLines.push(`${ct("checkout.step2.address_label", "Dirección")}: ${ct("checkout.step2.pickup_option", "Retiro en local")}`);
+      dataLines.push(
+        `${ct("checkout.step2.address_label", "Dirección")}: ${pickupOptionLabel()}`
+      );
     }
     if (dateIso || slot) {
       dataLines.push(
@@ -259,6 +266,35 @@ export default function CheckoutPage() {
     setDateIso(null);
     setSlot(null);
   }
+
+  useEffect(() => {
+    resetZone();
+    if (deliveryType !== "PICKUP") return;
+
+    let cancelled = false;
+    setLoadingPickupOptions(true);
+    fetch("/api/delivery-options?type=PICKUP")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        setOptions({
+          enabledWeekdays: data.enabledWeekdays ?? [],
+          slots: data.slots ?? [],
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setOptions({ enabledWeekdays: [], slots: [] });
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPickupOptions(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // Resetting schedule when the delivery type changes is intentional.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveryType]);
 
   // Geocodes the structured address and checks which zone polygon it lands in.
   // If covered, loads that zone's days + slots; otherwise shows the right msg.
@@ -316,7 +352,12 @@ export default function CheckoutPage() {
       if (!covered)
         return setError(ct("checkout.validation.verify_address", "Verificá tu dirección (paso 2) antes de seguir."));
     }
-    if (!dateIso) return setError(ct("checkout.validation.date", "Elegí un día de entrega."));
+    if (!dateIso)
+      return setError(
+        deliveryType === "PICKUP"
+          ? ct("checkout.validation.pickup_date", "Elegí un día para retirar.")
+          : ct("checkout.validation.date", "Elegí un día de entrega.")
+      );
     if (!slot) return setError(ct("checkout.validation.slot", "Elegí un horario."));
 
     setSubmitting(true);
@@ -532,7 +573,7 @@ export default function CheckoutPage() {
               onClick={() => setDeliveryType("PICKUP")}
               textKey="checkout.step2.pickup_option"
             >
-              {ct("checkout.step2.pickup_option", "Retiro en local")}
+              {pickupOptionLabel()}
             </ChoiceButton>
           </div>
           {deliveryType === "DELIVERY" && (
@@ -651,18 +692,30 @@ export default function CheckoutPage() {
         >
           {!options && (
             <p className="text-sm text-muted">
-              {ct(
-                "checkout.step3.verify_first",
-                "Primero verificá tu zona de entrega (paso 2) para ver los días disponibles."
-              )}
+              {loadingPickupOptions
+                ? ct("checkout.step3.loading_pickup", "Cargando horarios de retiro…")
+                : deliveryType === "PICKUP"
+                ? ct(
+                    "checkout.step3.pickup_select_first",
+                    "Elegí un día y horario disponible para pasar a retirar."
+                  )
+                : ct(
+                    "checkout.step3.verify_first",
+                    "Primero verificá tu zona de entrega (paso 2) para ver los días disponibles."
+                  )}
             </p>
           )}
           {options && options.enabledWeekdays.length === 0 && (
             <p className="text-sm text-muted">
-              {ct(
-                "checkout.step3.no_days",
-                "Tu zona no tiene días de entrega configurados por el momento."
-              )}
+              {deliveryType === "PICKUP"
+                ? ct(
+                    "checkout.step3.no_pickup_days",
+                    "No hay días de retiro configurados por el momento."
+                  )
+                : ct(
+                    "checkout.step3.no_days",
+                    "Tu zona no tiene días de entrega configurados por el momento."
+                  )}
             </p>
           )}
           {options && options.enabledWeekdays.length > 0 && (

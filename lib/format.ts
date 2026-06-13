@@ -13,10 +13,12 @@ export function formatLongDate(date: Date): string {
 
 // Human label for the delivery type.
 export function deliveryTypeLabel(type: string): string {
-  return type === "PICKUP" ? "Retiro en local (pick-up)" : "Envío a domicilio";
+  return type === "PICKUP" ? "Pasar a retirar" : "Envío a domicilio";
 }
 
 // Human label for the payment method.
 export function paymentMethodLabel(method: string): string {
-  return method === "MERCADOPAGO" ? "Mercado Pago" : "Efectivo al recibir";
+  if (method === "MERCADOPAGO") return "Mercado Pago";
+  if (method === "TRANSFERENCIA") return "Transferencia bancaria";
+  return "Efectivo al recibir";
 }

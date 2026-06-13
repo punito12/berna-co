@@ -7,7 +7,6 @@
 
 import { prisma } from "@/lib/db";
 import type { SaleKind } from "@/lib/sales-detail";
-import { recordCashOrderIncome } from "@/lib/cash";
 import { deleteManualSale } from "@/lib/management";
 
 export const ACTIVE_STATUSES = ["CONFIRMED", "DELIVERED", "CANCELLED"] as const;
@@ -37,28 +36,9 @@ export async function setSaleStatus(
       throw new Error("Un pedido cancelado no se puede reactivar.");
     await prisma.order.update({ where: { id }, data: { status } });
 
-    // Efectivo / transferencia web order collected on delivery → record the
-    // income in Caja (source reflects the method). MP is handled by the webhook.
-    const nonMpMethods = ["CASH", "EFECTIVO", "TRANSFERENCIA"];
-    if (status === "DELIVERED" && nonMpMethods.includes(o.paymentMethod)) {
-      const full = await prisma.order.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          total: true,
-          customerName: true,
-          createdAt: true,
-          paymentMethod: true,
-        },
-      });
-      if (full) {
-        try {
-          await recordCashOrderIncome(full);
-        } catch (e) {
-          console.error("recordCashOrderIncome failed:", e);
-        }
-      }
-    }
+    // Payment is intentionally separate from delivery. Efectivo/transferencia
+    // orders stay PENDING until the admin uses "Registrar pago"; MP is handled
+    // by the webhook.
   } else {
     const s = await prisma.manualSale.findUnique({
       where: { id },

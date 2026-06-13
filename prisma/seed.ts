@@ -195,9 +195,14 @@ async function main() {
   // ones with their default availability; never overwrite the admin's choices.
   for (const d of deliveryDays) {
     await prisma.availableDeliveryDay.upsert({
-      where: { dayOfWeek: d.dayOfWeek },
+      where: {
+        scheduleType_dayOfWeek: {
+          scheduleType: "DELIVERY",
+          dayOfWeek: d.dayOfWeek,
+        },
+      },
       update: {}, // keep whatever the admin set
-      create: d,
+      create: { ...d, scheduleType: "DELIVERY" },
     });
   }
   console.log(`Ensured ${deliveryDays.length} delivery days.`);

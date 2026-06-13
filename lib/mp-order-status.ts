@@ -2,6 +2,7 @@ type MpOrderStatusInput = {
   paymentMethod: string | null;
   status: string;
   mpPaymentId?: string | null;
+  paymentStatus?: string;
 };
 
 export type PaymentBadgeTone = "success" | "warning" | "danger" | "neutral";
@@ -26,8 +27,14 @@ export function orderPaymentListLabel(order: MpOrderStatusInput): string {
   if (state === "APPROVED") return "MP aprobado";
   if (state === "PENDING") return "MP pendiente de pago";
   if (state === "CANCELLED") return "MP cancelado/rechazado";
-  if (order.paymentMethod === "TRANSFERENCIA") return "Transferencia";
-  return "Efectivo al recibir";
+  const status =
+    order.paymentStatus === "PAID"
+      ? "pagado"
+      : order.paymentStatus === "PARTIAL"
+      ? "parcial"
+      : "pendiente";
+  if (order.paymentMethod === "TRANSFERENCIA") return `Transferencia ${status}`;
+  return `Efectivo ${status}`;
 }
 
 export function orderPaymentMethodLabel(order: MpOrderStatusInput): string {
@@ -55,6 +62,9 @@ export function orderPaymentBadgeTone(order: MpOrderStatusInput): PaymentBadgeTo
   if (state === "APPROVED") return "success";
   if (state === "PENDING") return "warning";
   if (state === "CANCELLED") return "danger";
+  if (order.paymentStatus === "PAID") return "success";
+  if (order.paymentStatus === "PARTIAL") return "warning";
+  if (order.paymentStatus === "PENDING") return "warning";
   return "neutral";
 }
 

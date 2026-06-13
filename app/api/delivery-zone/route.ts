@@ -55,7 +55,8 @@ export async function POST(request: Request) {
     }
 
     const slots = await prisma.deliverySlot.findMany({
-      where: { available: true },
+      where: { available: true, scheduleType: "DELIVERY" },
+      orderBy: { label: "asc" },
     });
 
     return NextResponse.json({

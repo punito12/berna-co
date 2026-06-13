@@ -138,8 +138,8 @@ model Order {
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   // Cuenta corriente: PAID = saldado, PARTIAL = pago parcial, PENDING = a deber.
-  // Web orders are PAID (MP webhook / cash on confirm); CxC is mainly for sales.
-  paymentStatus String    @default("PAID") // PAID | PARTIAL | PENDING
+  // Web orders start PENDING; MP approval or admin payment registration marks paid.
+  paymentStatus String    @default("PENDING") // PAID | PARTIAL | PENDING
   dueDate       DateTime? // vencimiento (cuenta corriente)
 
   items    OrderItem[]
@@ -163,12 +163,19 @@ model DeliverySlot {
   id        String  @id @default(cuid())
   label     String // e.g. "10:00–12:00"
   available Boolean @default(true)
+  scheduleType String @default("DELIVERY") // DELIVERY | PICKUP
+
+  @@index([scheduleType])
 }
 
 model AvailableDeliveryDay {
   id        String  @id @default(cuid())
-  dayOfWeek Int     @unique // 0=Sun ... 6=Sat
+  dayOfWeek Int     // 0=Sun ... 6=Sat
   available Boolean @default(true)
+  scheduleType String @default("DELIVERY") // DELIVERY | PICKUP
+
+  @@unique([scheduleType, dayOfWeek])
+  @@index([scheduleType])
 }
 
 // Newsletter subscribers captured from the footer form.
@@ -550,6 +557,53 @@ model PaymentMethodConfig {
   whatsappNumber           String @default("")
 
   updatedAt DateTime @updatedAt
+}
+
+// Digital remitos created from the admin. They are independent from orders,
+// stock, caja and payments: saving/printing a remito does not move inventory or
+// money.
+model Remito {
+  id        String   @id @default(cuid())
+  number    Int      @unique
+  date      DateTime
+  customerName String
+
+  subtotal       Int @default(0)
+  discountPercent Float @default(0)
+  discountAmount  Int @default(0)
+  total          Int @default(0)
+
+  paymentMethod String @default("")
+  note          String @default("")
+
+  receivedSignature String @default("")
+  receivedClarification String @default("")
+  receivedDate DateTime?
+
+  archived Boolean @default(false)
+  items    RemitoItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([archived])
+}
+
+model RemitoItem {
+  id        String @id @default(cuid())
+  remitoId  String
+  remito    Remito @relation(fields: [remitoId], references: [id], onDelete: Cascade)
+
+  quantity    Float
+  unit        String @default("kg") // kg | paq.
+  description String
+  unitPrice   Int
+  total       Int
+
+  order Int @default(0)
+
+  @@index([remitoId])
 }
 
 // ---- CMS (Editor del sitio) ----
