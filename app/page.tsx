@@ -15,7 +15,23 @@ import {
   getStyleSettings,
   styleSettingsToCssVars,
 } from "@/lib/cms-style-settings";
+import { getGlobalSeo, getPageSeo } from "@/lib/cms-seo";
+import type { Metadata } from "next";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
+
+// Home metadata from the CMS (seo.home.*), falling back to the global SEO.
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const bundle = await loadCmsBundle();
+    const global = getGlobalSeo(bundle);
+    const page = getPageSeo(bundle, "home", global.title, global.description);
+    // `absolute` so the layout's "%s | Berna&co" template isn't appended to the
+    // already-complete home title.
+    return { title: { absolute: page.title }, description: page.description };
+  } catch {
+    return {};
+  }
+}
 
 // Home page. Sections render in the order/visibility configured in the CMS
 // (SiteSection); each section's texts/images come from the CMS too, with the

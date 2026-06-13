@@ -5,6 +5,7 @@ import { getSiteUrl } from "@/lib/seo";
 
 const staticPages = [
   { path: "/", priority: 1 },
+  { path: "/confianza", priority: 0.6 },
   { path: "/envios", priority: 0.5 },
   { path: "/cambios-devoluciones", priority: 0.5 },
   { path: "/terminos", priority: 0.5 },

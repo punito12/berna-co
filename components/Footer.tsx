@@ -4,6 +4,7 @@ import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 import Link from "next/link";
 
 const legalLinks = [
+  { href: "/confianza", label: "Cómo comprar" },
   { href: "/envios", label: "Envíos" },
   { href: "/cambios-devoluciones", label: "Cambios y devoluciones" },
   { href: "/terminos", label: "Términos" },

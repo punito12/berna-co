@@ -460,79 +460,12 @@ export default function IdentityEditor({
         </div>
       </section>
 
-      {/* Typography */}
-      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
-        <div className="mb-5 flex flex-col gap-2 border-b border-line pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
-              Fuentes globales
-            </p>
-            <h2 className="font-black uppercase tracking-tight text-xl text-ink">
-              Tipografía
-            </h2>
-          </div>
-          <p className="max-w-xl text-sm leading-6 text-muted">
-            Estos ajustes afectan títulos y textos principales del sitio cuando
-            se publican.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <FontSelect
-            label="Títulos"
-            value={typo.headingFont}
-            onChange={(v) => saveTypo({ ...typo, headingFont: v })}
-          />
-          <FontSelect
-            label="Cuerpo"
-            value={typo.bodyFont}
-            onChange={(v) => saveTypo({ ...typo, bodyFont: v })}
-          />
-          <label className="block">
-            <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
-              Peso de títulos
-            </span>
-            <select
-              value={typo.headingWeight}
-              onChange={(e) =>
-                saveTypo({ ...typo, headingWeight: e.target.value })
-              }
-              className="w-full rounded border border-line bg-white px-3 py-2 text-ink disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {WEIGHTS.map((w) => (
-                <option key={w} value={w}>
-                  {w}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {/* Live preview (loads the chosen fonts on the fly) */}
-        <link
-          href={`https://fonts.googleapis.com/css2?family=${encodeURIComponent(
-            typo.headingFont
-          )}:wght@${typo.headingWeight}&family=${encodeURIComponent(
-            typo.bodyFont
-          )}&display=swap`}
-          rel="stylesheet"
-        />
-        <div className="mt-4 rounded-xl border border-line bg-cream/30 p-5">
-          <p
-            className="uppercase tracking-tight text-3xl"
-            style={{
-              fontFamily: `'${typo.headingFont}', sans-serif`,
-              fontWeight: Number(typo.headingWeight),
-            }}
-          >
-            Milanesas Premium
-          </p>
-          <p
-            className="mt-2 text-base text-muted"
-            style={{ fontFamily: `'${typo.bodyFont}', sans-serif` }}
-          >
-            De nuestra cocina a tu freezer. Elegí tu corte y tu empanado.
-          </p>
-        </div>
-      </section>
+      {/* Typography — hidden for launch. The public site uses fixed brand fonts
+          (Archivo / Fraunces via next/font) that these global controls did NOT
+          drive, so showing them would be a misleading "dead" control. Per-element
+          fonts (Estilos de la tienda) remain available and DO affect the site.
+          The saveTypo/FontSelect/WEIGHTS machinery is kept for a future tanda
+          that connects global fonts properly. */}
 
       {/* Logo */}
       <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">

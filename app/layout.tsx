@@ -12,6 +12,7 @@ import {
   getStyleSettings,
   styleSettingsToCssVars,
 } from "@/lib/cms-style-settings";
+import { getGlobalSeo } from "@/lib/cms-seo";
 import {
   DEFAULT_OG_IMAGE,
   SITE_DESCRIPTION,
@@ -41,51 +42,72 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: getSiteUrl(),
-  title: {
-    default: SITE_TITLE,
-    template: `%s | ${SITE_NAME}`,
-  },
-  description: SITE_DESCRIPTION,
-  applicationName: SITE_NAME,
-  alternates: {
-    canonical: "/",
-  },
-  icons: {
-    icon: [
-      { url: "/images/logo-dark.png", type: "image/png" },
-      { url: "/images/logo-light.png", type: "image/png" },
-    ],
-    apple: [{ url: "/images/logo-dark.png", type: "image/png" }],
-  },
-  openGraph: {
-    type: "website",
-    locale: "es_AR",
-    url: absoluteUrl("/"),
-    siteName: SITE_NAME,
+// Metadata is generated from the CMS SEO settings (Editor → SEO y compartir),
+// falling back to the hardcoded SITE_TITLE / SITE_DESCRIPTION / OG image — so
+// the metadata is unchanged until the owner edits it. Note: this reads the
+// PUBLISHED values (no preview) since metadata isn't rendered with the preview
+// cookie; the editor has its own live preview card.
+export async function generateMetadata(): Promise<Metadata> {
+  let seo = {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: [
-      {
-        url: absoluteUrl(DEFAULT_OG_IMAGE),
-        width: 1200,
-        height: 630,
-        alt: "Berna&co - carnes, milanesas y congelados premium",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-    images: [absoluteUrl(DEFAULT_OG_IMAGE)],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+    ogTitle: SITE_TITLE,
+    ogDescription: SITE_DESCRIPTION,
+    ogImage: DEFAULT_OG_IMAGE,
+  };
+  try {
+    const bundle = await loadCmsBundle();
+    seo = getGlobalSeo(bundle);
+  } catch {
+    // DB unavailable — keep hardcoded fallbacks.
+  }
+  const ogImageUrl = absoluteUrl(seo.ogImage);
+  return {
+    metadataBase: getSiteUrl(),
+    title: {
+      default: seo.title,
+      template: `%s | ${SITE_NAME}`,
+    },
+    description: seo.description,
+    applicationName: SITE_NAME,
+    alternates: {
+      canonical: "/",
+    },
+    icons: {
+      icon: [
+        { url: "/images/logo-dark.png", type: "image/png" },
+        { url: "/images/logo-light.png", type: "image/png" },
+      ],
+      apple: [{ url: "/images/logo-dark.png", type: "image/png" }],
+    },
+    openGraph: {
+      type: "website",
+      locale: "es_AR",
+      url: absoluteUrl("/"),
+      siteName: SITE_NAME,
+      title: seo.ogTitle,
+      description: seo.ogDescription,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: "Berna&co - carnes, milanesas y congelados premium",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: seo.ogTitle,
+      description: seo.ogDescription,
+      images: [ogImageUrl],
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
 
 export default async function RootLayout({
   children,

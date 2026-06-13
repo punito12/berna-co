@@ -11,7 +11,11 @@ html {
 }
 
 body {
-  background-color: #ffffff;
+  /* "Fondo principal" (bg) from the CMS theme, with the current white as
+     fallback so the design is identical until the owner changes it. The admin
+     panel wraps its content in its own bg-cream container, so this only shows
+     on the public site. */
+  background-color: var(--color-bg, #ffffff);
   color: #0a0a0a;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
