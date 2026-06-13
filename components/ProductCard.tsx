@@ -199,7 +199,10 @@ export default function ProductCard({
           </span>
           <div
             key={cover}
-            className={`absolute inset-0 bg-contain bg-center bg-no-repeat transition-transform duration-700 ease-out ${
+            // Mobile: bg-cover llena la card (recorta solo el margen blanco de
+            // la foto, no la bolsa) para que el producto se vea más grande.
+            // Desktop: bg-contain (el contenedor 2:3 ya coincide con la foto).
+            className={`absolute inset-0 bg-cover bg-center bg-no-repeat sm:bg-contain transition-transform duration-700 ease-out ${
               allOutOfStock ? "opacity-40 grayscale" : "group-hover:scale-105"
             }`}
             style={{ backgroundImage: `url('${cover}')` }}
@@ -311,7 +314,7 @@ export default function ProductCard({
                   className="inline-flex max-w-full items-baseline gap-1 border border-chip-border bg-chip-bg px-2 py-1 text-chip-text sm:px-2.5"
                 >
                   <span className="font-black text-xs sm:text-sm">
-                    −{payDiscountPct}%
+                    {payDiscountPct}% OFF
                   </span>
                   <span className="text-[10px] font-bold uppercase tracking-wide sm:text-[11px]">
                     <span className="sm:hidden">
@@ -350,7 +353,7 @@ export default function ProductCard({
               disabled={allOutOfStock || allAtCartLimit}
               data-cms-style="button"
               style={primaryBtnStyle}
-              className="mt-2.5 w-full overflow-hidden bg-button px-3 py-2 font-bold uppercase tracking-wide text-[11px] text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:mt-3 sm:hidden"
+              className="mt-2.5 w-full overflow-hidden bg-button px-3 py-1.5 font-bold uppercase tracking-wide text-[10px] text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:hidden"
             >
               {allOutOfStock
                 ? outOfStockLabel
