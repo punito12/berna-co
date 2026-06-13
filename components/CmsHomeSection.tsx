@@ -525,10 +525,32 @@ function BlockCopy({
   );
 }
 
+// Some sections render their heading text with a DIFFERENT data-cms-text key
+// than `${sectionKey}.${part}` (e.g. the products grid reuses catalogo.* keys,
+// the hero CTA uses cta_primary). This maps a block part to the REAL key the
+// public element carries, so font/style changes actually apply. Parts not
+// listed fall back to `${sectionKey}.${part}` (which already matches).
+const BLOCK_PART_KEY_OVERRIDES: Record<string, Record<string, string>> = {
+  "home.products": {
+    eyebrow: "catalogo.eyebrow",
+    title: "catalogo.title",
+    subtitle: "catalogo.subtitle",
+  },
+  "home.hero": {
+    ctaLabel: "home.hero.cta_primary",
+  },
+};
+
+function blockPartKey(sectionKey: string, part: string): string {
+  return BLOCK_PART_KEY_OVERRIDES[sectionKey]?.[part] ?? `${sectionKey}.${part}`;
+}
+
 function blockTextStylesCss(sectionKey: string, config: CmsBlockConfig): string {
   if (!config.textStyles) return "";
   return Object.entries(config.textStyles)
-    .map(([part, style]) => textStyleCssRule(`${sectionKey}.${part}`, style))
+    .map(([part, style]) =>
+      textStyleCssRule(blockPartKey(sectionKey, part), style)
+    )
     .filter(Boolean)
     .join("");
 }

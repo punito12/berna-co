@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-function notifyDraftChanged() {
-  window.dispatchEvent(new Event("cms:draft-changed"));
-}
+import { useEffect, useState } from "react";
+import { postCmsDraft, notifyCmsDraftChanged } from "@/lib/cms-client";
 
 export default function CmsImageField({
   imageKey,
@@ -21,24 +18,25 @@ export default function CmsImageField({
   const [savedUrl, setSavedUrl] = useState(draft);
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
-  const saveRunRef = useRef(0);
-  const saveAbortRef = useRef<AbortController | null>(null);
-  const changed = url !== published;
+  const [error, setError] = useState<string | null>(null);
 
+  const dirty = url !== savedUrl;
+  const changedFromPublished = savedUrl !== published;
+
+  // Sync from props on load and after publish/discard/revert.
   useEffect(() => {
     setUrl(draft);
     setSavedUrl(draft);
   }, [draft]);
 
+  // Discard: reset to published immediately.
   useEffect(() => {
     const resetToPublished = () => {
-      saveRunRef.current += 1;
-      saveAbortRef.current?.abort();
-      saveAbortRef.current = null;
       setUrl(published);
       setSavedUrl(published);
       setSaving(false);
       setSavedTick(false);
+      setError(null);
     };
     window.addEventListener("cms:drafts-discarding", resetToPublished);
     window.addEventListener("cms:drafts-discarded", resetToPublished);
@@ -48,49 +46,37 @@ export default function CmsImageField({
     };
   }, [published]);
 
-  useEffect(() => {
-    if (url === savedUrl) return;
-    const timer = window.setTimeout(() => {
-      void save(url);
-    }, 700);
-    return () => window.clearTimeout(timer);
-    // save intentionally stays outside the dependency list because it receives
-    // the explicit URL to persist.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, savedUrl]);
+  function flashSaved() {
+    setSavedTick(true);
+    setTimeout(() => setSavedTick(false), 1500);
+  }
 
-  async function save(nextUrl = url) {
-    if (nextUrl === savedUrl) return;
-    const run = ++saveRunRef.current;
-    saveAbortRef.current?.abort();
-    const controller = new AbortController();
-    saveAbortRef.current = controller;
+  // Persists a URL to the draft (timeout-protected). Used by the save button and
+  // right after an upload completes.
+  async function persist(nextUrl: string) {
     setSaving(true);
+    setError(null);
     try {
-      const res = await fetch("/api/admin/cms/image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: imageKey, url: nextUrl }),
-        signal: controller.signal,
+      const r = await postCmsDraft("/api/admin/cms/image", {
+        key: imageKey,
+        url: nextUrl,
       });
-      if (run !== saveRunRef.current) return;
-      if (res.ok) {
-        setSavedUrl(nextUrl);
-        notifyDraftChanged();
-        setSavedTick(true);
-        setTimeout(() => setSavedTick(false), 1200);
+      if (!r.ok) {
+        setError(r.error);
+        return false;
       }
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
-        console.error("[cms image autosave]", error);
-      }
+      setSavedUrl(nextUrl);
+      notifyCmsDraftChanged();
+      flashSaved();
+      return true;
     } finally {
-      if (run === saveRunRef.current) setSaving(false);
+      setSaving(false);
     }
   }
 
   async function upload(file: File) {
     setSaving(true);
+    setError(null);
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -98,38 +84,45 @@ export default function CmsImageField({
         method: "POST",
         body: fd,
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.url) {
-        alert(data.error || "No se pudo subir la imagen.");
+        setError(data.error || "No se pudo subir la imagen.");
+        setSaving(false);
         return;
       }
       setUrl(data.url);
-      await save(data.url);
-    } finally {
+      await persist(data.url);
+    } catch {
+      setError("Hubo un problema al subir la imagen. Intentá de nuevo.");
       setSaving(false);
     }
   }
 
   async function restore() {
+    if (saving) return;
     setUrl(published);
-    await save(published);
+    await persist(published);
   }
 
   return (
-    <div className="rounded-lg border border-line bg-white p-4">
+    <div
+      className={`rounded-lg border bg-white p-4 ${
+        dirty ? "border-amber-400" : "border-line"
+      }`}
+    >
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 font-bold uppercase tracking-wide text-[11px] text-muted">
           {label}
-          {changed && (
+          {changedFromPublished && (
             <span
               className="inline-block h-2 w-2 rounded-full bg-amber-500"
-              title="Cambio sin publicar"
+              title="Cambio guardado, falta publicar"
             />
           )}
         </span>
-        {saving && <span className="text-[10px] text-muted">Guardando...</span>}
-        {savedTick && (
-          <span className="text-[10px] font-bold text-green-700">Guardado</span>
+        {saving && <span className="text-[10px] text-muted">Guardando…</span>}
+        {savedTick && !dirty && (
+          <span className="text-[10px] font-bold text-green-700">✓ Guardado</span>
         )}
       </div>
       <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
@@ -145,7 +138,6 @@ export default function CmsImageField({
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            onBlur={() => save()}
             className="w-full rounded border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-black"
             placeholder="/images/..."
           />
@@ -164,13 +156,24 @@ export default function CmsImageField({
             </label>
             <button
               type="button"
+              onClick={() => void persist(url)}
+              disabled={saving || !dirty}
+              className="rounded bg-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {saving ? "Guardando…" : "Guardar cambios"}
+            </button>
+            <button
+              type="button"
               onClick={restore}
-              disabled={saving || !changed}
+              disabled={saving || !changedFromPublished}
               className="font-bold uppercase tracking-widest text-[10px] text-muted hover:text-ink disabled:opacity-40"
             >
               Restaurar publicado
             </button>
           </div>
+          {error && (
+            <p className="text-[11px] font-bold text-red-700">{error}</p>
+          )}
         </div>
       </div>
     </div>

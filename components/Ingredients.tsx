@@ -119,10 +119,16 @@ export default function Ingredients({
     <section id="ingredientes" className="bg-cream">
       <div className="mx-auto max-w-5xl px-4 py-14 sm:py-24">
         <Reveal className="mb-10 text-center sm:mb-14">
-          <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
+          <p
+            data-cms-text="home.ingredients.eyebrow"
+            className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
+          >
             {eyebrow}
           </p>
-          <h2 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl">
+          <h2
+            data-cms-text="home.ingredients.title"
+            className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
+          >
             {title}
           </h2>
         </Reveal>

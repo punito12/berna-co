@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   parseTextStyle,
   sanitizeTextStyle,
@@ -8,18 +8,16 @@ import {
 } from "@/lib/cms-text-styles";
 import CmsStylePreview from "@/components/CmsStylePreview";
 import { CMS_FONT_OPTIONS } from "@/lib/cms-fonts";
+import { postCmsDraft, notifyCmsDraftChanged } from "@/lib/cms-client";
 
 const FONT_OPTIONS = ["", ...CMS_FONT_OPTIONS];
 
 const WEIGHT_OPTIONS = ["", "300", "400", "500", "600", "700", "800", "900"];
 
-function notifyDraftChanged() {
-  window.dispatchEvent(new Event("cms:draft-changed"));
-}
-
-// One editable site text: label, textarea/input, character counter, "restaurar
-// al original" button, and auto-save of the draft after typing pauses. Shows a
-// dot when the draft differs from the published value.
+// One editable site text: label, textarea/input, character counter, an explicit
+// "Guardar cambios" button (saves the DRAFT — not published), and "restaurar al
+// original". Saving is manual and reliable: no autosave, no infinite spinner.
+// The amber dot means "this draft differs from what's published".
 export default function CmsTextField({
   textKey,
   label,
@@ -41,6 +39,8 @@ export default function CmsTextField({
   multiline?: boolean;
   allowStyle?: boolean;
 }) {
+  // `value`/`textStyle` = what's in the inputs. `savedValue`/`savedStyle` = what
+  // the DB draft currently holds (updated only after a successful save).
   const [value, setValue] = useState(draft);
   const [savedValue, setSavedValue] = useState(draft);
   const [textStyle, setTextStyle] = useState<CmsTextStyle>(
@@ -51,13 +51,21 @@ export default function CmsTextField({
   );
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
-  const saveRunRef = useRef(0);
-  const saveAbortRef = useRef<AbortController | null>(null);
-  const publishedStyle = parseTextStyle(style ?? "{}");
-  const changed =
-    value !== published ||
-    JSON.stringify(textStyle) !== JSON.stringify(publishedStyle);
+  const [error, setError] = useState<string | null>(null);
 
+  const publishedStyle = parseTextStyle(style ?? "{}");
+
+  // Local edits not yet saved to the draft.
+  const dirty =
+    value !== savedValue ||
+    JSON.stringify(textStyle) !== JSON.stringify(savedStyle);
+  // Draft differs from published (will change the public site when published).
+  const changedFromPublished =
+    savedValue !== published ||
+    JSON.stringify(savedStyle) !== JSON.stringify(publishedStyle);
+
+  // Sync from props: happens on initial load and after publish/discard/revert
+  // (router.refresh re-runs the server page and passes fresh values).
   useEffect(() => {
     setValue(draft);
     setSavedValue(draft);
@@ -69,11 +77,9 @@ export default function CmsTextField({
     setSavedStyle(next);
   }, [styleDraft]);
 
+  // Discard: reset the inputs to the published values immediately.
   useEffect(() => {
     const resetToPublished = () => {
-      saveRunRef.current += 1;
-      saveAbortRef.current?.abort();
-      saveAbortRef.current = null;
       const nextStyle = parseTextStyle(style ?? "{}");
       setValue(published);
       setSavedValue(published);
@@ -81,6 +87,7 @@ export default function CmsTextField({
       setSavedStyle(nextStyle);
       setSaving(false);
       setSavedTick(false);
+      setError(null);
     };
     window.addEventListener("cms:drafts-discarding", resetToPublished);
     window.addEventListener("cms:drafts-discarded", resetToPublished);
@@ -90,110 +97,80 @@ export default function CmsTextField({
     };
   }, [published, style]);
 
-  useEffect(() => {
-    if (value === savedValue) return;
-    const timer = window.setTimeout(() => {
-      void save(value);
-    }, 700);
-    return () => window.clearTimeout(timer);
-    // save intentionally stays outside the dependency list because it reads the
-    // latest refs/state through the explicit nextValue argument.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, savedValue]);
-
-  async function save(nextValue = value) {
-    if (nextValue === savedValue) return; // nothing new
-    const run = ++saveRunRef.current;
-    saveAbortRef.current?.abort();
-    const controller = new AbortController();
-    saveAbortRef.current = controller;
-    setSaving(true);
-    try {
-      const res = await fetch("/api/admin/cms/text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: textKey, value: nextValue }),
-        signal: controller.signal,
-      });
-      if (run !== saveRunRef.current) return;
-      if (res.ok) {
-        setSavedValue(nextValue);
-        notifyDraftChanged();
-        setSavedTick(true);
-        setTimeout(() => setSavedTick(false), 1200);
-      }
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
-        console.error("[cms text autosave]", error);
-      }
-    } finally {
-      if (run === saveRunRef.current) setSaving(false);
-    }
+  function flashSaved() {
+    setSavedTick(true);
+    setTimeout(() => setSavedTick(false), 1500);
   }
 
-  async function restore() {
+  // Saves whatever changed (text and/or style) to the draft, in one click.
+  async function save() {
+    if (!dirty || saving) return;
     setSaving(true);
+    setError(null);
+    const textChanged = value !== savedValue;
+    const safeStyle = sanitizeTextStyle(textStyle as Record<string, unknown>);
+    const styleChanged =
+      JSON.stringify(safeStyle) !== JSON.stringify(savedStyle);
     try {
-      const res = await fetch("/api/admin/cms/text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: textKey, action: "restore" }),
-      });
-      if (res.ok) {
-        setValue(published);
-        setSavedValue(published);
-        notifyDraftChanged();
+      if (textChanged) {
+        const r = await postCmsDraft("/api/admin/cms/text", {
+          key: textKey,
+          value,
+        });
+        if (!r.ok) {
+          setError(r.error);
+          return;
+        }
+        setSavedValue(value);
       }
+      if (styleChanged) {
+        const r = await postCmsDraft("/api/admin/cms/text", {
+          key: textKey,
+          style: safeStyle,
+        });
+        if (!r.ok) {
+          setError(r.error);
+          return;
+        }
+        setTextStyle(safeStyle);
+        setSavedStyle(safeStyle);
+      }
+      notifyCmsDraftChanged();
+      flashSaved();
     } finally {
       setSaving(false);
     }
   }
 
-  async function saveStyle(nextStyle: CmsTextStyle) {
-    const safe = sanitizeTextStyle(nextStyle as Record<string, unknown>);
-    setTextStyle(safe);
-    if (JSON.stringify(safe) === JSON.stringify(savedStyle)) return;
-    const run = ++saveRunRef.current;
-    saveAbortRef.current?.abort();
-    const controller = new AbortController();
-    saveAbortRef.current = controller;
+  // Resets BOTH text and style of this field back to the published values.
+  async function restore() {
+    if (saving) return;
     setSaving(true);
+    setError(null);
     try {
-      const res = await fetch("/api/admin/cms/text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: textKey, style: safe }),
-        signal: controller.signal,
+      const r = await postCmsDraft("/api/admin/cms/text", {
+        key: textKey,
+        action: "restore",
       });
-      if (run !== saveRunRef.current) return;
-      if (res.ok) {
-        setSavedStyle(safe);
-        notifyDraftChanged();
-        setSavedTick(true);
-        setTimeout(() => setSavedTick(false), 1200);
+      if (!r.ok) {
+        setError(r.error);
+        return;
       }
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
-        console.error("[cms style autosave]", error);
-      }
-    } finally {
-      if (run === saveRunRef.current) setSaving(false);
-    }
-  }
-
-  async function restoreStyle() {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/admin/cms/text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: textKey, action: "restore-style" }),
+      const r2 = await postCmsDraft("/api/admin/cms/text", {
+        key: textKey,
+        action: "restore-style",
       });
-      if (res.ok) {
-        setTextStyle(publishedStyle);
-        setSavedStyle(publishedStyle);
-        notifyDraftChanged();
+      if (!r2.ok) {
+        setError(r2.error);
+        return;
       }
+      const nextStyle = parseTextStyle(style ?? "{}");
+      setValue(published);
+      setSavedValue(published);
+      setTextStyle(nextStyle);
+      setSavedStyle(nextStyle);
+      notifyCmsDraftChanged();
+      flashSaved();
     } finally {
       setSaving(false);
     }
@@ -203,14 +180,18 @@ export default function CmsTextField({
     "w-full rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black";
 
   return (
-    <div className="rounded-lg border border-line bg-white p-4">
+    <div
+      className={`rounded-lg border bg-white p-4 ${
+        dirty ? "border-amber-400" : "border-line"
+      }`}
+    >
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 font-bold uppercase tracking-wide text-[11px] text-muted">
           {label}
-          {changed && (
+          {changedFromPublished && (
             <span
               className="inline-block h-2 w-2 rounded-full bg-amber-500"
-              title="Cambio sin publicar"
+              title="Cambio guardado, falta publicar"
             />
           )}
         </span>
@@ -223,7 +204,6 @@ export default function CmsTextField({
           value={value}
           maxLength={maxLength}
           onChange={(e) => setValue(e.target.value)}
-          onBlur={() => void save(value)}
           rows={3}
           className={inputClass + " resize-y"}
         />
@@ -232,111 +212,123 @@ export default function CmsTextField({
           value={value}
           maxLength={maxLength}
           onChange={(e) => setValue(e.target.value)}
-          onBlur={() => void save(value)}
           className={inputClass}
         />
       )}
-      <div className="mt-2 flex items-center gap-3">
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving || !dirty}
+          className="rounded bg-ink px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {saving ? "Guardando…" : "Guardar cambios"}
+        </button>
         <button
           type="button"
           onClick={restore}
-          disabled={saving || !changed}
+          disabled={saving || !changedFromPublished}
           className="font-bold uppercase tracking-widest text-[10px] text-muted hover:text-ink disabled:opacity-40"
         >
           Restaurar al original
         </button>
-        {saving && <span className="text-[10px] text-muted">Guardando…</span>}
-        {savedTick && (
+        {dirty && !saving && (
+          <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700">
+            Sin guardar
+          </span>
+        )}
+        {savedTick && !dirty && (
           <span className="text-[10px] font-bold text-green-700">✓ Guardado</span>
         )}
       </div>
+      {error && (
+        <p className="mt-2 text-[11px] font-bold text-red-700">{error}</p>
+      )}
+
       {allowStyle && (
-      <details className="mt-3 border-t border-line pt-3">
-        <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-widest text-muted">
-          Opciones avanzadas de diseño
-        </summary>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <StyleSelect
-            label="Fuente"
-            value={textStyle.fontFamily ?? ""}
-            options={FONT_OPTIONS}
-            emptyLabel="Actual"
-            onChange={(fontFamily) =>
-              saveStyle({ ...textStyle, fontFamily: fontFamily || undefined })
-            }
-          />
-          <StyleSelect
-            label="Peso"
-            value={textStyle.fontWeight ?? ""}
-            options={WEIGHT_OPTIONS}
-            emptyLabel="Actual"
-            onChange={(fontWeight) =>
-              saveStyle({ ...textStyle, fontWeight: fontWeight || undefined })
-            }
-          />
-          <StyleInput
-            label="Tamaño desktop"
-            value={textStyle.fontSize ?? ""}
-            placeholder="Ej: 48px"
-            onBlur={(fontSize) =>
-              saveStyle({ ...textStyle, fontSize: fontSize || undefined })
-            }
-          />
-          <StyleInput
-            label="Tamaño mobile"
-            value={textStyle.fontSizeMobile ?? ""}
-            placeholder="Ej: 32px"
-            onBlur={(fontSizeMobile) =>
-              saveStyle({
-                ...textStyle,
-                fontSizeMobile: fontSizeMobile || undefined,
-              })
-            }
-          />
-          <StyleInput
-            label="Interlineado"
-            value={textStyle.lineHeight ?? ""}
-            placeholder="Ej: 1.1"
-            onBlur={(lineHeight) =>
-              saveStyle({ ...textStyle, lineHeight: lineHeight || undefined })
-            }
-          />
-          <StyleInput
-            label="Espaciado"
-            value={textStyle.letterSpacing ?? ""}
-            placeholder="Ej: 0.02em"
-            onBlur={(letterSpacing) =>
-              saveStyle({
-                ...textStyle,
-                letterSpacing: letterSpacing || undefined,
-              })
-            }
-          />
-          <StyleToggle
-            label="Itálica"
-            checked={textStyle.italic === true}
-            onChange={(italic) =>
-              saveStyle({ ...textStyle, italic: italic || undefined })
-            }
-          />
-          <StyleToggle
-            label="Negrita / mayúsculas"
-            checked={textStyle.uppercase === true}
-            onChange={(uppercase) =>
-              saveStyle({ ...textStyle, uppercase: uppercase || undefined })
-            }
-          />
-        </div>
-        <CmsStylePreview text={value} style={textStyle} />
-        <button
-          type="button"
-          onClick={restoreStyle}
-          disabled={saving || JSON.stringify(textStyle) === JSON.stringify(publishedStyle)}
-          className="mt-3 font-bold uppercase tracking-widest text-[10px] text-muted hover:text-ink disabled:opacity-40"
-        >
-          Restaurar estilo publicado
-        </button>
-      </details>
+        <details className="mt-3 border-t border-line pt-3">
+          <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-widest text-muted">
+            Opciones avanzadas de diseño
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <StyleSelect
+              label="Fuente"
+              value={textStyle.fontFamily ?? ""}
+              options={FONT_OPTIONS}
+              emptyLabel="Actual"
+              onChange={(fontFamily) =>
+                setTextStyle({ ...textStyle, fontFamily: fontFamily || undefined })
+              }
+            />
+            <StyleSelect
+              label="Peso"
+              value={textStyle.fontWeight ?? ""}
+              options={WEIGHT_OPTIONS}
+              emptyLabel="Actual"
+              onChange={(fontWeight) =>
+                setTextStyle({ ...textStyle, fontWeight: fontWeight || undefined })
+              }
+            />
+            <StyleInput
+              label="Tamaño desktop"
+              value={textStyle.fontSize ?? ""}
+              placeholder="Ej: 48px"
+              onChange={(fontSize) =>
+                setTextStyle({ ...textStyle, fontSize: fontSize || undefined })
+              }
+            />
+            <StyleInput
+              label="Tamaño mobile"
+              value={textStyle.fontSizeMobile ?? ""}
+              placeholder="Ej: 32px"
+              onChange={(fontSizeMobile) =>
+                setTextStyle({
+                  ...textStyle,
+                  fontSizeMobile: fontSizeMobile || undefined,
+                })
+              }
+            />
+            <StyleInput
+              label="Interlineado"
+              value={textStyle.lineHeight ?? ""}
+              placeholder="Ej: 1.1"
+              onChange={(lineHeight) =>
+                setTextStyle({ ...textStyle, lineHeight: lineHeight || undefined })
+              }
+            />
+            <StyleInput
+              label="Espaciado"
+              value={textStyle.letterSpacing ?? ""}
+              placeholder="Ej: 0.02em"
+              onChange={(letterSpacing) =>
+                setTextStyle({
+                  ...textStyle,
+                  letterSpacing: letterSpacing || undefined,
+                })
+              }
+            />
+            <StyleToggle
+              label="Itálica"
+              checked={textStyle.italic === true}
+              onChange={(italic) =>
+                setTextStyle({ ...textStyle, italic: italic || undefined })
+              }
+            />
+            <StyleToggle
+              label="Mayúsculas"
+              checked={textStyle.uppercase === true}
+              onChange={(uppercase) =>
+                setTextStyle({ ...textStyle, uppercase: uppercase || undefined })
+              }
+            />
+          </div>
+          <CmsStylePreview text={value} style={textStyle} />
+          <p className="mt-2 text-[10px] text-muted">
+            Los cambios de diseño se guardan con el botón “Guardar cambios” de
+            arriba.
+          </p>
+        </details>
       )}
     </div>
   );
@@ -375,25 +367,20 @@ function StyleSelect({
   );
 }
 
+// Local-only style input: edits update parent state on change (no autosave).
 function StyleInput({
   label,
   value,
   placeholder,
-  onBlur,
+  onChange,
 }: {
   label: string;
   value: string;
   placeholder: string;
-  onBlur: (value: string) => void;
+  onChange: (value: string) => void;
 }) {
   const [local, setLocal] = useState(value);
   useEffect(() => setLocal(value), [value]);
-  useEffect(() => {
-    const next = local.trim();
-    if (next === value) return;
-    const timer = window.setTimeout(() => onBlur(next), 700);
-    return () => window.clearTimeout(timer);
-  }, [local, onBlur, value]);
   return (
     <label className="block">
       <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
@@ -403,7 +390,7 @@ function StyleInput({
         value={local}
         placeholder={placeholder}
         onChange={(e) => setLocal(e.target.value)}
-        onBlur={() => onBlur(local.trim())}
+        onBlur={() => onChange(local.trim())}
         className="w-full rounded border border-line bg-white px-2 py-1.5 text-sm text-ink"
       />
     </label>

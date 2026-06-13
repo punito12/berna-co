@@ -1,43 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import CmsImageField from "@/components/CmsImageField";
+import { postCmsDraft, notifyCmsDraftChanged } from "@/lib/cms-client";
 
 const DOMAIN = "csberna.com.ar";
-
-function notifyDraftChanged() {
-  window.dispatchEvent(new Event("cms:draft-changed"));
-}
-
-async function saveText(
-  key: string,
-  value: string,
-  signal?: AbortSignal
-): Promise<boolean> {
-  let res: Response;
-  try {
-    res = await fetch("/api/admin/cms/text", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, value }),
-      signal,
-    });
-  } catch (error) {
-    if (!(error instanceof DOMException && error.name === "AbortError")) {
-      console.error("[cms seo autosave]", error);
-    }
-    return false;
-  }
-  if (res.ok) notifyDraftChanged();
-  return res.ok;
-}
 
 type FieldProps = {
   label: string;
   help?: string;
   value: string;
   onChange: (v: string) => void;
-  onBlur: () => void;
   maxLength: number;
   multiline?: boolean;
 };
@@ -60,7 +33,6 @@ function Field({
   help,
   value,
   onChange,
-  onBlur,
   maxLength,
   multiline,
 }: FieldProps) {
@@ -82,7 +54,6 @@ function Field({
           maxLength={maxLength}
           rows={2}
           onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
           className={cls + " resize-y"}
         />
       ) : (
@@ -90,7 +61,6 @@ function Field({
           value={value}
           maxLength={maxLength}
           onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
           className={cls}
         />
       )}
@@ -121,27 +91,31 @@ export default function SeoEditor({
   const [saved, setSaved] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
-  const saveRunRef = useRef(0);
-  const saveAbortRef = useRef<AbortController | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof v, value: string) =>
     setV((prev) => ({ ...prev, [k]: value }));
 
+  const dirty = (Object.keys(v) as SeoField[]).some(
+    (field) => v[field] !== saved[field]
+  );
+
+  // Sync from props on initial load and after publish/discard/revert.
   useEffect(() => {
     setV(initial);
     setSaved(initial);
     setSaving(false);
     setSavedTick(false);
+    setError(null);
   }, [initial]);
 
+  // Discard: reset inputs immediately.
   useEffect(() => {
     const resetToInitial = () => {
-      saveRunRef.current += 1;
-      saveAbortRef.current?.abort();
-      saveAbortRef.current = null;
       setV(initial);
       setSaved(initial);
       setSaving(false);
       setSavedTick(false);
+      setError(null);
     };
     window.addEventListener("cms:drafts-discarding", resetToInitial);
     window.addEventListener("cms:drafts-discarded", resetToInitial);
@@ -151,43 +125,33 @@ export default function SeoEditor({
     };
   }, [initial]);
 
-  async function saveFields(fields: SeoField[]) {
-    const pending = fields.filter((field) => v[field] !== saved[field]);
-    if (!pending.length) return;
-    const run = ++saveRunRef.current;
-    saveAbortRef.current?.abort();
-    const controller = new AbortController();
-    saveAbortRef.current = controller;
-    setSaving(true);
-    const results = await Promise.all(
-      pending.map((field) => saveText(keys[field], v[field], controller.signal))
-    );
-    if (run !== saveRunRef.current) return;
-    if (results.every(Boolean)) {
-      setSaved((prev) => {
-        const next = { ...prev };
-        for (const field of pending) next[field] = v[field];
-        return next;
-      });
-      setSavedTick(true);
-      window.setTimeout(() => setSavedTick(false), 1200);
-    }
-    setSaving(false);
-  }
-
-  useEffect(() => {
+  // Explicit save of all dirty fields. Timeout-protected: never hangs forever.
+  async function saveAll() {
     const pending = (Object.keys(v) as SeoField[]).filter(
       (field) => v[field] !== saved[field]
     );
-    if (!pending.length) return;
-    const timer = window.setTimeout(() => {
-      void saveFields(pending);
-    }, 700);
-    return () => window.clearTimeout(timer);
-    // saveFields intentionally stays outside the dependency list because the
-    // effect passes the explicit fields to persist.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v, saved]);
+    if (!pending.length || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      for (const field of pending) {
+        const r = await postCmsDraft("/api/admin/cms/text", {
+          key: keys[field],
+          value: v[field],
+        });
+        if (!r.ok) {
+          setError(r.error);
+          return;
+        }
+        setSaved((prev) => ({ ...prev, [field]: v[field] }));
+      }
+      notifyCmsDraftChanged();
+      setSavedTick(true);
+      window.setTimeout(() => setSavedTick(false), 1500);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   // Social preview uses the OG fields, falling back to the main title/desc.
   const previewTitle = v.ogTitle.trim() || v.title.trim() || "Berna&co";
@@ -196,17 +160,35 @@ export default function SeoEditor({
 
   return (
     <div className="space-y-8">
+      {/* Sticky save bar: edits stay local until you click Guardar cambios. */}
+      <div className="sticky top-2 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
+        <div className="text-sm">
+          {dirty ? (
+            <span className="font-bold text-amber-700">
+              Tenés cambios sin guardar
+            </span>
+          ) : savedTick ? (
+            <span className="font-bold text-green-700">✓ Cambios guardados</span>
+          ) : (
+            <span className="text-muted">Editá el SEO del sitio</span>
+          )}
+          {error && (
+            <span className="ml-2 font-bold text-red-700">{error}</span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={saveAll}
+          disabled={saving || !dirty}
+          className="rounded bg-ink px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {saving ? "Guardando…" : "Guardar cambios"}
+        </button>
+      </div>
+
       {/* Google */}
       <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
         <div className="mb-4 border-b border-line pb-3">
-          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted">
-              Cómo te ve Google
-            </p>
-            <p className="rounded-full border border-line bg-cream px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-muted">
-              {saving ? "Guardando..." : savedTick ? "Guardado" : "Autosave activo"}
-            </p>
-          </div>
           <h3 className="font-black uppercase tracking-tight text-lg text-ink">
             Google
           </h3>
@@ -221,7 +203,6 @@ export default function SeoEditor({
             help="Ideal hasta ~60 caracteres."
             value={v.title}
             onChange={(x) => set("title", x)}
-            onBlur={() => void saveFields(["title"])}
             maxLength={70}
           />
           <Field
@@ -229,7 +210,6 @@ export default function SeoEditor({
             help="Ideal hasta ~155 caracteres."
             value={v.description}
             onChange={(x) => set("description", x)}
-            onBlur={() => void saveFields(["description"])}
             maxLength={200}
             multiline
           />
@@ -271,14 +251,12 @@ export default function SeoEditor({
             label="Título al compartir (opcional)"
             value={v.ogTitle}
             onChange={(x) => set("ogTitle", x)}
-            onBlur={() => void saveFields(["ogTitle"])}
             maxLength={70}
           />
           <Field
             label="Descripción al compartir (opcional)"
             value={v.ogDescription}
             onChange={(x) => set("ogDescription", x)}
-            onBlur={() => void saveFields(["ogDescription"])}
             maxLength={200}
             multiline
           />
@@ -357,14 +335,12 @@ export default function SeoEditor({
                 label="Título"
                 value={v.homeTitle}
                 onChange={(x) => set("homeTitle", x)}
-                onBlur={() => void saveFields(["homeTitle"])}
                 maxLength={70}
               />
               <Field
                 label="Descripción"
                 value={v.homeDescription}
                 onChange={(x) => set("homeDescription", x)}
-                onBlur={() => void saveFields(["homeDescription"])}
                 maxLength={200}
                 multiline
               />
@@ -379,14 +355,12 @@ export default function SeoEditor({
                 label="Título"
                 value={v.confianzaTitle}
                 onChange={(x) => set("confianzaTitle", x)}
-                onBlur={() => void saveFields(["confianzaTitle"])}
                 maxLength={70}
               />
               <Field
                 label="Descripción"
                 value={v.confianzaDescription}
                 onChange={(x) => set("confianzaDescription", x)}
-                onBlur={() => void saveFields(["confianzaDescription"])}
                 maxLength={200}
                 multiline
               />

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CMS_FONT_OPTIONS } from "@/lib/cms-fonts";
+import { postCmsDraft } from "@/lib/cms-client";
 
 // Curated Google Fonts for the typography selectors.
 const FONTS = CMS_FONT_OPTIONS;
@@ -275,29 +276,50 @@ export default function IdentityEditor({
   styleSettingsDraft: Record<string, string>;
   logoDraft: string;
 }) {
+  // `colors`/`styles` = local draft being edited. `saved*` = what the DB draft
+  // holds. Edits update local state only; nothing is sent until "Guardar
+  // cambios" is clicked. This removes the per-change request storm + flicker.
   const [colors, setColors] = useState<Colors>(colorsDraft);
-  const [typo, setTypo] = useState<Typo>(typographyDraft);
+  const [savedColors, setSavedColors] = useState<Colors>(colorsDraft);
+  const [typo] = useState<Typo>(typographyDraft);
   const [styles, setStyles] = useState<Record<string, string>>(
     styleSettingsDraft
   );
+  const [savedStyles, setSavedStyles] =
+    useState<Record<string, string>>(styleSettingsDraft);
   const [logo, setLogo] = useState(logoDraft);
-  const [savingMsg, setSavingMsg] = useState<string | null>(null);
-  const saveRunRef = useRef(0);
-  const styleAbortRef = useRef<AbortController | null>(null);
-  const colorAbortRef = useRef<AbortController | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [savedTick, setSavedTick] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  const dirty =
+    JSON.stringify(colors) !== JSON.stringify(savedColors) ||
+    JSON.stringify(styles) !== JSON.stringify(savedStyles);
+
+  // Sync from props on initial load and after publish/discard/revert.
+  useEffect(() => {
+    setColors(colorsDraft);
+    setSavedColors(colorsDraft);
+  }, [colorsDraft]);
+  useEffect(() => {
+    setStyles(styleSettingsDraft);
+    setSavedStyles(styleSettingsDraft);
+  }, [styleSettingsDraft]);
+  useEffect(() => {
+    setLogo(logoDraft);
+  }, [logoDraft]);
+
+  // Discard: reset the editor immediately to the (published) drafts.
   useEffect(() => {
     const resetToDrafts = () => {
-      saveRunRef.current += 1;
-      styleAbortRef.current?.abort();
-      colorAbortRef.current?.abort();
-      styleAbortRef.current = null;
-      colorAbortRef.current = null;
       setColors(colorsDraft);
-      setTypo(typographyDraft);
+      setSavedColors(colorsDraft);
       setStyles(styleSettingsDraft);
+      setSavedStyles(styleSettingsDraft);
       setLogo(logoDraft);
-      setSavingMsg(null);
+      setSaving(false);
+      setSavedTick(false);
+      setError(null);
     };
     window.addEventListener("cms:drafts-discarding", resetToDrafts);
     window.addEventListener("cms:drafts-discarded", resetToDrafts);
@@ -305,72 +327,40 @@ export default function IdentityEditor({
       window.removeEventListener("cms:drafts-discarding", resetToDrafts);
       window.removeEventListener("cms:drafts-discarded", resetToDrafts);
     };
-  }, [colorsDraft, typographyDraft, styleSettingsDraft, logoDraft]);
+  }, [colorsDraft, styleSettingsDraft, logoDraft]);
 
-  async function saveStyles(next: Record<string, string>) {
-    const run = ++saveRunRef.current;
-    styleAbortRef.current?.abort();
-    const controller = new AbortController();
-    styleAbortRef.current = controller;
-    setStyles(next);
-    let res: Response;
-    try {
-      res = await fetch("/api/admin/cms/style-settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ styles: next }),
-        signal: controller.signal,
-      });
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
-        console.error("[cms style settings autosave]", error);
-        setSavingMsg("Error al guardar");
-      }
-      return;
-    }
-    if (run !== saveRunRef.current) return;
-    setSavingMsg(res.ok ? "Estilos guardados ✓" : "Error al guardar");
-    if (res.ok) notifyDraftChanged();
-    setTimeout(() => setSavingMsg(null), 1200);
+  function flashSaved() {
+    setSavedTick(true);
+    setTimeout(() => setSavedTick(false), 1500);
   }
 
-  async function saveColors(next: Colors) {
-    const run = ++saveRunRef.current;
-    colorAbortRef.current?.abort();
-    const controller = new AbortController();
-    colorAbortRef.current = controller;
-    setColors(next);
-    let res: Response;
+  // Saves colors + style settings to the draft, in one click.
+  async function saveAll() {
+    if (!dirty || saving) return;
+    setSaving(true);
+    setError(null);
     try {
-      res = await fetch("/api/admin/cms/theme", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ colors: next }),
-        signal: controller.signal,
-      });
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
-        console.error("[cms color autosave]", error);
-        setSavingMsg("Error al guardar");
+      if (JSON.stringify(colors) !== JSON.stringify(savedColors)) {
+        const r = await postCmsDraft("/api/admin/cms/theme", { colors });
+        if (!r.ok) {
+          setError(r.error);
+          return;
+        }
+        setSavedColors(colors);
       }
-      return;
+      if (JSON.stringify(styles) !== JSON.stringify(savedStyles)) {
+        const r = await postCmsDraft("/api/admin/cms/style-settings", { styles });
+        if (!r.ok) {
+          setError(r.error);
+          return;
+        }
+        setSavedStyles(styles);
+      }
+      notifyDraftChanged();
+      flashSaved();
+    } finally {
+      setSaving(false);
     }
-    if (run !== saveRunRef.current) return;
-    setSavingMsg(res.ok ? "Colores guardados ✓" : "Error al guardar");
-    if (res.ok) notifyDraftChanged();
-    setTimeout(() => setSavingMsg(null), 1200);
-  }
-
-  async function saveTypo(next: Typo) {
-    setTypo(next);
-    await fetch("/api/admin/cms/typography", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ typography: next }),
-    });
-    notifyDraftChanged();
-    setSavingMsg("Tipografía guardada ✓");
-    setTimeout(() => setSavingMsg(null), 1200);
   }
 
   async function onLogoFile(file: File) {
@@ -384,16 +374,15 @@ export default function IdentityEditor({
     const d = await res.json();
     if (res.ok && d.url) {
       setLogo(d.url);
-      await fetch("/api/admin/cms/logo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: d.url }),
-      });
-      notifyDraftChanged();
-      setSavingMsg("Logo guardado ✓");
-      setTimeout(() => setSavingMsg(null), 1200);
+      const r = await postCmsDraft("/api/admin/cms/logo", { url: d.url });
+      if (r.ok) {
+        notifyDraftChanged();
+        flashSaved();
+      } else {
+        setError(r.error);
+      }
     } else {
-      alert(d.error || "No se pudo subir el logo.");
+      setError(d.error || "No se pudo subir el logo.");
     }
   }
 
@@ -404,11 +393,31 @@ export default function IdentityEditor({
 
   return (
     <div className="space-y-8">
-      {savingMsg && (
-        <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-700">
-          {savingMsg}
-        </p>
-      )}
+      {/* Sticky save bar: edits stay local until you click Guardar cambios. */}
+      <div className="sticky top-2 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
+        <div className="text-sm">
+          {dirty ? (
+            <span className="font-bold text-amber-700">
+              Tenés cambios sin guardar
+            </span>
+          ) : savedTick ? (
+            <span className="font-bold text-green-700">✓ Cambios guardados</span>
+          ) : (
+            <span className="text-muted">Editá colores y estilos del sitio</span>
+          )}
+          {error && (
+            <span className="ml-2 font-bold text-red-700">{error}</span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={saveAll}
+          disabled={saving || !dirty}
+          className="rounded bg-ink px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {saving ? "Guardando…" : "Guardar cambios"}
+        </button>
+      </div>
 
       {/* Colors */}
       <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
@@ -451,14 +460,13 @@ export default function IdentityEditor({
                   onChange={(e) =>
                     setColors({ ...colors, [key]: e.target.value })
                   }
-                  onBlur={() => saveColors(colors)}
                   className="w-24 rounded border border-line px-2 py-1 text-sm tabular-nums text-ink"
                 />
                 <input
                   type="color"
                   value={/^#[0-9a-f]{6}$/i.test(colors[key] ?? "") ? colors[key] : "#000000"}
                   onChange={(e) =>
-                    saveColors({ ...colors, [key]: e.target.value })
+                    setColors({ ...colors, [key]: e.target.value })
                   }
                   className="h-8 w-10 cursor-pointer rounded border border-line"
                 />
@@ -527,9 +535,8 @@ export default function IdentityEditor({
               group={group}
               colors={colors}
               setColors={setColors}
-              saveColors={saveColors}
               styles={styles}
-              saveStyles={saveStyles}
+              setStyles={setStyles}
             />
           ))}
         </div>
@@ -592,20 +599,18 @@ function StyleGroupSection({
   group,
   colors,
   setColors,
-  saveColors,
   styles,
-  saveStyles,
+  setStyles,
 }: {
   group: StyleGroup;
   colors: Colors;
   setColors: (c: Colors) => void;
-  saveColors: (c: Colors) => void;
   styles: Record<string, string>;
-  saveStyles: (s: Record<string, string>) => void;
+  setStyles: (s: Record<string, string>) => void;
 }) {
   const controls = GROUP_CONTROLS[group.title] ?? [];
   const set = (key: string, value: string) =>
-    saveStyles({ ...styles, [key]: value });
+    setStyles({ ...styles, [key]: value });
   return (
     <div className="rounded-xl border border-line bg-cream/25 p-4">
       <h3 className="font-black uppercase tracking-tight text-sm text-ink">
@@ -630,7 +635,6 @@ function StyleGroupSection({
                 onChange={(e) =>
                   setColors({ ...colors, [field.key]: e.target.value })
                 }
-                onBlur={() => saveColors(colors)}
                 className="w-24 rounded border border-line px-2 py-1 text-sm tabular-nums text-ink"
               />
               <input
@@ -641,7 +645,7 @@ function StyleGroupSection({
                     : "#000000"
                 }
                 onChange={(e) =>
-                  saveColors({ ...colors, [field.key]: e.target.value })
+                  setColors({ ...colors, [field.key]: e.target.value })
                 }
                 className="h-8 w-10 cursor-pointer rounded border border-line"
               />
