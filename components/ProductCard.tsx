@@ -275,7 +275,7 @@ export default function ProductCard({
                 "var(--btn2-transform, uppercase)" as React.CSSProperties["textTransform"],
               textDecoration: "var(--btn2-underline, none)",
             }}
-            className="mt-1 inline-flex min-h-11 items-center font-bold uppercase tracking-widest text-[11px] text-button-secondary-text underline-offset-4 hover:underline sm:mt-2 sm:min-h-0"
+            className="mt-2 hidden font-bold uppercase tracking-widest text-[11px] text-button-secondary-text underline-offset-4 hover:underline sm:inline-flex sm:items-center"
           >
             {viewDetailLabel}
           </Link>
@@ -327,10 +327,10 @@ export default function ProductCard({
                     style={chipStyle}
                     className="inline-flex max-w-full items-baseline gap-1 border border-chip-border bg-chip-bg px-2 py-1 text-chip-text sm:px-2.5"
                   >
-                    <span className="font-black text-sm">
+                    <span className="font-black text-xs sm:text-sm">
                       {formatPrice(c.price)}
                     </span>
-                    <span className="text-[11px] font-bold uppercase tracking-wide">
+                    <span className="text-[10px] font-bold uppercase tracking-wide sm:text-[11px]">
                       <span className="sm:hidden">
                         {c.shortLabel}
                       </span>
@@ -366,7 +366,7 @@ export default function ProductCard({
               disabled={allOutOfStock || allAtCartLimit}
               data-cms-style="button"
               style={primaryBtnStyle}
-              className="mt-3 w-full overflow-hidden bg-button px-4 py-3 font-bold uppercase tracking-widest text-xs text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:hidden"
+              className="mt-3 w-full overflow-hidden bg-button px-3 py-2.5 font-bold uppercase tracking-wide text-[11px] text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:hidden"
             >
               {allOutOfStock
                 ? outOfStockLabel

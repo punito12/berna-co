@@ -175,7 +175,7 @@ export default function CmsHomeSection({
               </div>
             )}
           </div>
-          <div>
+          <div className="text-center md:text-left">
             {(() => {
               // "Nuestra historia" eyebrow: uses its own (optional) text. No
               // hardcoded "LA VIDA ES RICA!" fallback — only renders if there's

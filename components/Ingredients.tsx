@@ -7,7 +7,7 @@ import Link from "next/link";
 
 function EggIcon() {
   return (
-    <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
+    <svg viewBox="0 0 64 64" className="h-12 w-12 sm:h-16 sm:w-16" fill="none" aria-hidden>
       <path
         d="M32 6c-9 0-17 14-17 27a17 17 0 1 0 34 0C49 20 41 6 32 6Z"
         stroke="currentColor"
@@ -27,7 +27,7 @@ function EggIcon() {
 function ChickenIcon() {
   // A pasture chicken: whole bird, comb, beak, wing and a small ground line.
   return (
-    <svg viewBox="0 0 64 64" className="h-16 w-16" fill="none" aria-hidden>
+    <svg viewBox="0 0 64 64" className="h-12 w-12 sm:h-16 sm:w-16" fill="none" aria-hidden>
       {/* body */}
       <path
         d="M18 38c0-10 8-18 19-18 9 0 16 6 16 15 0 8-7 14-17 14H22c-6 0-10-4-10-9 0-4 2-7 6-9"
@@ -86,7 +86,7 @@ function PecetoPasturaIcon() {
       src="/icons/peceto-pastura.svg"
       alt=""
       aria-hidden="true"
-      className="h-16 w-16 scale-150 object-contain"
+      className="h-12 w-12 scale-150 object-contain sm:h-16 sm:w-16"
     />
   );
 }
@@ -143,16 +143,16 @@ export default function Ingredients({
             >
               <Link
                 href={item.href}
-                className="flex h-full flex-col items-center gap-4 px-6 py-8 outline-none transition-colors focus-visible:bg-cream sm:gap-5 sm:py-12"
+                className="flex h-full flex-col items-center gap-2.5 px-4 py-5 outline-none transition-colors focus-visible:bg-cream sm:gap-5 sm:px-6 sm:py-12"
                 aria-label={`Ver beneficios de ${item.title}`}
               >
-                <span className="rounded-full border border-line bg-cream/60 p-4 text-ink transition-transform duration-300 group-hover:scale-105">
+                <span className="rounded-full border border-line bg-cream/60 p-2.5 text-ink transition-transform duration-300 group-hover:scale-105 sm:p-4">
                   <item.Icon />
                 </span>
-                <h3 className="flex min-h-[3.5rem] items-center justify-center font-black uppercase tracking-tight text-xl leading-tight text-ink">
+                <h3 className="flex items-center justify-center font-black uppercase tracking-tight text-base leading-tight text-ink sm:min-h-[3.5rem] sm:text-xl">
                   {item.title}
                 </h3>
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-accent transition-colors group-hover:text-ink">
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-accent transition-colors group-hover:text-ink sm:text-xs">
                   Ver beneficios
                 </span>
               </Link>
