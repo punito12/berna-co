@@ -42,6 +42,13 @@ const config: Config = {
         "badge-stock-text": "var(--color-badge-stock-text, #FFFFFF)",
         "badge-promo-bg": "var(--color-badge-promo-bg, #c0392b)",
         "badge-promo-text": "var(--color-badge-promo-text, #FFFFFF)",
+        "hero-btn-bg": "var(--color-hero-btn-bg, #FFFFFF)",
+        "hero-btn-text": "var(--color-hero-btn-text, #0A0A0A)",
+        "empanado-active-bg": "var(--color-empanado-active-bg, #0A0A0A)",
+        "empanado-active-text": "var(--color-empanado-active-text, #FFFFFF)",
+        "empanado-inactive-bg": "var(--color-empanado-inactive-bg, #FFFFFF)",
+        "empanado-inactive-text": "var(--color-empanado-inactive-text, #0A0A0A)",
+        "empanado-border": "var(--color-empanado-border, #0A0A0A)",
       },
       fontFamily: {
         // Grotesque workhorse (headlines + UI) and the serif accent.

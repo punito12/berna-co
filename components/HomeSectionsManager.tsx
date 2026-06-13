@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CmsTextField from "@/components/CmsTextField";
 import {
   CMS_BLOCK_LABELS,
@@ -19,28 +18,9 @@ import {
 } from "@/lib/cms-text-styles";
 import { humanizeCmsKey } from "@/lib/cms-labels";
 import CmsStylePreview from "@/components/CmsStylePreview";
+import { CMS_FONT_OPTIONS } from "@/lib/cms-fonts";
 
-const FONT_OPTIONS = [
-  "",
-  "Archivo",
-  "Fraunces",
-  "Inter",
-  "Poppins",
-  "Montserrat",
-  "Bebas Neue",
-  "Playfair Display",
-  "Lora",
-  "Roboto",
-  "Oswald",
-  "Raleway",
-  "Work Sans",
-  "Merriweather",
-  "Nunito",
-  "DM Sans",
-  "Space Grotesk",
-  "Archivo Black",
-  "Libre Franklin",
-];
+const FONT_OPTIONS = ["", ...CMS_FONT_OPTIONS];
 
 const WEIGHT_OPTIONS = ["", "300", "400", "500", "600", "700", "800", "900"];
 
@@ -158,7 +138,6 @@ export default function HomeSectionsManager({
   initialSections: Section[];
   texts: TextRow[];
 }) {
-  const router = useRouter();
   const [sections, setSections] = useState(initialSections);
   const [dragKey, setDragKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -166,9 +145,13 @@ export default function HomeSectionsManager({
   const [busy, setBusy] = useState<string | null>(null);
   const textByKey = useMemo(() => new Map(texts.map((t) => [t.key, t])), [texts]);
 
-  async function refreshAfterDraft() {
+  // Notifies the status bar to re-check pending changes. We DON'T call
+  // router.refresh() here: every action already updates local state
+  // (setSections), and refreshing re-renders the whole server page on each
+  // keystroke/toggle, which made the editor flicker. The published values only
+  // change on publish, so a local update is enough.
+  function refreshAfterDraft() {
     notifyDraftChanged();
-    router.refresh();
   }
 
   async function persistOrder(next: Section[]) {
@@ -262,21 +245,38 @@ export default function HomeSectionsManager({
     }
   }
 
-  async function saveConfig(key: string, config: CmsBlockConfig) {
+  async function saveConfig(
+    key: string,
+    config: CmsBlockConfig,
+    signal?: AbortSignal
+  ): Promise<boolean> {
     const safe = sanitizeBlockConfig(config as Record<string, unknown>);
     setSections((prev) =>
       prev.map((s) =>
         s.key === key ? { ...s, configDraft: JSON.stringify(safe) } : s
       )
     );
-    const res = await fetch("/api/admin/cms/sections/config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, config: safe }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/admin/cms/sections/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, config: safe }),
+        signal,
+      });
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        console.error("[cms section autosave]", error);
+      }
+      return false;
+    }
     const data = await res.json();
-    if (!res.ok) return alert(data.error || "No se pudo guardar.");
+    if (!res.ok) {
+      if (!signal?.aborted) alert(data.error || "No se pudo guardar.");
+      return false;
+    }
     refreshAfterDraft();
+    return true;
   }
 
   return (
@@ -454,13 +454,113 @@ function BlockConfigEditor({
 }: {
   type: CmsBlockType;
   config: CmsBlockConfig;
-  onSave: (config: CmsBlockConfig) => void;
+  onSave: (config: CmsBlockConfig, signal?: AbortSignal) => Promise<boolean>;
 }) {
-  const [draft, setDraft] = useState<CmsBlockConfig>({
-    ...defaultBlockConfig(type),
-    ...config,
-  });
+  const initialDraft = useMemo(
+    () => ({
+      ...defaultBlockConfig(type),
+      ...config,
+    }),
+    [type, config]
+  );
+  const [draft, setDraft] = useState<CmsBlockConfig>(initialDraft);
   const [saving, setSaving] = useState(false);
+  const [savedTick, setSavedTick] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [savedSignature, setSavedSignature] = useState(() =>
+    JSON.stringify(sanitizeBlockConfig(initialDraft as Record<string, unknown>))
+  );
+  const saveRunRef = useRef(0);
+  const saveAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const next = {
+      ...defaultBlockConfig(type),
+      ...config,
+    };
+    setDraft(next);
+    setSavedSignature(
+      JSON.stringify(sanitizeBlockConfig(next as Record<string, unknown>))
+    );
+    setSaving(false);
+    setSavedTick(false);
+    setSaveError(false);
+  }, [type, config]);
+
+  useEffect(() => {
+    const resetToCurrentConfig = () => {
+      saveRunRef.current += 1;
+      saveAbortRef.current?.abort();
+      saveAbortRef.current = null;
+      const next = {
+        ...defaultBlockConfig(type),
+        ...config,
+      };
+      setDraft(next);
+      setSavedSignature(
+        JSON.stringify(sanitizeBlockConfig(next as Record<string, unknown>))
+      );
+      setSaving(false);
+      setSavedTick(false);
+      setSaveError(false);
+    };
+    window.addEventListener("cms:drafts-discarding", resetToCurrentConfig);
+    window.addEventListener("cms:drafts-discarded", resetToCurrentConfig);
+    return () => {
+      window.removeEventListener("cms:drafts-discarding", resetToCurrentConfig);
+      window.removeEventListener("cms:drafts-discarded", resetToCurrentConfig);
+    };
+  }, [type, config]);
+
+  useEffect(() => {
+    const safe = sanitizeBlockConfig(draft as Record<string, unknown>);
+    const signature = JSON.stringify(safe);
+    if (signature === savedSignature) return;
+
+    setSaving(true);
+    setSaveError(false);
+    setSavedTick(false);
+    const run = ++saveRunRef.current;
+    saveAbortRef.current?.abort();
+    const controller = new AbortController();
+    saveAbortRef.current = controller;
+    const timer = window.setTimeout(async () => {
+      const ok = await onSave(safe, controller.signal);
+      if (run !== saveRunRef.current) return;
+      setSaving(false);
+      if (ok) {
+        setSavedSignature(signature);
+        setSavedTick(true);
+        window.setTimeout(() => setSavedTick(false), 1200);
+      } else {
+        setSaveError(true);
+      }
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [draft, onSave, savedSignature]);
+
+  async function saveNow() {
+    const safe = sanitizeBlockConfig(draft as Record<string, unknown>);
+    const signature = JSON.stringify(safe);
+    setSaving(true);
+    setSaveError(false);
+    setSavedTick(false);
+    const run = ++saveRunRef.current;
+    saveAbortRef.current?.abort();
+    const controller = new AbortController();
+    saveAbortRef.current = controller;
+    const ok = await onSave(safe, controller.signal);
+    if (run !== saveRunRef.current) return;
+    setSaving(false);
+    if (ok) {
+      setSavedSignature(signature);
+      setSavedTick(true);
+      window.setTimeout(() => setSavedTick(false), 1200);
+    } else {
+      setSaveError(true);
+    }
+  }
 
   function update(next: CmsBlockConfig) {
     setDraft(next);
@@ -502,9 +602,18 @@ function BlockConfigEditor({
             Contenido de la sección
           </p>
           <p className="mt-1 text-sm leading-6 text-muted">
-            Editá estos campos y guardá la sección. Después usá vista previa
-            para revisar antes de publicar.
+            Editá estos campos. Se guardan solos como borrador para que la
+            vista previa pueda mostrar los cambios.
           </p>
+        </div>
+        <div className="rounded-full border border-line bg-cream px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-muted">
+          {saving
+            ? "Guardando..."
+            : saveError
+            ? "Error al guardar"
+            : savedTick
+            ? "Guardado"
+            : "Autosave activo"}
         </div>
       </div>
       <div className="grid gap-3">
@@ -613,11 +722,11 @@ function BlockConfigEditor({
       </div>
       <button
         type="button"
-        onClick={() => onSave(draft)}
+        onClick={saveNow}
         disabled={saving}
         className="mt-4 rounded-full bg-ink px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-white disabled:opacity-50"
       >
-        Guardar sección
+        Guardar ahora
       </button>
     </div>
   );
@@ -901,6 +1010,12 @@ function SmallInput({
 }) {
   const [local, setLocal] = useState(value);
   useEffect(() => setLocal(value), [value]);
+  useEffect(() => {
+    const next = local.trim();
+    if (next === value) return;
+    const timer = window.setTimeout(() => onBlur(next), 700);
+    return () => window.clearTimeout(timer);
+  }, [local, onBlur, value]);
   return (
     <label className="block">
       <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">

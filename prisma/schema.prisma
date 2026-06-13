@@ -15,7 +15,13 @@ model Product {
   id          String  @id @default(cuid())
   name        String
   description String // short description, shown on the catalog cards
-  longDescription String @default("") // full description, shown on the detail page
+  longDescription String @default("") // full description, shown on the detail page (universal for the whole cut)
+
+  // JSON map of per-empanado description, e.g.
+  // {"KETO":"Empanado keto sin harinas...","INTEGRAL":"Con pan integral..."}.
+  // Shown on the detail page below the universal description; swaps when the
+  // customer picks a different empanado. Empty entries are simply not shown.
+  empanadoDescriptions String @default("{}")
   slug        String  @unique
   weightGrams Int
   category    String // CARNE | POLLO | CERDO | VEGANO

@@ -8,6 +8,7 @@ import {
   parseBlockConfig,
   validateBlockConfig,
 } from "@/lib/cms-blocks";
+import { CMS_FONT_SET } from "@/lib/cms-fonts";
 
 export type SiteSnapshot = {
   content: {
@@ -51,27 +52,6 @@ export type CmsBackup = {
   exportedAt: string;
   snapshot: SiteSnapshot;
 };
-
-const ALLOWED_FONTS = new Set([
-  "Archivo",
-  "Inter",
-  "Poppins",
-  "Montserrat",
-  "Bebas Neue",
-  "Playfair Display",
-  "Lora",
-  "Roboto",
-  "Oswald",
-  "Raleway",
-  "Work Sans",
-  "Merriweather",
-  "Nunito",
-  "DM Sans",
-  "Space Grotesk",
-  "Fraunces",
-  "Archivo Black",
-  "Libre Franklin",
-]);
 
 const REQUIRED_TEXT_KEYS = [
   "home.hero.title",
@@ -225,7 +205,7 @@ export async function validateCmsDrafts(): Promise<CmsSafetyIssue[]> {
   const typography = parseObject(content?.typographyDraft ?? "{}");
   for (const key of ["headingFont", "bodyFont"]) {
     const value = typography?.[key];
-    if (typeof value !== "string" || !ALLOWED_FONTS.has(value)) {
+    if (typeof value !== "string" || !CMS_FONT_SET.has(value)) {
       issues.push({
         code: `typography.${key}`,
         label: "Tipografía no disponible",

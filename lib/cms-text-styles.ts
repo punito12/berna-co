@@ -1,3 +1,5 @@
+import { CMS_FONT_SET } from "@/lib/cms-fonts";
+
 export type CmsTextStyle = {
   fontFamily?: string;
   fontSize?: string;
@@ -9,27 +11,6 @@ export type CmsTextStyle = {
   lineHeight?: string;
   letterSpacing?: string;
 };
-
-const ALLOWED_FONTS = new Set([
-  "Archivo",
-  "Fraunces",
-  "Inter",
-  "Poppins",
-  "Montserrat",
-  "Bebas Neue",
-  "Playfair Display",
-  "Lora",
-  "Roboto",
-  "Oswald",
-  "Raleway",
-  "Work Sans",
-  "Merriweather",
-  "Nunito",
-  "DM Sans",
-  "Space Grotesk",
-  "Archivo Black",
-  "Libre Franklin",
-]);
 
 const ALLOWED_WEIGHTS = new Set(["300", "400", "500", "600", "700", "800", "900"]);
 const SIZE_RE = /^\d{1,3}(\.\d{1,2})?(px|rem|em)$/;
@@ -53,7 +34,7 @@ export function parseTextStyle(raw: string): CmsTextStyle {
 
 export function sanitizeTextStyle(input: Record<string, unknown>): CmsTextStyle {
   const out: CmsTextStyle = {};
-  if (typeof input.fontFamily === "string" && ALLOWED_FONTS.has(input.fontFamily)) {
+  if (typeof input.fontFamily === "string" && CMS_FONT_SET.has(input.fontFamily)) {
     out.fontFamily = input.fontFamily;
   }
   if (typeof input.fontSize === "string" && SIZE_RE.test(input.fontSize)) {

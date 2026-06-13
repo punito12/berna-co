@@ -170,6 +170,7 @@ export type ProductInput = {
   prices: Record<string, number>; // pesos, by empanado
   stocks: Record<string, number>; // units, by empanado
   images: Record<string, string[]>; // up to 2 photo paths, by empanado
+  empanadoDescriptions?: Record<string, string>; // per-empanado description
 };
 
 // Turns a name into a URL-safe slug (no accents, spaces → dashes).
@@ -273,6 +274,13 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
     if (t === "2x1" || t === "3x2") promoTypes[b] = t;
   }
 
+  // Per-empanado descriptions (only offered breadcrumbs, non-empty).
+  const empanadoDescriptions: Record<string, string> = {};
+  for (const b of breadcrumbs) {
+    const d = (input.empanadoDescriptions?.[b] ?? "").trim();
+    if (d) empanadoDescriptions[b] = d;
+  }
+
   return {
     name,
     description,
@@ -292,6 +300,7 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
     prices: JSON.stringify(prices),
     stocks: JSON.stringify(stocks),
     images: JSON.stringify(images),
+    empanadoDescriptions: JSON.stringify(empanadoDescriptions),
     price: defaultPrice,
     stock: totalStock,
     imageUrl,

@@ -210,24 +210,24 @@ export default function ProductCard({
             style={{ backgroundImage: `url('${cover}')` }}
           />
 
-          <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
+          <div className="absolute left-2 top-2 flex flex-col items-start gap-1 sm:left-3 sm:top-3 sm:gap-1.5">
             {!allOutOfStock && selPromoType && (
-              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-promo-bg px-2 py-1 font-black uppercase tracking-widest text-[11px] text-badge-promo-text shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
+              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-promo-bg px-1.5 py-0.5 font-black uppercase tracking-wide text-[9px] text-badge-promo-text shadow-md sm:px-3 sm:py-1.5 sm:tracking-widest sm:text-sm">
                 {selPromoType}
               </span>
             )}
             {!allOutOfStock && selPromoPercent > 0 && (
-              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-promo-bg px-2 py-1 font-black uppercase tracking-widest text-[11px] text-badge-promo-text shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
+              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-promo-bg px-1.5 py-0.5 font-black uppercase tracking-wide text-[9px] text-badge-promo-text shadow-md sm:px-3 sm:py-1.5 sm:tracking-widest sm:text-sm">
                 -{selPromoPercent}%
               </span>
             )}
             {product.isNew && !allOutOfStock && (
-              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-new-bg px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-badge-new-text">
+              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-new-bg px-1.5 py-0.5 font-bold uppercase tracking-wide text-[9px] text-badge-new-text sm:px-2.5 sm:py-1 sm:tracking-widest sm:text-[10px]">
                 {newLabel}
               </span>
             )}
             {allOutOfStock && (
-              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-stock-bg px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-badge-stock-text">
+              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-stock-bg px-1.5 py-0.5 font-bold uppercase tracking-wide text-[9px] text-badge-stock-text sm:px-2.5 sm:py-1 sm:tracking-widest sm:text-[10px]">
                 {outOfStockLabel}
               </span>
             )}
@@ -247,7 +247,10 @@ export default function ProductCard({
           <p className="mt-0.5 font-bold uppercase tracking-wide text-xs text-muted">
             {formatWeight(product.weightGrams)}
           </p>
-          <p className="mt-3 hidden text-sm leading-relaxed text-muted sm:block">
+          <p
+            style={{ fontFamily: "var(--description-font, inherit)" }}
+            className="mt-3 hidden text-sm leading-relaxed text-muted sm:block"
+          >
             {product.description}
           </p>
 
@@ -281,10 +284,17 @@ export default function ProductCard({
                     type="button"
                     onClick={() => setSelected(code)}
                     aria-pressed={active}
-                    className={`rounded-full border border-black px-3 py-1.5 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
+                    data-cms-style="empanado"
+                    style={{
+                      borderRadius: "var(--empanado-radius, 9999px)",
+                      fontFamily: "var(--empanado-font, inherit)",
+                      fontWeight: "var(--empanado-weight, 700)" as React.CSSProperties["fontWeight"],
+                      textTransform: "var(--empanado-transform, uppercase)" as React.CSSProperties["textTransform"],
+                    }}
+                    className={`border border-empanado-border px-3 py-1.5 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
                       active
-                        ? "bg-black text-white shadow-sm"
-                        : "bg-white text-black hover:-translate-y-0.5 hover:bg-cream"
+                        ? "bg-empanado-active-bg text-empanado-active-text shadow-sm"
+                        : "bg-empanado-inactive-bg text-empanado-inactive-text hover:-translate-y-0.5 hover:bg-cream"
                     }`}
                   >
                     {BREADCRUMB_LABELS[code] ?? code}

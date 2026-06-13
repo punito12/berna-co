@@ -1,34 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   parseTextStyle,
   sanitizeTextStyle,
   type CmsTextStyle,
 } from "@/lib/cms-text-styles";
 import CmsStylePreview from "@/components/CmsStylePreview";
+import { CMS_FONT_OPTIONS } from "@/lib/cms-fonts";
 
-const FONT_OPTIONS = [
-  "",
-  "Archivo",
-  "Fraunces",
-  "Inter",
-  "Poppins",
-  "Montserrat",
-  "Bebas Neue",
-  "Playfair Display",
-  "Lora",
-  "Roboto",
-  "Oswald",
-  "Raleway",
-  "Work Sans",
-  "Merriweather",
-  "Nunito",
-  "DM Sans",
-  "Space Grotesk",
-  "Archivo Black",
-  "Libre Franklin",
-];
+const FONT_OPTIONS = ["", ...CMS_FONT_OPTIONS];
 
 const WEIGHT_OPTIONS = ["", "300", "400", "500", "600", "700", "800", "900"];
 
@@ -37,8 +18,8 @@ function notifyDraftChanged() {
 }
 
 // One editable site text: label, textarea/input, character counter, "restaurar
-// al original" button, and auto-save of the draft on blur. Shows a dot when the
-// draft differs from the published value.
+// al original" button, and auto-save of the draft after typing pauses. Shows a
+// dot when the draft differs from the published value.
 export default function CmsTextField({
   textKey,
   label,
@@ -70,6 +51,8 @@ export default function CmsTextField({
   );
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
+  const saveRunRef = useRef(0);
+  const saveAbortRef = useRef<AbortController | null>(null);
   const publishedStyle = parseTextStyle(style ?? "{}");
   const changed =
     value !== published ||
@@ -88,35 +71,63 @@ export default function CmsTextField({
 
   useEffect(() => {
     const resetToPublished = () => {
+      saveRunRef.current += 1;
+      saveAbortRef.current?.abort();
+      saveAbortRef.current = null;
       const nextStyle = parseTextStyle(style ?? "{}");
       setValue(published);
       setSavedValue(published);
       setTextStyle(nextStyle);
       setSavedStyle(nextStyle);
+      setSaving(false);
       setSavedTick(false);
     };
+    window.addEventListener("cms:drafts-discarding", resetToPublished);
     window.addEventListener("cms:drafts-discarded", resetToPublished);
-    return () =>
+    return () => {
+      window.removeEventListener("cms:drafts-discarding", resetToPublished);
       window.removeEventListener("cms:drafts-discarded", resetToPublished);
+    };
   }, [published, style]);
 
-  async function save() {
-    if (value === savedValue) return; // nothing new
+  useEffect(() => {
+    if (value === savedValue) return;
+    const timer = window.setTimeout(() => {
+      void save(value);
+    }, 700);
+    return () => window.clearTimeout(timer);
+    // save intentionally stays outside the dependency list because it reads the
+    // latest refs/state through the explicit nextValue argument.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, savedValue]);
+
+  async function save(nextValue = value) {
+    if (nextValue === savedValue) return; // nothing new
+    const run = ++saveRunRef.current;
+    saveAbortRef.current?.abort();
+    const controller = new AbortController();
+    saveAbortRef.current = controller;
     setSaving(true);
     try {
       const res = await fetch("/api/admin/cms/text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: textKey, value }),
+        body: JSON.stringify({ key: textKey, value: nextValue }),
+        signal: controller.signal,
       });
+      if (run !== saveRunRef.current) return;
       if (res.ok) {
-        setSavedValue(value);
+        setSavedValue(nextValue);
         notifyDraftChanged();
         setSavedTick(true);
         setTimeout(() => setSavedTick(false), 1200);
       }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        console.error("[cms text autosave]", error);
+      }
     } finally {
-      setSaving(false);
+      if (run === saveRunRef.current) setSaving(false);
     }
   }
 
@@ -142,21 +153,31 @@ export default function CmsTextField({
     const safe = sanitizeTextStyle(nextStyle as Record<string, unknown>);
     setTextStyle(safe);
     if (JSON.stringify(safe) === JSON.stringify(savedStyle)) return;
+    const run = ++saveRunRef.current;
+    saveAbortRef.current?.abort();
+    const controller = new AbortController();
+    saveAbortRef.current = controller;
     setSaving(true);
     try {
       const res = await fetch("/api/admin/cms/text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: textKey, style: safe }),
+        signal: controller.signal,
       });
+      if (run !== saveRunRef.current) return;
       if (res.ok) {
         setSavedStyle(safe);
         notifyDraftChanged();
         setSavedTick(true);
         setTimeout(() => setSavedTick(false), 1200);
       }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        console.error("[cms style autosave]", error);
+      }
     } finally {
-      setSaving(false);
+      if (run === saveRunRef.current) setSaving(false);
     }
   }
 
@@ -202,7 +223,7 @@ export default function CmsTextField({
           value={value}
           maxLength={maxLength}
           onChange={(e) => setValue(e.target.value)}
-          onBlur={save}
+          onBlur={() => void save(value)}
           rows={3}
           className={inputClass + " resize-y"}
         />
@@ -211,7 +232,7 @@ export default function CmsTextField({
           value={value}
           maxLength={maxLength}
           onChange={(e) => setValue(e.target.value)}
-          onBlur={save}
+          onBlur={() => void save(value)}
           className={inputClass}
         />
       )}
@@ -367,6 +388,12 @@ function StyleInput({
 }) {
   const [local, setLocal] = useState(value);
   useEffect(() => setLocal(value), [value]);
+  useEffect(() => {
+    const next = local.trim();
+    if (next === value) return;
+    const timer = window.setTimeout(() => onBlur(next), 700);
+    return () => window.clearTimeout(timer);
+  }, [local, onBlur, value]);
   return (
     <label className="block">
       <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">

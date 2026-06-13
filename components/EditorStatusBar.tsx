@@ -174,6 +174,7 @@ export default function EditorStatusBar() {
     if (!ok) return;
     setBusy("discard");
     setMessage(null);
+    window.dispatchEvent(new Event("cms:drafts-discarding"));
     try {
       const res = await fetch("/api/admin/cms/discard", { method: "POST" });
       const data = await res.json();

@@ -32,6 +32,7 @@ export type ProductForUI = {
   promoType: string; // product-wide quantity promo fallback
   promoPercentByBreadcrumb: Record<string, number>; // per-empanado % off
   promoTypeByBreadcrumb: Record<string, string>; // per-empanado 2x1/3x2
+  empanadoDescriptionByBreadcrumb: Record<string, string>; // per-empanado description
 };
 
 // The raw Prisma row fields we care about (kept loose to avoid import churn).
@@ -57,6 +58,7 @@ type ProductRow = {
   promoType: string;
   promoPercents: string;
   promoTypes: string;
+  empanadoDescriptions?: string;
 };
 
 // Maps a database row into the UI shape (parsing the JSON columns). The
@@ -86,6 +88,9 @@ function toProductForUI(p: ProductRow): ProductForUI {
     promoType: p.promoType ?? "",
     promoPercentByBreadcrumb: safeParseNumberMap(p.promoPercents),
     promoTypeByBreadcrumb: safeParseStringMap(p.promoTypes),
+    empanadoDescriptionByBreadcrumb: safeParseStringMap(
+      p.empanadoDescriptions ?? "{}"
+    ),
   };
 }
 

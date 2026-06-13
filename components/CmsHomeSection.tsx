@@ -268,14 +268,21 @@ export default function CmsHomeSection({
           ];
     return (
       <section className="bg-cream">
+        {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
         <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
           <div className="mb-8 text-center sm:mb-12">
             {config.eyebrow && (
-              <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
+              <p
+                className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
+                {...cmsTextAttrs(`${section.key}.eyebrow`)}
+              >
                 {config.eyebrow}
               </p>
             )}
-            <h2 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl">
+            <h2
+              className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
+              {...cmsTextAttrs(`${section.key}.title`)}
+            >
               {config.title || t("home.features.title", "Cómo comprar")}
             </h2>
           </div>
@@ -315,9 +322,10 @@ export default function CmsHomeSection({
     const imageLeft = config.imageSide !== "right";
     return (
       <section className="bg-cream">
+        {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 md:grid-cols-2 md:items-center sm:py-20">
           <BlockImage config={config} className={imageLeft ? "" : "md:order-2"} />
-          <BlockCopy config={config} />
+          <BlockCopy config={config} sectionKey={section.key} />
         </div>
       </section>
     );
@@ -326,8 +334,12 @@ export default function CmsHomeSection({
   if (type === "faq") {
     return (
       <section className="bg-cream">
+        {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
         <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
-          <h2 className="font-black uppercase tracking-tight text-4xl text-ink">
+          <h2
+            className="font-black uppercase tracking-tight text-4xl text-ink"
+            {...cmsTextAttrs(`${section.key}.title`)}
+          >
             {config.title || "Preguntas frecuentes"}
           </h2>
           <div className="mt-8 divide-y divide-line rounded-lg border border-line bg-white">
@@ -348,16 +360,26 @@ export default function CmsHomeSection({
   if (type === "cta") {
     return (
       <section className="bg-ink px-4 py-16 text-center text-white">
-        <h2 className="font-black uppercase tracking-tight text-4xl">
+        {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
+        <h2
+          className="font-black uppercase tracking-tight text-4xl"
+          {...cmsTextAttrs(`${section.key}.title`)}
+        >
           {config.title || "La vida es rica"}
         </h2>
         {config.subtitle && (
-          <p className="mx-auto mt-3 max-w-xl text-cream">{config.subtitle}</p>
+          <p
+            className="mx-auto mt-3 max-w-xl text-cream"
+            {...cmsTextAttrs(`${section.key}.subtitle`)}
+          >
+            {config.subtitle}
+          </p>
         )}
         {config.ctaLabel && config.ctaHref && (
           <a
             href={config.ctaHref}
             className="mt-8 inline-flex bg-white px-8 py-4 font-bold uppercase tracking-widest text-sm text-black"
+            {...cmsTextAttrs(`${section.key}.ctaLabel`)}
           >
             {config.ctaLabel}
           </a>
@@ -369,11 +391,18 @@ export default function CmsHomeSection({
   if (type === "newsletter") {
     return (
       <section className="bg-ink px-4 py-16 text-center text-white">
-        <h2 className="font-black uppercase tracking-tight text-3xl">
+        {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
+        <h2
+          className="font-black uppercase tracking-tight text-3xl"
+          {...cmsTextAttrs(`${section.key}.title`)}
+        >
           {config.title || "Sumate al newsletter"}
         </h2>
         {config.subtitle && (
-          <p className="mx-auto mt-2 max-w-md text-sm text-white/60">
+          <p
+            className="mx-auto mt-2 max-w-md text-sm text-white/60"
+            {...cmsTextAttrs(`${section.key}.subtitle`)}
+          >
             {config.subtitle}
           </p>
         )}
@@ -437,30 +466,49 @@ export default function CmsHomeSection({
 
   return (
     <section className="bg-cream">
+      {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
       <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
-        <BlockCopy config={config} />
+        <BlockCopy config={config} sectionKey={section.key} />
       </div>
     </section>
   );
 }
 
-function BlockCopy({ config }: { config: CmsBlockConfig }) {
+function BlockCopy({
+  config,
+  sectionKey,
+}: {
+  config: CmsBlockConfig;
+  sectionKey: string;
+}) {
   return (
     <div>
       {config.eyebrow && (
-        <p className="font-bold uppercase tracking-[0.3em] text-xs text-muted">
+        <p
+          className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
+          {...cmsTextAttrs(`${sectionKey}.eyebrow`)}
+        >
           {config.eyebrow}
         </p>
       )}
-      <h2 className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-5xl">
+      <h2
+        className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-5xl"
+        {...cmsTextAttrs(`${sectionKey}.title`)}
+      >
         {config.title || "Sección"}
       </h2>
       {config.subtitle && (
-        <p className="mt-4 font-serif italic text-lg text-muted">{config.subtitle}</p>
+        <p
+          className="mt-4 font-serif italic text-lg text-muted"
+          {...cmsTextAttrs(`${sectionKey}.subtitle`)}
+        >
+          {config.subtitle}
+        </p>
       )}
       {config.body && (
         <RichText
           text={config.body}
+          textKey={`${sectionKey}.body`}
           className="mt-5 space-y-2 text-base leading-relaxed text-ink/80"
         />
       )}
@@ -468,6 +516,7 @@ function BlockCopy({ config }: { config: CmsBlockConfig }) {
         <a
           href={config.ctaHref}
           className="mt-6 inline-flex bg-black px-6 py-3 font-bold uppercase tracking-widest text-xs text-white"
+          {...cmsTextAttrs(`${sectionKey}.ctaLabel`)}
         >
           {config.ctaLabel}
         </a>

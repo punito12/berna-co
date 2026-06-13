@@ -30,6 +30,7 @@ export type ProductFormValues = {
   prices: Record<string, number>;
   stocks: Record<string, number>;
   images: Record<string, string[]>; // up to 2 photo paths per empanado
+  empanadoDescriptions?: Record<string, string>; // per-empanado description
 };
 
 const PHOTO_SLOTS = [0, 1]; // two photos per empanado
@@ -88,6 +89,14 @@ export default function ProductForm({
     for (const b of BREADCRUMBS) out[b] = initial.images[b] ?? [];
     return out;
   });
+  // Per-empanado description (shown on the detail page, swaps with empanado).
+  const [empanadoDescriptions, setEmpanadoDescriptions] = useState<
+    Record<string, string>
+  >(() => {
+    const out: Record<string, string> = {};
+    for (const b of BREADCRUMBS) out[b] = initial.empanadoDescriptions?.[b] ?? "";
+    return out;
+  });
   // Tracks which slot is uploading, keyed "breadcrumb:slot".
   const [uploading, setUploading] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -103,6 +112,9 @@ export default function ProductForm({
   function setPhoto(breadcrumb: string, slot: number, url: string) {
     setImages((prev) => {
       const arr = [...(prev[breadcrumb] ?? [])];
+      // Fill any holes with "" so slot positions are preserved (e.g. uploading
+      // photo 2 without photo 1 must keep photo 2 in slot 1, not collapse it).
+      for (let i = 0; i < slot; i++) if (arr[i] == null) arr[i] = "";
       arr[slot] = url;
       return { ...prev, [breadcrumb]: arr };
     });
@@ -156,10 +168,19 @@ export default function ProductForm({
         prices: Object.fromEntries(breadcrumbs.map((b) => [b, Number(prices[b])])),
         stocks: Object.fromEntries(breadcrumbs.map((b) => [b, Number(stocks[b])])),
         images: Object.fromEntries(
-          breadcrumbs.map((b) => [
-            b,
-            (images[b] ?? []).filter((u) => u && u.trim()),
-          ])
+          breadcrumbs.map((b) => {
+            // Normalize each slot to a string, then drop only TRAILING empties so
+            // slot positions are preserved (photo 2 stays in slot 1 even if
+            // slot 0 is empty). Inner empty slots become "" to keep the index.
+            const arr = (images[b] ?? []).map((u) => (u ?? "").trim());
+            while (arr.length > 0 && arr[arr.length - 1] === "") arr.pop();
+            return [b, arr];
+          })
+        ),
+        empanadoDescriptions: Object.fromEntries(
+          breadcrumbs
+            .map((b) => [b, (empanadoDescriptions[b] ?? "").trim()])
+            .filter(([, v]) => v)
         ),
       };
       const url =
@@ -475,6 +496,20 @@ export default function ProductForm({
                   </div>
                 );
               })}
+              <label className="col-span-full block">
+                <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+                  Descripción de este empanado (opcional)
+                </span>
+                <textarea
+                  value={empanadoDescriptions[b] ?? ""}
+                  onChange={(e) =>
+                    setEmpanadoDescriptions((p) => ({ ...p, [b]: e.target.value }))
+                  }
+                  rows={2}
+                  placeholder="Lo que diferencia a este empanado. Se muestra en el detalle al elegirlo."
+                  className={inputClass}
+                />
+              </label>
             </div>
           ))}
         </div>

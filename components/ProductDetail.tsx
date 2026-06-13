@@ -4,7 +4,11 @@ import { useState } from "react";
 import ProductGallery from "@/components/ProductGallery";
 import AddToCartPanel from "@/components/AddToCartPanel";
 import RichText from "@/components/RichText";
-import { formatWeight, type ProductForUI } from "@/lib/products";
+import {
+  BREADCRUMB_LABELS,
+  formatWeight,
+  type ProductForUI,
+} from "@/lib/products";
 
 type ProductDetailLabels = {
   chooseBreadcrumb?: string;
@@ -55,12 +59,31 @@ export default function ProductDetail({
           {product.name}
         </h1>
 
-        {/* Full description on the detail page; falls back to the short one.
-            Rendered with RichText so **bold**, *italic* and "- " bullets show. */}
-        <RichText
-          text={product.longDescription?.trim() || product.description}
-          className="mt-5 border-y border-line py-5 font-serif text-base leading-relaxed text-ink/80 sm:mt-6 sm:py-6 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
-        />
+        {/* Universal description (same for the whole cut). Falls back to the
+            short one. Rendered with RichText so markdown styles show. */}
+        <div style={{ fontFamily: "var(--description-font)" }}>
+          <RichText
+            text={product.longDescription?.trim() || product.description}
+            className="mt-5 border-y border-line py-5 font-serif text-base leading-relaxed text-ink/80 sm:mt-6 sm:py-6 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
+          />
+        </div>
+
+        {/* Per-empanado description: swaps when the customer picks a different
+            empanado. Only shown when this empanado has its own text. */}
+        {product.empanadoDescriptionByBreadcrumb[selected]?.trim() && (
+          <div
+            className="mt-4 rounded-lg border border-line bg-cream/40 p-4 sm:p-5"
+            style={{ fontFamily: "var(--description-font)" }}
+          >
+            <p className="mb-1 font-bold uppercase tracking-wide text-[11px] text-muted">
+              {BREADCRUMB_LABELS[selected] ?? selected}
+            </p>
+            <RichText
+              text={product.empanadoDescriptionByBreadcrumb[selected]}
+              className="font-serif text-base leading-relaxed text-ink/80 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
+            />
+          </div>
+        )}
 
         <AddToCartPanel
           product={product}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function notifyDraftChanged() {
   window.dispatchEvent(new Event("cms:draft-changed"));
@@ -21,6 +21,8 @@ export default function CmsImageField({
   const [savedUrl, setSavedUrl] = useState(draft);
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
+  const saveRunRef = useRef(0);
+  const saveAbortRef = useRef<AbortController | null>(null);
   const changed = url !== published;
 
   useEffect(() => {
@@ -30,32 +32,60 @@ export default function CmsImageField({
 
   useEffect(() => {
     const resetToPublished = () => {
+      saveRunRef.current += 1;
+      saveAbortRef.current?.abort();
+      saveAbortRef.current = null;
       setUrl(published);
       setSavedUrl(published);
+      setSaving(false);
       setSavedTick(false);
     };
+    window.addEventListener("cms:drafts-discarding", resetToPublished);
     window.addEventListener("cms:drafts-discarded", resetToPublished);
-    return () =>
+    return () => {
+      window.removeEventListener("cms:drafts-discarding", resetToPublished);
       window.removeEventListener("cms:drafts-discarded", resetToPublished);
+    };
   }, [published]);
+
+  useEffect(() => {
+    if (url === savedUrl) return;
+    const timer = window.setTimeout(() => {
+      void save(url);
+    }, 700);
+    return () => window.clearTimeout(timer);
+    // save intentionally stays outside the dependency list because it receives
+    // the explicit URL to persist.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, savedUrl]);
 
   async function save(nextUrl = url) {
     if (nextUrl === savedUrl) return;
+    const run = ++saveRunRef.current;
+    saveAbortRef.current?.abort();
+    const controller = new AbortController();
+    saveAbortRef.current = controller;
     setSaving(true);
     try {
       const res = await fetch("/api/admin/cms/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: imageKey, url: nextUrl }),
+        signal: controller.signal,
       });
+      if (run !== saveRunRef.current) return;
       if (res.ok) {
         setSavedUrl(nextUrl);
         notifyDraftChanged();
         setSavedTick(true);
         setTimeout(() => setSavedTick(false), 1200);
       }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        console.error("[cms image autosave]", error);
+      }
     } finally {
-      setSaving(false);
+      if (run === saveRunRef.current) setSaving(false);
     }
   }
 

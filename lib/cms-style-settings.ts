@@ -8,30 +8,7 @@ import {
   type CmsBundle,
   type StyleSettings,
 } from "@/lib/cms";
-
-const ALLOWED_FONTS = new Set([
-  "Archivo",
-  "Inter",
-  "Poppins",
-  "Montserrat",
-  "Bebas Neue",
-  "Playfair Display",
-  "Lora",
-  "Roboto",
-  "Oswald",
-  "Raleway",
-  "Merriweather",
-  "Anton",
-  "Work Sans",
-  "Space Grotesk",
-  "DM Sans",
-  "Manrope",
-  "Outfit",
-  "Plus Jakarta Sans",
-  "Fraunces",
-  "Nunito",
-  "Libre Franklin",
-]);
+import { CMS_FONT_SET } from "@/lib/cms-fonts";
 
 const ALLOWED_WEIGHTS = new Set(["400", "500", "600", "700", "800", "900"]);
 const ALLOWED_RADIUS = new Set(["0px", "8px", "12px", "16px", "20px", "9999px"]);
@@ -42,7 +19,7 @@ const SPACING_RE = /^-?\d(\.\d{1,3})?em$/;
 const BORDER_RE = /^[0-3]px$/;
 
 function pickFont(v: unknown): string {
-  return typeof v === "string" && ALLOWED_FONTS.has(v) ? v : "";
+  return typeof v === "string" && CMS_FONT_SET.has(v) ? v : "";
 }
 function pickWeight(v: unknown): string {
   return typeof v === "string" && ALLOWED_WEIGHTS.has(v) ? v : "";
@@ -114,6 +91,15 @@ export function sanitizeStyleSettings(input: unknown): StyleSettings {
     badgeWeight: pickWeight(o.badgeWeight),
     badgeSize: pickSize(o.badgeSize),
     badgeUppercase: pickToggle(o.badgeUppercase),
+    heroBtnRadius: pickRadius(o.heroBtnRadius),
+    heroBtnFont: pickFont(o.heroBtnFont),
+    heroBtnWeight: pickWeight(o.heroBtnWeight),
+    heroBtnUppercase: pickToggle(o.heroBtnUppercase),
+    empanadoRadius: pickRadius(o.empanadoRadius),
+    empanadoFont: pickFont(o.empanadoFont),
+    empanadoWeight: pickWeight(o.empanadoWeight),
+    empanadoUppercase: pickToggle(o.empanadoUppercase),
+    descriptionFont: pickFont(o.descriptionFont),
   };
 }
 
@@ -201,6 +187,15 @@ export function styleSettingsToCssVars(s: StyleSettings): string {
     ["--badge-weight", s.badgeWeight],
     ["--badge-size", s.badgeSize],
     ["--badge-transform", transform(s.badgeUppercase)],
+    ["--hero-btn-radius", s.heroBtnRadius],
+    ["--hero-btn-font", fontFamily(s.heroBtnFont)],
+    ["--hero-btn-weight", s.heroBtnWeight],
+    ["--hero-btn-transform", transform(s.heroBtnUppercase)],
+    ["--empanado-radius", s.empanadoRadius],
+    ["--empanado-font", fontFamily(s.empanadoFont)],
+    ["--empanado-weight", s.empanadoWeight],
+    ["--empanado-transform", transform(s.empanadoUppercase)],
+    ["--description-font", fontFamily(s.descriptionFont)],
   ];
   return v
     .filter(([, value]) => value !== "")

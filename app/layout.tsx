@@ -12,6 +12,7 @@ import {
   getStyleSettings,
   styleSettingsToCssVars,
 } from "@/lib/cms-style-settings";
+import { cmsGoogleFontsUrl } from "@/lib/cms-fonts";
 import { getGlobalSeo } from "@/lib/cms-seo";
 import {
   DEFAULT_OG_IMAGE,
@@ -41,6 +42,8 @@ const fraunces = Fraunces({
   variable: "--font-fraunces",
   display: "swap",
 });
+
+const cmsFontsUrl = cmsGoogleFontsUrl();
 
 // Metadata is generated from the CMS SEO settings (Editor → SEO y compartir),
 // falling back to the hardcoded SITE_TITLE / SITE_DESCRIPTION / OG image — so
@@ -132,6 +135,9 @@ export default async function RootLayout({
   return (
     <html lang="es-AR" className={`${archivo.variable} ${fraunces.variable}`}>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link href={cmsFontsUrl} rel="stylesheet" />
         {cssVars && (
           <style
             // CMS theme → CSS variables on :root. Tailwind tokens consume them.

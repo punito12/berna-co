@@ -87,6 +87,9 @@ export default async function AdminProductsPage() {
             prices: safeNumberMap(p.prices),
             stocks: safeNumberMap(p.stocks),
             images: safeImagesMap(p.images),
+            empanadoDescriptions: safeStringMap(
+              (p as { empanadoDescriptions?: string }).empanadoDescriptions ?? "{}"
+            ),
           };
           return <ProductEditor key={p.id} product={value} />;
         })}

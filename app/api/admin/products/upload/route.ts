@@ -6,7 +6,7 @@ import { uploadImageToBlob, UploadError } from "@/lib/uploads";
 // Vercel Blob under productos/. Returns { url } pointing at the public file.
 // Existing /images/... product URLs keep working as static fallbacks.
 
-const MAX_BYTES = 6 * 1024 * 1024; // 6 MB
+const MAX_BYTES = 12 * 1024 * 1024; // 12 MB (modern phone photos)
 const ALLOWED = new Map<string, string>([
   ["image/jpeg", "jpg"],
   ["image/png", "png"],

@@ -1,28 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CMS_FONT_OPTIONS } from "@/lib/cms-fonts";
 
 // Curated Google Fonts for the typography selectors.
-const FONTS = [
-  "Archivo",
-  "Inter",
-  "Poppins",
-  "Montserrat",
-  "Bebas Neue",
-  "Playfair Display",
-  "Lora",
-  "Roboto",
-  "Oswald",
-  "Raleway",
-  "Merriweather",
-  "Anton",
-  "Work Sans",
-  "Space Grotesk",
-  "DM Sans",
-  "Manrope",
-  "Outfit",
-  "Plus Jakarta Sans",
-];
+const FONTS = CMS_FONT_OPTIONS;
 
 const WEIGHTS = ["400", "500", "600", "700", "800", "900"];
 
@@ -116,6 +98,30 @@ const STYLE_GROUPS: StyleGroup[] = [
       { key: "badgePromoBg", label: "Oferta · fondo" },
       { key: "badgePromoText", label: "Oferta · texto" },
     ],
+  },
+  {
+    title: "Botón del inicio (Ver productos)",
+    applies: 'El botón grande de la portada que lleva a los productos.',
+    fields: [
+      { key: "heroBtnBg", label: "Fondo" },
+      { key: "heroBtnText", label: "Texto" },
+    ],
+  },
+  {
+    title: "Selector de empanado",
+    applies: "Los botones para elegir empanado (Tradicional / Keto / Integral).",
+    fields: [
+      { key: "empanadoActiveBg", label: "Activo · fondo" },
+      { key: "empanadoActiveText", label: "Activo · texto" },
+      { key: "empanadoInactiveBg", label: "Inactivo · fondo" },
+      { key: "empanadoInactiveText", label: "Inactivo · texto" },
+      { key: "empanadoBorder", label: "Borde" },
+    ],
+  },
+  {
+    title: "Descripciones de producto",
+    applies: "La descripción corta (grilla) y larga (detalle) de cada producto.",
+    fields: [],
   },
 ];
 
@@ -213,6 +219,21 @@ const GROUP_CONTROLS: Record<string, StyleControl[]> = {
     { kind: "size", key: "badgeSize", label: "Tamaño", placeholder: "Ej: 11px" },
     { kind: "toggle", key: "badgeUppercase", label: "Mayúsculas" },
   ],
+  "Botón del inicio (Ver productos)": [
+    { kind: "select", key: "heroBtnRadius", label: "Bordes", options: RADIUS_OPTIONS },
+    { kind: "select", key: "heroBtnFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
+    { kind: "select", key: "heroBtnWeight", label: "Peso", options: WEIGHT_OPTIONS },
+    { kind: "toggle", key: "heroBtnUppercase", label: "Mayúsculas" },
+  ],
+  "Selector de empanado": [
+    { kind: "select", key: "empanadoRadius", label: "Bordes", options: RADIUS_OPTIONS },
+    { kind: "select", key: "empanadoFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
+    { kind: "select", key: "empanadoWeight", label: "Peso", options: WEIGHT_OPTIONS },
+    { kind: "toggle", key: "empanadoUppercase", label: "Mayúsculas" },
+  ],
+  "Descripciones de producto": [
+    { kind: "select", key: "descriptionFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
+  ],
 };
 
 function notifyDraftChanged() {
@@ -261,26 +282,80 @@ export default function IdentityEditor({
   );
   const [logo, setLogo] = useState(logoDraft);
   const [savingMsg, setSavingMsg] = useState<string | null>(null);
+  const saveRunRef = useRef(0);
+  const styleAbortRef = useRef<AbortController | null>(null);
+  const colorAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const resetToDrafts = () => {
+      saveRunRef.current += 1;
+      styleAbortRef.current?.abort();
+      colorAbortRef.current?.abort();
+      styleAbortRef.current = null;
+      colorAbortRef.current = null;
+      setColors(colorsDraft);
+      setTypo(typographyDraft);
+      setStyles(styleSettingsDraft);
+      setLogo(logoDraft);
+      setSavingMsg(null);
+    };
+    window.addEventListener("cms:drafts-discarding", resetToDrafts);
+    window.addEventListener("cms:drafts-discarded", resetToDrafts);
+    return () => {
+      window.removeEventListener("cms:drafts-discarding", resetToDrafts);
+      window.removeEventListener("cms:drafts-discarded", resetToDrafts);
+    };
+  }, [colorsDraft, typographyDraft, styleSettingsDraft, logoDraft]);
 
   async function saveStyles(next: Record<string, string>) {
+    const run = ++saveRunRef.current;
+    styleAbortRef.current?.abort();
+    const controller = new AbortController();
+    styleAbortRef.current = controller;
     setStyles(next);
-    const res = await fetch("/api/admin/cms/style-settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ styles: next }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/admin/cms/style-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ styles: next }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        console.error("[cms style settings autosave]", error);
+        setSavingMsg("Error al guardar");
+      }
+      return;
+    }
+    if (run !== saveRunRef.current) return;
     setSavingMsg(res.ok ? "Estilos guardados ✓" : "Error al guardar");
     if (res.ok) notifyDraftChanged();
     setTimeout(() => setSavingMsg(null), 1200);
   }
 
   async function saveColors(next: Colors) {
+    const run = ++saveRunRef.current;
+    colorAbortRef.current?.abort();
+    const controller = new AbortController();
+    colorAbortRef.current = controller;
     setColors(next);
-    const res = await fetch("/api/admin/cms/theme", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ colors: next }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/admin/cms/theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ colors: next }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        console.error("[cms color autosave]", error);
+        setSavingMsg("Error al guardar");
+      }
+      return;
+    }
+    if (run !== saveRunRef.current) return;
     setSavingMsg(res.ok ? "Colores guardados ✓" : "Error al guardar");
     if (res.ok) notifyDraftChanged();
     setTimeout(() => setSavingMsg(null), 1200);
@@ -888,6 +963,59 @@ function GroupPreview({
         >
           -20%
         </span>
+      </div>
+    );
+  }
+  if (title === "Botón del inicio (Ver productos)") {
+    return (
+      <div className="rounded-lg bg-ink p-4">
+        <span
+          className="inline-block px-5 py-2.5 text-xs font-bold uppercase tracking-widest"
+          style={{
+            background: colors.heroBtnBg,
+            color: colors.heroBtnText,
+            borderRadius: radius(s.heroBtnRadius),
+            fontFamily: fontOf(s.heroBtnFont),
+            fontWeight: weight(s.heroBtnWeight) ?? 700,
+            textTransform: tt(s.heroBtnUppercase) ?? "uppercase",
+          }}
+        >
+          Ver productos ↓
+        </span>
+      </div>
+    );
+  }
+  if (title === "Selector de empanado") {
+    const pill = (label: string, on: boolean): React.CSSProperties => ({
+      background: on ? colors.empanadoActiveBg : colors.empanadoInactiveBg,
+      color: on ? colors.empanadoActiveText : colors.empanadoInactiveText,
+      borderColor: colors.empanadoBorder,
+      borderRadius: radius(s.empanadoRadius, "9999px"),
+      fontFamily: fontOf(s.empanadoFont),
+      fontWeight: weight(s.empanadoWeight) ?? 700,
+      textTransform: tt(s.empanadoUppercase) ?? "uppercase",
+    });
+    return (
+      <div className={box + " flex flex-wrap gap-2"}>
+        <span className="border px-3 py-1.5 text-xs" style={pill("Keto", true)}>
+          Keto
+        </span>
+        <span className="border px-3 py-1.5 text-xs" style={pill("Integral", false)}>
+          Integral
+        </span>
+      </div>
+    );
+  }
+  if (title === "Descripciones de producto") {
+    return (
+      <div className={box}>
+        <p
+          className="text-sm leading-relaxed text-muted"
+          style={{ fontFamily: fontOf(s.descriptionFont) }}
+        >
+          Milanesa de pollo empanada, lista para el horno. Ideal para una comida
+          rica y rápida.
+        </p>
       </div>
     );
   }

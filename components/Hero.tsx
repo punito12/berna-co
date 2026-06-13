@@ -67,8 +67,15 @@ export default function Hero({
       <a
         href="#productos"
         data-cms-text={ctaKey}
-        className="group mt-9 inline-flex animate-fade-up items-center gap-3 bg-white px-9 py-4 font-bold uppercase tracking-widest text-sm text-black shadow-[0_18px_40px_rgba(0,0,0,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cream hover:shadow-[0_22px_50px_rgba(0,0,0,0.3)] active:translate-y-0 sm:mt-12"
-        style={{ animationDelay: "500ms" }}
+        data-cms-style="hero-btn"
+        className="group mt-9 inline-flex animate-fade-up items-center gap-3 bg-hero-btn-bg px-9 py-4 font-bold uppercase tracking-widest text-sm text-hero-btn-text shadow-[0_18px_40px_rgba(0,0,0,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(0,0,0,0.3)] active:translate-y-0 sm:mt-12"
+        style={{
+          animationDelay: "500ms",
+          borderRadius: "var(--hero-btn-radius, 0px)",
+          fontFamily: "var(--hero-btn-font, inherit)",
+          fontWeight: "var(--hero-btn-weight, 700)" as React.CSSProperties["fontWeight"],
+          textTransform: "var(--hero-btn-transform, uppercase)" as React.CSSProperties["textTransform"],
+        }}
       >
         {cta}
         <span

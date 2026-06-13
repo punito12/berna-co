@@ -48,6 +48,15 @@ export type ThemeColors = {
   badgeStockText: string; // "SIN STOCK" badge text
   badgePromoBg: string; // promo / discount badge background
   badgePromoText: string; // promo / discount badge text
+  // Hero CTA ("Ver productos") — inverted button over the dark hero.
+  heroBtnBg: string;
+  heroBtnText: string;
+  // Empanado selector pills (product detail + card).
+  empanadoActiveBg: string;
+  empanadoActiveText: string;
+  empanadoInactiveBg: string;
+  empanadoInactiveText: string;
+  empanadoBorder: string;
 };
 
 export type Typography = {
@@ -109,6 +118,18 @@ export type StyleSettings = {
   badgeWeight: string;
   badgeSize: string;
   badgeUppercase: "" | "on" | "off";
+  // Hero CTA ("Ver productos")
+  heroBtnRadius: string;
+  heroBtnFont: string;
+  heroBtnWeight: string;
+  heroBtnUppercase: "" | "on" | "off";
+  // Empanado selector pills
+  empanadoRadius: string;
+  empanadoFont: string;
+  empanadoWeight: string;
+  empanadoUppercase: "" | "on" | "off";
+  // Product descriptions (short + long)
+  descriptionFont: string;
 };
 
 // Defaults are all "" (inherit) except where a concrete value is needed to keep
@@ -151,6 +172,15 @@ export const DEFAULT_STYLE_SETTINGS: StyleSettings = {
   badgeWeight: "",
   badgeSize: "",
   badgeUppercase: "",
+  heroBtnRadius: "",
+  heroBtnFont: "",
+  heroBtnWeight: "",
+  heroBtnUppercase: "",
+  empanadoRadius: "",
+  empanadoFont: "",
+  empanadoWeight: "",
+  empanadoUppercase: "",
+  descriptionFont: "",
 };
 
 export const DEFAULT_THEME: ThemeColors = {
@@ -183,6 +213,15 @@ export const DEFAULT_THEME: ThemeColors = {
   badgeStockText: "#FFFFFF",
   badgePromoBg: "#c0392b",
   badgePromoText: "#FFFFFF",
+  // Hero CTA (inverted: white on dark hero).
+  heroBtnBg: "#FFFFFF",
+  heroBtnText: "#0A0A0A",
+  // Empanado selector pills (active = black, inactive = white, black border).
+  empanadoActiveBg: "#0A0A0A",
+  empanadoActiveText: "#FFFFFF",
+  empanadoInactiveBg: "#FFFFFF",
+  empanadoInactiveText: "#0A0A0A",
+  empanadoBorder: "#0A0A0A",
 };
 
 export const DEFAULT_TYPOGRAPHY: Typography = {
@@ -462,6 +501,13 @@ export function themeToCssVars(theme: ThemeColors): string {
     `--color-badge-stock-text:${theme.badgeStockText}`,
     `--color-badge-promo-bg:${theme.badgePromoBg}`,
     `--color-badge-promo-text:${theme.badgePromoText}`,
+    `--color-hero-btn-bg:${theme.heroBtnBg}`,
+    `--color-hero-btn-text:${theme.heroBtnText}`,
+    `--color-empanado-active-bg:${theme.empanadoActiveBg}`,
+    `--color-empanado-active-text:${theme.empanadoActiveText}`,
+    `--color-empanado-inactive-bg:${theme.empanadoInactiveBg}`,
+    `--color-empanado-inactive-text:${theme.empanadoInactiveText}`,
+    `--color-empanado-border:${theme.empanadoBorder}`,
   ].join(";");
 }
 
