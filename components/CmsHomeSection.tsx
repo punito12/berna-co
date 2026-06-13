@@ -49,27 +49,34 @@ export default function CmsHomeSection({
 
   if (section.key === "home.hero" || type === "hero") {
     return (
-      <Hero
-        title={
-          config.title ||
-          t("home.hero.title", "Milanesas premium\ny congelados caseros")
-        }
-        subtitle={
-          config.subtitle ||
-          t(
-            "home.hero.subtitle",
-            "Elegí online, coordiná la entrega y pagá como prefieras."
-          )
-        }
-        cta={config.ctaLabel || t("home.hero.cta_primary", "Comprar ahora")}
-        backgroundUrl={
-          config.imageUrl || image("home.hero.background", "/images/hero.jpg")
-        }
-        logoUrl={logoUrl}
-        titleKey="home.hero.title"
-        subtitleKey="home.hero.subtitle"
-        ctaKey="home.hero.cta_primary"
-      />
+      <>
+        {/* Las fuentes/estilos por-texto del bloque se inyectan acá; sin esto
+            el Hero ignoraba el control de fuente del CMS. */}
+        {blockStyleCss && (
+          <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />
+        )}
+        <Hero
+          title={
+            config.title ||
+            t("home.hero.title", "Milanesas premium\ny congelados caseros")
+          }
+          subtitle={
+            config.subtitle ||
+            t(
+              "home.hero.subtitle",
+              "Elegí online, coordiná la entrega y pagá como prefieras."
+            )
+          }
+          cta={config.ctaLabel || t("home.hero.cta_primary", "Comprar ahora")}
+          backgroundUrl={
+            config.imageUrl || image("home.hero.background", "/images/hero.jpg")
+          }
+          logoUrl={logoUrl}
+          titleKey="home.hero.title"
+          subtitleKey="home.hero.subtitle"
+          ctaKey="home.hero.cta_primary"
+        />
+      </>
     );
   }
 
@@ -209,26 +216,33 @@ export default function CmsHomeSection({
 
   if (section.key === "home.ingredients") {
     return (
-      <Ingredients
-        eyebrow={config.eyebrow || t("home.ingredients.eyebrow", "Lo que hay adentro")}
-        title={
-          config.title ||
-          t("home.ingredients.title", t("home.features.title", "Nuestros ingredientes"))
-        }
-        item1={
-          config.items?.[0]?.title ||
-          t("home.ingredients.item1", t("home.features.item3.title", "Huevos de gallinas libres"))
-        }
-        item2={
-          config.items?.[1]?.title ||
-          t("home.ingredients.item2", t("home.features.item2.title", "Pollo pastoril"))
-        }
-        item3={
-          config.items?.[2]?.title ||
-          t("home.ingredients.item3", "Peceto de pastura")
-        }
-        previewToken={preview ? previewToken : undefined}
-      />
+      <>
+        {/* Igual que el Hero: sin este <style> el control de fuente de
+            "Nuestros ingredientes" no aplicaba en el sitio público. */}
+        {blockStyleCss && (
+          <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />
+        )}
+        <Ingredients
+          eyebrow={config.eyebrow || t("home.ingredients.eyebrow", "Lo que hay adentro")}
+          title={
+            config.title ||
+            t("home.ingredients.title", t("home.features.title", "Nuestros ingredientes"))
+          }
+          item1={
+            config.items?.[0]?.title ||
+            t("home.ingredients.item1", t("home.features.item3.title", "Huevos de gallinas libres"))
+          }
+          item2={
+            config.items?.[1]?.title ||
+            t("home.ingredients.item2", t("home.features.item2.title", "Pollo pastoril"))
+          }
+          item3={
+            config.items?.[2]?.title ||
+            t("home.ingredients.item3", "Peceto de pastura")
+          }
+          previewToken={preview ? previewToken : undefined}
+        />
+      </>
     );
   }
 
