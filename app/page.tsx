@@ -11,6 +11,10 @@ import {
   textStylesToCss,
   isPreview,
 } from "@/lib/cms";
+import {
+  getStyleSettings,
+  styleSettingsToCssVars,
+} from "@/lib/cms-style-settings";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 
 // Home page. Sections render in the order/visibility configured in the CMS
@@ -29,7 +33,14 @@ export default async function HomePage({
 
   const preview = (await isPreview()) || isCmsPreviewRequest(searchParams?.preview);
   const sections = getSections(cms, "home", preview);
-  const previewCssVars = preview ? themeToCssVars(getThemeColors(cms, true)) : "";
+  const previewCssVars = preview
+    ? [
+        themeToCssVars(getThemeColors(cms, true)),
+        styleSettingsToCssVars(getStyleSettings(cms, true)),
+      ]
+        .filter(Boolean)
+        .join(";")
+    : "";
   const previewTextCss = preview ? textStylesToCss(cms, true) : "";
 
   return (

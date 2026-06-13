@@ -79,7 +79,15 @@ export default function AddToCartPanel({
               Precio por unidad
             </p>
             <div className="mt-1 flex flex-wrap items-baseline gap-2">
-              <p className="font-black text-3xl leading-none text-price sm:text-4xl">
+              <p
+                style={{
+                  fontFamily: "var(--price-font, inherit)",
+                  fontWeight:
+                    "var(--price-weight, 900)" as React.CSSProperties["fontWeight"],
+                  letterSpacing: "var(--price-spacing, normal)",
+                }}
+                className="font-black text-3xl leading-none text-price sm:text-4xl"
+              >
                 {formatPrice(displayPrice)}
               </p>
               {promoPercent > 0 && (
@@ -185,6 +193,14 @@ export default function AddToCartPanel({
           type="button"
           onClick={handleAdd}
           disabled={outOfStock}
+          data-cms-style="button"
+          style={{
+            borderRadius: "var(--btn-radius, 0px)",
+            fontFamily: "var(--btn-font, inherit)",
+            fontWeight: "var(--btn-weight, 700)" as React.CSSProperties["fontWeight"],
+            textTransform:
+              "var(--btn-transform, uppercase)" as React.CSSProperties["textTransform"],
+          }}
           className="w-full bg-button px-4 py-4 font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted"
         >
           {outOfStock

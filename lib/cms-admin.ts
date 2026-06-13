@@ -33,11 +33,39 @@ export async function setThemeColorsDraft(colors: Record<string, string>) {
   });
 }
 
+// Parses the current typography draft JSON into a plain object (safe fallback).
+async function readTypographyDraftObject(): Promise<Record<string, unknown>> {
+  const content = await getSiteContentAdmin();
+  try {
+    const parsed = JSON.parse(content.typographyDraft || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 export async function setTypographyDraft(typo: Record<string, string>) {
-  await getSiteContentAdmin();
+  // Merge so the non-color style settings stored under `styles` are preserved.
+  const existing = await readTypographyDraftObject();
+  const next = { ...existing, ...typo };
   await prisma.siteContent.update({
     where: { id: "singleton" },
-    data: { typographyDraft: JSON.stringify(typo) },
+    data: { typographyDraft: JSON.stringify(next) },
+  });
+}
+
+// Saves the non-color global style settings under typography.styles, preserving
+// the existing typography (headingFont/bodyFont/headingWeight).
+export async function setStyleSettingsDraft(
+  styles: Record<string, unknown>
+) {
+  const existing = await readTypographyDraftObject();
+  const next = { ...existing, styles };
+  await prisma.siteContent.update({
+    where: { id: "singleton" },
+    data: { typographyDraft: JSON.stringify(next) },
   });
 }
 

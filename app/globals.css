@@ -77,3 +77,19 @@ body {
     opacity: 1;
   }
 }
+
+/* Phase 3 Tanda 2 — global CMS font sizes. Using var() WITHOUT a fallback means
+   that when the CMS hasn't set a size, the declaration is invalid and ignored,
+   so the default Tailwind responsive sizes are preserved. Mobile-first: the
+   base rule uses the mobile var; the sm: breakpoint switches to the desktop var. */
+[data-cms-style="button"] { font-size: var(--btn-size); }
+[data-cms-style="button2"] { font-size: var(--btn2-size); }
+[data-cms-style="chip"] { font-size: var(--chip-size); }
+[data-cms-style="filter"] { font-size: var(--filter-size); }
+[data-cms-style="badge"] { font-size: var(--badge-size); }
+[data-cms-style="name"] { font-size: var(--name-size-mobile); }
+[data-cms-style="price"] { font-size: var(--price-size-mobile); }
+@media (min-width: 640px) {
+  [data-cms-style="name"] { font-size: var(--name-size); }
+  [data-cms-style="price"] { font-size: var(--price-size); }
+}

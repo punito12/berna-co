@@ -9,6 +9,10 @@ import {
   textStylesToCss,
 } from "@/lib/cms";
 import {
+  getStyleSettings,
+  styleSettingsToCssVars,
+} from "@/lib/cms-style-settings";
+import {
   DEFAULT_OG_IMAGE,
   SITE_DESCRIPTION,
   SITE_NAME,
@@ -95,7 +99,9 @@ export default async function RootLayout({
   let textStyleCss = "";
   try {
     const bundle = await loadCmsBundle();
-    cssVars = themeToCssVars(getThemeColors(bundle));
+    const themeVars = themeToCssVars(getThemeColors(bundle));
+    const styleVars = styleSettingsToCssVars(getStyleSettings(bundle));
+    cssVars = [themeVars, styleVars].filter(Boolean).join(";");
     textStyleCss = textStylesToCss(bundle);
   } catch {
     // DB unavailable at render — fall back to the hex defaults in tailwind.

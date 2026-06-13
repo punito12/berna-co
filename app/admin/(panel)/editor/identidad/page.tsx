@@ -1,5 +1,6 @@
 import { getSiteContentAdmin } from "@/lib/cms-admin";
 import { DEFAULT_THEME, DEFAULT_TYPOGRAPHY } from "@/lib/cms";
+import { sanitizeStyleSettings } from "@/lib/cms-style-settings";
 import IdentityEditor from "@/components/IdentityEditor";
 
 function parse<T>(raw: string, fb: T): T {
@@ -8,6 +9,18 @@ function parse<T>(raw: string, fb: T): T {
     return v && typeof v === "object" ? { ...fb, ...v } : fb;
   } catch {
     return fb;
+  }
+}
+
+// The non-color style settings live under typography.styles.
+function parseStyles(raw: string) {
+  try {
+    const v = JSON.parse(raw);
+    return sanitizeStyleSettings(
+      v && typeof v === "object" ? (v as Record<string, unknown>).styles : {}
+    );
+  } catch {
+    return sanitizeStyleSettings({});
   }
 }
 
@@ -34,6 +47,7 @@ export default async function EditorIdentidadPage() {
       <IdentityEditor
         colorsDraft={parse(content.themeColorsDraft, DEFAULT_THEME)}
         typographyDraft={parse(content.typographyDraft, DEFAULT_TYPOGRAPHY)}
+        styleSettingsDraft={parseStyles(content.typographyDraft)}
         logoDraft={content.logoUrlDraft}
       />
     </div>

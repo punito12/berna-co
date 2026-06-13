@@ -56,6 +56,103 @@ export type Typography = {
   headingWeight: string;
 };
 
+// Phase 3 — Tanda 2: non-color global style settings (shapes, shadows, fonts,
+// sizes, uppercase). Stored as a `styles` sub-object inside the SiteContent
+// `typography` JSON (a free-form field that already flows through publish/
+// discard and isn't hex-validated). Empty string = "inherit current design",
+// so defaults below keep the public site identical.
+//
+// Values are constrained on the editor side (selects/toggles), and sanitized
+// again server-side before saving (see lib/cms-style-settings.ts).
+export type StyleSettings = {
+  // Primary buttons
+  buttonRadius: string; // px, e.g. "0px"
+  buttonFont: string; // "" = inherit
+  buttonWeight: string; // "" = inherit
+  buttonSize: string; // px, "" = inherit
+  buttonUppercase: "" | "on" | "off"; // "" = inherit (on)
+  // Secondary buttons / links
+  buttonSecondaryFont: string;
+  buttonSecondaryWeight: string;
+  buttonSecondarySize: string;
+  buttonSecondaryUppercase: "" | "on" | "off";
+  buttonSecondaryUnderline: "" | "on" | "off";
+  // Product cards
+  cardRadius: string; // px
+  cardShadow: "" | "none" | "soft" | "medium";
+  cardBorderWidth: string; // px
+  // Product name
+  nameFont: string;
+  nameWeight: string;
+  nameSizeMobile: string;
+  nameSizeDesktop: string;
+  nameUppercase: "" | "on" | "off";
+  nameLetterSpacing: string; // em
+  // Price
+  priceFont: string;
+  priceWeight: string;
+  priceSizeMobile: string;
+  priceSizeDesktop: string;
+  priceLetterSpacing: string;
+  // Payment chips
+  chipRadius: string;
+  chipWeight: string;
+  chipSize: string;
+  chipUppercase: "" | "on" | "off";
+  // Category filters
+  filterRadius: string;
+  filterWeight: string;
+  filterSize: string;
+  filterUppercase: "" | "on" | "off";
+  // Badges
+  badgeRadius: string;
+  badgeWeight: string;
+  badgeSize: string;
+  badgeUppercase: "" | "on" | "off";
+};
+
+// Defaults are all "" (inherit) except where a concrete value is needed to keep
+// the current look. Public CSS uses each value with a fallback equal to the
+// current design, so "" / missing → identical to today.
+export const DEFAULT_STYLE_SETTINGS: StyleSettings = {
+  buttonRadius: "",
+  buttonFont: "",
+  buttonWeight: "",
+  buttonSize: "",
+  buttonUppercase: "",
+  buttonSecondaryFont: "",
+  buttonSecondaryWeight: "",
+  buttonSecondarySize: "",
+  buttonSecondaryUppercase: "",
+  buttonSecondaryUnderline: "",
+  cardRadius: "",
+  cardShadow: "",
+  cardBorderWidth: "",
+  nameFont: "",
+  nameWeight: "",
+  nameSizeMobile: "",
+  nameSizeDesktop: "",
+  nameUppercase: "",
+  nameLetterSpacing: "",
+  priceFont: "",
+  priceWeight: "",
+  priceSizeMobile: "",
+  priceSizeDesktop: "",
+  priceLetterSpacing: "",
+  chipRadius: "",
+  chipWeight: "",
+  chipSize: "",
+  chipUppercase: "",
+  filterRadius: "",
+  filterWeight: "",
+  filterSize: "",
+  filterUppercase: "",
+  badgeRadius: "",
+  badgeWeight: "",
+  badgeSize: "",
+  badgeUppercase: "",
+};
+
 export const DEFAULT_THEME: ThemeColors = {
   ink: "#0A0A0A",
   cream: "#F5F0EB",

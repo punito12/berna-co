@@ -235,6 +235,15 @@ export default function Catalog({
               <div className="mx-auto max-w-6xl px-4 py-4">
                 <Link
                   href="/checkout"
+                  data-cms-style="button"
+                  style={{
+                    borderRadius: "var(--btn-radius, 0px)",
+                    fontFamily: "var(--btn-font, inherit)",
+                    fontWeight:
+                      "var(--btn-weight, 700)" as React.CSSProperties["fontWeight"],
+                    textTransform:
+                      "var(--btn-transform, uppercase)" as React.CSSProperties["textTransform"],
+                  }}
                   className="block w-full bg-button px-4 py-4 text-center font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0"
                 >
                   {cartContinueLabel}
@@ -265,7 +274,14 @@ function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       data-cms-text={textKey}
-      className={`rounded-full border px-4 py-2 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
+      data-cms-style="filter"
+      style={{
+        borderRadius: "var(--filter-radius, 9999px)",
+        fontWeight: "var(--filter-weight, 700)" as React.CSSProperties["fontWeight"],
+        textTransform:
+          "var(--filter-transform, uppercase)" as React.CSSProperties["textTransform"],
+      }}
+      className={`border px-4 py-2 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
         active
           ? "border-filter-active-bg bg-filter-active-bg text-filter-active-text shadow-sm"
           : "border-filter-border bg-filter-inactive-bg text-filter-inactive-text hover:-translate-y-0.5 hover:border-black"

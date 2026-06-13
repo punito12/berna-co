@@ -112,9 +112,49 @@ export default function ProductCard({
     window.setTimeout(() => setJustAdded(false), 1200);
   }
 
+  // Phase 3 Tanda 2 — non-color style settings via CSS vars. Each falls back to
+  // the current design, so an unset var renders exactly like before.
+  const primaryBtnStyle: React.CSSProperties = {
+    borderRadius: "var(--btn-radius, 0px)",
+    fontFamily: "var(--btn-font, inherit)",
+    fontWeight: "var(--btn-weight, 700)" as React.CSSProperties["fontWeight"],
+    textTransform:
+      "var(--btn-transform, uppercase)" as React.CSSProperties["textTransform"],
+  };
+  const cardStyle: React.CSSProperties = {
+    borderRadius: "var(--card-radius, 0.5rem)",
+    borderWidth: "var(--card-border-width, 1px)",
+    boxShadow: "var(--card-shadow, 0 1px 0 rgba(10,10,10,0.03))",
+  };
+  // Note: font-size for name/price is handled in globals.css via data-cms-style
+  // + media query, so the default Tailwind responsive sizes are preserved when
+  // no CMS size is set (inline font-size would override the sm: breakpoint).
+  const nameStyle: React.CSSProperties = {
+    fontFamily: "var(--name-font, inherit)",
+    fontWeight: "var(--name-weight, 900)" as React.CSSProperties["fontWeight"],
+    textTransform:
+      "var(--name-transform, uppercase)" as React.CSSProperties["textTransform"],
+    letterSpacing: "var(--name-spacing, normal)",
+  };
+  const priceStyle: React.CSSProperties = {
+    fontFamily: "var(--price-font, inherit)",
+    fontWeight: "var(--price-weight, 900)" as React.CSSProperties["fontWeight"],
+    letterSpacing: "var(--price-spacing, normal)",
+  };
+  const chipStyle: React.CSSProperties = {
+    borderRadius: "var(--chip-radius, 9999px)",
+    fontWeight: "var(--chip-weight, 700)" as React.CSSProperties["fontWeight"],
+  };
+  const badgeStyle: React.CSSProperties = {
+    borderRadius: "var(--badge-radius, 0px)",
+    fontWeight: "var(--badge-weight, 700)" as React.CSSProperties["fontWeight"],
+    textTransform:
+      "var(--badge-transform, uppercase)" as React.CSSProperties["textTransform"],
+  };
+
   const priceDisplay = selPromoPercent > 0 ? (
     <p className="flex min-w-0 flex-wrap items-baseline gap-2">
-      <span className="font-black text-xl text-price-promo sm:text-2xl">
+      <span data-cms-style="price" style={priceStyle} className="font-black text-xl text-price-promo sm:text-2xl">
         {formatPrice(promoPriceFor(product, selected))}
       </span>
       <span className="text-sm text-muted line-through">
@@ -122,7 +162,7 @@ export default function ProductCard({
       </span>
     </p>
   ) : (
-    <p className="font-black text-xl text-price sm:text-2xl">
+    <p data-cms-style="price" style={priceStyle} className="font-black text-xl text-price sm:text-2xl">
       {formatPrice(priceFor(product, selected))}
     </p>
   );
@@ -149,7 +189,10 @@ export default function ProductCard({
 
   return (
     <>
-      <article className="group flex h-full min-w-0 max-w-full flex-col overflow-hidden rounded-lg border border-card-border bg-card-bg shadow-[0_1px_0_rgba(10,10,10,0.03)] transition-all duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_22px_55px_rgba(10,10,10,0.10)]">
+      <article
+        style={cardStyle}
+        className="group flex h-full min-w-0 max-w-full flex-col overflow-hidden border border-card-border bg-card-bg transition-all duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_22px_55px_rgba(10,10,10,0.10)]"
+      >
         {/* Photo */}
         <Link
           href={`/producto/${product.slug}`}
@@ -169,22 +212,22 @@ export default function ProductCard({
 
           <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
             {!allOutOfStock && selPromoType && (
-              <span className="bg-badge-promo-bg px-2 py-1 font-black uppercase tracking-widest text-[11px] text-badge-promo-text shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
+              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-promo-bg px-2 py-1 font-black uppercase tracking-widest text-[11px] text-badge-promo-text shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
                 {selPromoType}
               </span>
             )}
             {!allOutOfStock && selPromoPercent > 0 && (
-              <span className="bg-badge-promo-bg px-2 py-1 font-black uppercase tracking-widest text-[11px] text-badge-promo-text shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
+              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-promo-bg px-2 py-1 font-black uppercase tracking-widest text-[11px] text-badge-promo-text shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
                 -{selPromoPercent}%
               </span>
             )}
             {product.isNew && !allOutOfStock && (
-              <span className="bg-badge-new-bg px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-badge-new-text">
+              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-new-bg px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-badge-new-text">
                 {newLabel}
               </span>
             )}
             {allOutOfStock && (
-              <span className="bg-badge-stock-bg px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-badge-stock-text">
+              <span data-cms-style="badge" style={badgeStyle} className="bg-badge-stock-bg px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-badge-stock-text">
                 {outOfStockLabel}
               </span>
             )}
@@ -193,7 +236,11 @@ export default function ProductCard({
 
         <div className="flex min-w-0 flex-1 flex-col p-2.5 pt-2 sm:p-5 md:p-6">
           <Link href={`/producto/${product.slug}`}>
-            <h3 className="break-words font-black uppercase tracking-tight text-base leading-tight text-product-name transition-colors hover:text-muted sm:text-xl">
+            <h3
+              data-cms-style="name"
+              style={nameStyle}
+              className="break-words font-black uppercase tracking-tight text-base leading-tight text-product-name transition-colors hover:text-muted sm:text-xl"
+            >
               {product.name}
             </h3>
           </Link>
@@ -206,6 +253,15 @@ export default function ProductCard({
 
           <Link
             href={`/producto/${product.slug}`}
+            data-cms-style="button2"
+            style={{
+              fontFamily: "var(--btn2-font, inherit)",
+              fontWeight:
+                "var(--btn2-weight, 700)" as React.CSSProperties["fontWeight"],
+              textTransform:
+                "var(--btn2-transform, uppercase)" as React.CSSProperties["textTransform"],
+              textDecoration: "var(--btn2-underline, none)",
+            }}
             className="mt-2 hidden font-bold uppercase tracking-widest text-[11px] text-button-secondary-text underline-offset-4 hover:underline sm:inline-block"
           >
             {viewDetailLabel}
@@ -247,7 +303,9 @@ export default function ProductCard({
                 {paymentChips.map((c) => (
                   <span
                     key={c.label}
-                    className="inline-flex max-w-full items-baseline gap-1 rounded-full border border-chip-border bg-chip-bg px-2 py-1 text-chip-text sm:px-2.5"
+                    data-cms-style="chip"
+                    style={chipStyle}
+                    className="inline-flex max-w-full items-baseline gap-1 border border-chip-border bg-chip-bg px-2 py-1 text-chip-text sm:px-2.5"
                   >
                     <span className="font-black text-sm">
                       {formatPrice(c.price)}
@@ -268,6 +326,8 @@ export default function ProductCard({
               type="button"
               onClick={handleAdd}
               disabled={selectedOutOfStock || selectedAtLimit}
+              data-cms-style="button"
+              style={primaryBtnStyle}
               className="mt-3 hidden w-full overflow-hidden bg-button px-4 py-3.5 font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:mt-4 sm:block"
             >
               {selectedOutOfStock
@@ -284,6 +344,8 @@ export default function ProductCard({
               type="button"
               onClick={handleMobileAdd}
               disabled={allOutOfStock || allAtCartLimit}
+              data-cms-style="button"
+              style={primaryBtnStyle}
               className="mt-3 w-full overflow-hidden bg-button px-4 py-3 font-bold uppercase tracking-widest text-xs text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:hidden"
             >
               {allOutOfStock
