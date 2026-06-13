@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, Fraunces } from "next/font/google";
+import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
 import {
@@ -108,6 +109,9 @@ export async function generateMetadata(): Promise<Metadata> {
     robots: {
       index: true,
       follow: true,
+    },
+    other: {
+      ...Sentry.getTraceData(),
     },
   };
 }

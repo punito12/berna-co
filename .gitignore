@@ -30,3 +30,6 @@ next-env.d.ts
 
 # image backups (originals before optimization)
 /_originales
+
+# Sentry Config File
+.env.sentry-build-plugin
