@@ -13,11 +13,12 @@ export default function PaymentConfigForm({
   initial: PaymentMethodConfigValues;
 }) {
   const router = useRouter();
-  const [efectivo, setEfectivo] = useState(
-    String(initial.efectivoDiscountPercent)
-  );
-  const [transferencia, setTransferencia] = useState(
-    String(initial.transferenciaDiscountPercent)
+  // Efectivo y transferencia comparten un único descuento. Sembramos desde el
+  // valor cargado (si difirieran por datos viejos, tomamos el que esté).
+  const [descuento, setDescuento] = useState(
+    String(
+      initial.efectivoDiscountPercent || initial.transferenciaDiscountPercent
+    )
   );
   const [alias, setAlias] = useState(initial.aliasMercadoPago);
   const [cbu, setCbu] = useState(initial.cbu);
@@ -34,8 +35,9 @@ export default function PaymentConfigForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          efectivoDiscountPercent: Number(efectivo),
-          transferenciaDiscountPercent: Number(transferencia),
+          // Mismo descuento para ambos métodos.
+          efectivoDiscountPercent: Number(descuento),
+          transferenciaDiscountPercent: Number(descuento),
           aliasMercadoPago: alias,
           cbu,
           whatsappNumber: whatsapp,
@@ -60,32 +62,21 @@ export default function PaymentConfigForm({
     >
       <div>
         <h2 className="mb-3 font-black uppercase tracking-tight text-sm text-muted">
-          Descuentos por método
+          Descuento por pago
         </h2>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Efectivo (%)">
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={efectivo}
-              onChange={(e) => setEfectivo(e.target.value)}
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Transferencia (%)">
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={transferencia}
-              onChange={(e) => setTransferencia(e.target.value)}
-              className={inputClass}
-            />
-          </Field>
-        </div>
+        <Field label="Descuento efectivo y transferencia (%)">
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={descuento}
+            onChange={(e) => setDescuento(e.target.value)}
+            className={inputClass}
+          />
+        </Field>
         <p className="mt-2 text-xs text-muted">
-          0% = sin descuento (no se muestra al cliente). Mercado Pago nunca lleva
+          Un solo descuento, igual para efectivo y transferencia. 0% = sin
+          descuento (no se muestra al cliente). Mercado Pago nunca lleva
           descuento.
         </p>
       </div>

@@ -177,25 +177,10 @@ export default function ProductCard({
     </p>
   );
 
-  const paymentChips = (() => {
-    const base = selPromoPercent > 0
-      ? promoPriceFor(product, selected)
-      : priceFor(product, selected);
-    const chips: { price: number; label: string; shortLabel: string }[] = [];
-    if (efectivoPct > 0)
-      chips.push({
-        price: Math.round((base * (100 - efectivoPct)) / 100),
-        label: paymentCashLabel,
-        shortLabel: paymentCashLabel,
-      });
-    if (transferenciaPct > 0)
-      chips.push({
-        price: Math.round((base * (100 - transferenciaPct)) / 100),
-        label: paymentTransferLabel,
-        shortLabel: paymentTransferShortLabel,
-      });
-    return chips;
-  })();
+  // Efectivo y transferencia comparten el mismo descuento (unificado en el
+  // admin). Mostramos UN solo recuadro con el descuento (no el precio). Si por
+  // datos viejos difirieran, tomamos el que esté cargado.
+  const payDiscountPct = efectivoPct || transferenciaPct;
 
   return (
     <>
@@ -318,26 +303,25 @@ export default function ProductCard({
           <div className="mt-auto pt-3 sm:pt-5">
             {priceDisplay}
 
-            {paymentChips.length > 0 && (
-              <div className="mt-2 flex min-w-0 max-w-full flex-col items-start gap-1.5 sm:flex-row sm:flex-wrap">
-                {paymentChips.map((c) => (
-                  <span
-                    key={c.label}
-                    data-cms-style="chip"
-                    style={chipStyle}
-                    className="inline-flex max-w-full items-baseline gap-1 border border-chip-border bg-chip-bg px-2 py-1 text-chip-text sm:px-2.5"
-                  >
-                    <span className="font-black text-xs sm:text-sm">
-                      {formatPrice(c.price)}
+            {payDiscountPct > 0 && (
+              <div className="mt-2">
+                <span
+                  data-cms-style="chip"
+                  style={chipStyle}
+                  className="inline-flex max-w-full items-baseline gap-1 border border-chip-border bg-chip-bg px-2 py-1 text-chip-text sm:px-2.5"
+                >
+                  <span className="font-black text-xs sm:text-sm">
+                    −{payDiscountPct}%
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide sm:text-[11px]">
+                    <span className="sm:hidden">
+                      {paymentCashLabel}/{paymentTransferShortLabel}
                     </span>
-                    <span className="text-[10px] font-bold uppercase tracking-wide sm:text-[11px]">
-                      <span className="sm:hidden">
-                        {c.shortLabel}
-                      </span>
-                      <span className="hidden sm:inline">{c.label}</span>
+                    <span className="hidden sm:inline">
+                      {paymentCashLabel} o {paymentTransferLabel}
                     </span>
                   </span>
-                ))}
+                </span>
               </div>
             )}
 
@@ -366,7 +350,7 @@ export default function ProductCard({
               disabled={allOutOfStock || allAtCartLimit}
               data-cms-style="button"
               style={primaryBtnStyle}
-              className="mt-3 w-full overflow-hidden bg-button px-3 py-2.5 font-bold uppercase tracking-wide text-[11px] text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:hidden"
+              className="mt-2.5 w-full overflow-hidden bg-button px-3 py-2 font-bold uppercase tracking-wide text-[11px] text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:mt-3 sm:hidden"
             >
               {allOutOfStock
                 ? outOfStockLabel
