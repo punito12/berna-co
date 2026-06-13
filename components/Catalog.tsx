@@ -267,8 +267,8 @@ function FilterChip({
       data-cms-text={textKey}
       className={`rounded-full border px-4 py-2 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
         active
-          ? "border-black bg-black text-white shadow-sm"
-          : "border-line bg-white text-ink hover:-translate-y-0.5 hover:border-black"
+          ? "border-filter-active-bg bg-filter-active-bg text-filter-active-text shadow-sm"
+          : "border-filter-border bg-filter-inactive-bg text-filter-inactive-text hover:-translate-y-0.5 hover:border-black"
       }`}
     >
       {children}

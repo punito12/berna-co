@@ -79,7 +79,7 @@ export default function AddToCartPanel({
               Precio por unidad
             </p>
             <div className="mt-1 flex flex-wrap items-baseline gap-2">
-              <p className="font-black text-3xl leading-none text-black sm:text-4xl">
+              <p className="font-black text-3xl leading-none text-price sm:text-4xl">
                 {formatPrice(displayPrice)}
               </p>
               {promoPercent > 0 && (

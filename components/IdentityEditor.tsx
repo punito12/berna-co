@@ -40,6 +40,85 @@ const COLOR_LABELS: Record<string, string> = {
   buttonText: "Texto de botón",
 };
 
+// Phase 3 — global ecommerce style groups. Each field maps to a key in the
+// theme colors JSON; defaults equal the current design, so nothing changes
+// until the owner edits a color. "Where it applies" is shown to the owner.
+type StyleField = { key: string; label: string };
+type StyleGroup = {
+  title: string;
+  applies: string;
+  fields: StyleField[];
+};
+
+const STYLE_GROUPS: StyleGroup[] = [
+  {
+    title: "Botones principales",
+    applies: 'Botón "Agregar al carrito" (grilla y detalle) y "Continuar" del carrito.',
+    fields: [
+      { key: "buttonBg", label: "Fondo" },
+      { key: "buttonText", label: "Texto" },
+    ],
+  },
+  {
+    title: "Botones secundarios",
+    applies: 'Links de acción como "Ver detalle y fotos".',
+    fields: [{ key: "buttonSecondaryText", label: "Texto / color del link" }],
+  },
+  {
+    title: "Tarjetas de producto",
+    applies: "El recuadro de cada producto en la grilla.",
+    fields: [
+      { key: "cardBg", label: "Fondo de la tarjeta" },
+      { key: "cardBorder", label: "Borde de la tarjeta" },
+    ],
+  },
+  {
+    title: "Nombre de producto",
+    applies: "El nombre de cada producto en la grilla.",
+    fields: [{ key: "productNameText", label: "Color del nombre" }],
+  },
+  {
+    title: "Precios",
+    applies: "El precio en la grilla y en el detalle del producto.",
+    fields: [
+      { key: "priceText", label: "Precio normal" },
+      { key: "pricePromoText", label: "Precio en oferta" },
+    ],
+  },
+  {
+    title: "Chips de pago",
+    applies: "Los chips de precio por efectivo / transferencia en cada producto.",
+    fields: [
+      { key: "chipBg", label: "Fondo" },
+      { key: "chipBorder", label: "Borde" },
+      { key: "chipText", label: "Texto" },
+    ],
+  },
+  {
+    title: "Filtros de categoría",
+    applies: "Los botones de filtro (Todos, Carne, Pollo…) arriba de la grilla.",
+    fields: [
+      { key: "filterActiveBg", label: "Fondo activo" },
+      { key: "filterActiveText", label: "Texto activo" },
+      { key: "filterInactiveBg", label: "Fondo inactivo" },
+      { key: "filterInactiveText", label: "Texto inactivo" },
+      { key: "filterBorder", label: "Borde" },
+    ],
+  },
+  {
+    title: "Etiquetas (badges)",
+    applies: 'Las etiquetas sobre las fotos: "New", "Sin stock" y las de oferta.',
+    fields: [
+      { key: "badgeNewBg", label: "New · fondo" },
+      { key: "badgeNewText", label: "New · texto" },
+      { key: "badgeStockBg", label: "Sin stock · fondo" },
+      { key: "badgeStockText", label: "Sin stock · texto" },
+      { key: "badgePromoBg", label: "Oferta · fondo" },
+      { key: "badgePromoText", label: "Oferta · texto" },
+    ],
+  },
+];
+
 function notifyDraftChanged() {
   window.dispatchEvent(new Event("cms:draft-changed"));
 }
@@ -238,6 +317,34 @@ export default function IdentityEditor({
         </div>
       </section>
 
+      {/* Phase 3 — global ecommerce style groups */}
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+        <div className="mb-5 border-b border-line pb-4">
+          <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+            Estilos de la tienda
+          </p>
+          <h2 className="font-black uppercase tracking-tight text-xl text-ink">
+            Botones, tarjetas, precios y etiquetas
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+            Cambiá los colores de los elementos de venta. Cada cambio queda en
+            borrador y se ve en el sitio recién cuando publicás. Si no tocás
+            nada, todo se ve como ahora.
+          </p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {STYLE_GROUPS.map((group) => (
+            <StyleGroupSection
+              key={group.title}
+              group={group}
+              colors={colors}
+              setColors={setColors}
+              saveColors={saveColors}
+            />
+          ))}
+        </div>
+      </section>
+
       {/* Typography */}
       <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
         <div className="mb-5 flex flex-col gap-2 border-b border-line pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -354,6 +461,224 @@ export default function IdentityEditor({
       </section>
     </div>
   );
+}
+
+// One ecommerce style group: its color fields + a live preview that uses the
+// currently selected colors (never hardcoded).
+function StyleGroupSection({
+  group,
+  colors,
+  setColors,
+  saveColors,
+}: {
+  group: StyleGroup;
+  colors: Colors;
+  setColors: (c: Colors) => void;
+  saveColors: (c: Colors) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-line bg-cream/25 p-4">
+      <h3 className="font-black uppercase tracking-tight text-sm text-ink">
+        {group.title}
+      </h3>
+      <p className="mt-1 text-xs leading-5 text-muted">
+        Se aplica en: {group.applies}
+      </p>
+      <div className="mt-3 space-y-2">
+        {group.fields.map((field) => (
+          <label
+            key={field.key}
+            className="flex items-center justify-between gap-3 rounded-lg border border-line bg-white p-2.5"
+          >
+            <span className="font-bold uppercase tracking-wide text-[11px] text-muted">
+              {field.label}
+            </span>
+            <span className="flex items-center gap-2">
+              <input
+                type="text"
+                value={colors[field.key] ?? ""}
+                onChange={(e) =>
+                  setColors({ ...colors, [field.key]: e.target.value })
+                }
+                onBlur={() => saveColors(colors)}
+                className="w-24 rounded border border-line px-2 py-1 text-sm tabular-nums text-ink"
+              />
+              <input
+                type="color"
+                value={
+                  /^#[0-9a-f]{6}$/i.test(colors[field.key] ?? "")
+                    ? colors[field.key]
+                    : "#000000"
+                }
+                onChange={(e) =>
+                  saveColors({ ...colors, [field.key]: e.target.value })
+                }
+                className="h-8 w-10 cursor-pointer rounded border border-line"
+              />
+            </span>
+          </label>
+        ))}
+      </div>
+      <div className="mt-3">
+        <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-muted">
+          Vista rápida
+        </p>
+        <GroupPreview title={group.title} colors={colors} />
+      </div>
+    </div>
+  );
+}
+
+// Live preview per group, rendered with the selected colors.
+function GroupPreview({ title, colors }: { title: string; colors: Colors }) {
+  const box = "rounded-lg border border-line bg-white p-3";
+  if (title === "Botones principales") {
+    return (
+      <div className={box}>
+        <span
+          className="inline-block rounded px-4 py-2 text-xs font-bold uppercase tracking-widest"
+          style={{ background: colors.buttonBg, color: colors.buttonText }}
+        >
+          Agregar al carrito
+        </span>
+      </div>
+    );
+  }
+  if (title === "Botones secundarios") {
+    return (
+      <div className={box}>
+        <span
+          className="text-[11px] font-bold uppercase tracking-widest underline underline-offset-4"
+          style={{ color: colors.buttonSecondaryText }}
+        >
+          Ver detalle y fotos →
+        </span>
+      </div>
+    );
+  }
+  if (title === "Tarjetas de producto") {
+    return (
+      <div
+        className="rounded-lg border p-3"
+        style={{ background: colors.cardBg, borderColor: colors.cardBorder }}
+      >
+        <div className="h-10 rounded bg-cream/60" />
+        <p
+          className="mt-2 text-xs font-black uppercase tracking-tight"
+          style={{ color: colors.productNameText }}
+        >
+          Milanesa de pollo
+        </p>
+      </div>
+    );
+  }
+  if (title === "Nombre de producto") {
+    return (
+      <div className={box}>
+        <p
+          className="text-sm font-black uppercase tracking-tight"
+          style={{ color: colors.productNameText }}
+        >
+          Peceto de pastura
+        </p>
+      </div>
+    );
+  }
+  if (title === "Precios") {
+    return (
+      <div className={box + " flex items-baseline gap-3"}>
+        <span
+          className="text-lg font-black"
+          style={{ color: colors.priceText }}
+        >
+          $ 9.900
+        </span>
+        <span
+          className="text-lg font-black"
+          style={{ color: colors.pricePromoText }}
+        >
+          $ 7.900
+        </span>
+      </div>
+    );
+  }
+  if (title === "Chips de pago") {
+    return (
+      <div className={box + " flex flex-wrap gap-2"}>
+        {["efectivo", "transf."].map((l) => (
+          <span
+            key={l}
+            className="inline-flex items-baseline gap-1 rounded-full border px-2.5 py-1"
+            style={{
+              background: colors.chipBg,
+              borderColor: colors.chipBorder,
+              color: colors.chipText,
+            }}
+          >
+            <span className="text-xs font-black">$ 7.900</span>
+            <span className="text-[10px] font-bold uppercase">{l}</span>
+          </span>
+        ))}
+      </div>
+    );
+  }
+  if (title === "Filtros de categoría") {
+    return (
+      <div className={box + " flex flex-wrap gap-2"}>
+        <span
+          className="rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide"
+          style={{
+            background: colors.filterActiveBg,
+            borderColor: colors.filterActiveBg,
+            color: colors.filterActiveText,
+          }}
+        >
+          Todos
+        </span>
+        <span
+          className="rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide"
+          style={{
+            background: colors.filterInactiveBg,
+            borderColor: colors.filterBorder,
+            color: colors.filterInactiveText,
+          }}
+        >
+          Pollo
+        </span>
+      </div>
+    );
+  }
+  if (title === "Etiquetas (badges)") {
+    return (
+      <div className={box + " flex flex-wrap gap-2"}>
+        <span
+          className="rounded px-2 py-1 text-[10px] font-black uppercase tracking-widest"
+          style={{ background: colors.badgeNewBg, color: colors.badgeNewText }}
+        >
+          New
+        </span>
+        <span
+          className="rounded px-2 py-1 text-[10px] font-black uppercase tracking-widest"
+          style={{
+            background: colors.badgeStockBg,
+            color: colors.badgeStockText,
+          }}
+        >
+          Sin stock
+        </span>
+        <span
+          className="rounded px-2 py-1 text-[10px] font-black uppercase tracking-widest"
+          style={{
+            background: colors.badgePromoBg,
+            color: colors.badgePromoText,
+          }}
+        >
+          -20%
+        </span>
+      </div>
+    );
+  }
+  return null;
 }
 
 function ContrastNote({

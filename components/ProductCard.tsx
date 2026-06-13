@@ -114,7 +114,7 @@ export default function ProductCard({
 
   const priceDisplay = selPromoPercent > 0 ? (
     <p className="flex min-w-0 flex-wrap items-baseline gap-2">
-      <span className="font-black text-xl text-accent sm:text-2xl">
+      <span className="font-black text-xl text-price-promo sm:text-2xl">
         {formatPrice(promoPriceFor(product, selected))}
       </span>
       <span className="text-sm text-muted line-through">
@@ -122,7 +122,7 @@ export default function ProductCard({
       </span>
     </p>
   ) : (
-    <p className="font-black text-xl text-black sm:text-2xl">
+    <p className="font-black text-xl text-price sm:text-2xl">
       {formatPrice(priceFor(product, selected))}
     </p>
   );
@@ -149,7 +149,7 @@ export default function ProductCard({
 
   return (
     <>
-      <article className="group flex h-full min-w-0 max-w-full flex-col overflow-hidden rounded-lg border border-line bg-white shadow-[0_1px_0_rgba(10,10,10,0.03)] transition-all duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_22px_55px_rgba(10,10,10,0.10)]">
+      <article className="group flex h-full min-w-0 max-w-full flex-col overflow-hidden rounded-lg border border-card-border bg-card-bg shadow-[0_1px_0_rgba(10,10,10,0.03)] transition-all duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_22px_55px_rgba(10,10,10,0.10)]">
         {/* Photo */}
         <Link
           href={`/producto/${product.slug}`}
@@ -169,22 +169,22 @@ export default function ProductCard({
 
           <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
             {!allOutOfStock && selPromoType && (
-              <span className="bg-accent px-2 py-1 font-black uppercase tracking-widest text-[11px] text-white shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
+              <span className="bg-badge-promo-bg px-2 py-1 font-black uppercase tracking-widest text-[11px] text-badge-promo-text shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
                 {selPromoType}
               </span>
             )}
             {!allOutOfStock && selPromoPercent > 0 && (
-              <span className="bg-accent px-2 py-1 font-black uppercase tracking-widest text-[11px] text-white shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
+              <span className="bg-badge-promo-bg px-2 py-1 font-black uppercase tracking-widest text-[11px] text-badge-promo-text shadow-md sm:px-3 sm:py-1.5 sm:text-sm">
                 -{selPromoPercent}%
               </span>
             )}
             {product.isNew && !allOutOfStock && (
-              <span className="bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
+              <span className="bg-badge-new-bg px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-badge-new-text">
                 {newLabel}
               </span>
             )}
             {allOutOfStock && (
-              <span className="bg-ink px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
+              <span className="bg-badge-stock-bg px-2.5 py-1 font-bold uppercase tracking-widest text-[10px] text-badge-stock-text">
                 {outOfStockLabel}
               </span>
             )}
@@ -193,7 +193,7 @@ export default function ProductCard({
 
         <div className="flex min-w-0 flex-1 flex-col p-2.5 pt-2 sm:p-5 md:p-6">
           <Link href={`/producto/${product.slug}`}>
-            <h3 className="break-words font-black uppercase tracking-tight text-base leading-tight text-ink transition-colors hover:text-muted sm:text-xl">
+            <h3 className="break-words font-black uppercase tracking-tight text-base leading-tight text-product-name transition-colors hover:text-muted sm:text-xl">
               {product.name}
             </h3>
           </Link>
@@ -206,7 +206,7 @@ export default function ProductCard({
 
           <Link
             href={`/producto/${product.slug}`}
-            className="mt-2 hidden font-bold uppercase tracking-widest text-[11px] text-ink underline-offset-4 hover:underline sm:inline-block"
+            className="mt-2 hidden font-bold uppercase tracking-widest text-[11px] text-button-secondary-text underline-offset-4 hover:underline sm:inline-block"
           >
             {viewDetailLabel}
           </Link>
@@ -247,7 +247,7 @@ export default function ProductCard({
                 {paymentChips.map((c) => (
                   <span
                     key={c.label}
-                    className="inline-flex max-w-full items-baseline gap-1 rounded-full border border-line bg-cream px-2 py-1 text-ink sm:px-2.5"
+                    className="inline-flex max-w-full items-baseline gap-1 rounded-full border border-chip-border bg-chip-bg px-2 py-1 text-chip-text sm:px-2.5"
                   >
                     <span className="font-black text-sm">
                       {formatPrice(c.price)}

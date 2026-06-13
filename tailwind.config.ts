@@ -21,6 +21,27 @@ const config: Config = {
         // the owner changes the button colors.
         button: "var(--color-button-bg, #0A0A0A)",
         "button-text": "var(--color-button-text, #FFFFFF)",
+        // Phase 3 — global ecommerce colors (CMS-editable, fallback = current).
+        "button-secondary-text": "var(--color-button-secondary-text, #0A0A0A)",
+        "card-bg": "var(--color-card-bg, #FFFFFF)",
+        "card-border": "var(--color-card-border, #E8E3DC)",
+        "product-name": "var(--color-product-name, #0A0A0A)",
+        price: "var(--color-price, #000000)",
+        "price-promo": "var(--color-price-promo, #c0392b)",
+        "chip-bg": "var(--color-chip-bg, #F5F0EB)",
+        "chip-border": "var(--color-chip-border, #E8E3DC)",
+        "chip-text": "var(--color-chip-text, #0A0A0A)",
+        "filter-active-bg": "var(--color-filter-active-bg, #0A0A0A)",
+        "filter-active-text": "var(--color-filter-active-text, #FFFFFF)",
+        "filter-inactive-bg": "var(--color-filter-inactive-bg, #FFFFFF)",
+        "filter-inactive-text": "var(--color-filter-inactive-text, #0A0A0A)",
+        "filter-border": "var(--color-filter-border, #E8E3DC)",
+        "badge-new-bg": "var(--color-badge-new-bg, #0A0A0A)",
+        "badge-new-text": "var(--color-badge-new-text, #FFFFFF)",
+        "badge-stock-bg": "var(--color-badge-stock-bg, #0A0A0A)",
+        "badge-stock-text": "var(--color-badge-stock-text, #FFFFFF)",
+        "badge-promo-bg": "var(--color-badge-promo-bg, #c0392b)",
+        "badge-promo-text": "var(--color-badge-promo-text, #FFFFFF)",
       },
       fontFamily: {
         // Grotesque workhorse (headlines + UI) and the serif accent.

@@ -26,6 +26,28 @@ export type ThemeColors = {
   bg: string;
   buttonBg: string;
   buttonText: string;
+  // Phase 3 — global ecommerce colors. Defaults equal the current hardcoded
+  // design, so the site looks identical until the owner changes them.
+  buttonSecondaryText: string; // "Ver detalle" / secondary CTAs
+  cardBg: string; // product card background
+  cardBorder: string; // product card border
+  productNameText: string; // product name in cards
+  priceText: string; // regular price
+  pricePromoText: string; // promo / discounted price
+  chipBg: string; // payment chip background
+  chipBorder: string; // payment chip border
+  chipText: string; // payment chip text
+  filterActiveBg: string; // active category filter background
+  filterActiveText: string; // active category filter text
+  filterInactiveBg: string; // inactive category filter background
+  filterInactiveText: string; // inactive category filter text
+  filterBorder: string; // category filter border
+  badgeNewBg: string; // "NEW" badge background
+  badgeNewText: string; // "NEW" badge text
+  badgeStockBg: string; // "SIN STOCK" badge background
+  badgeStockText: string; // "SIN STOCK" badge text
+  badgePromoBg: string; // promo / discount badge background
+  badgePromoText: string; // promo / discount badge text
 };
 
 export type Typography = {
@@ -43,6 +65,27 @@ export const DEFAULT_THEME: ThemeColors = {
   bg: "#FFFFFF",
   buttonBg: "#0A0A0A",
   buttonText: "#FFFFFF",
+  // Phase 3 defaults = current hardcoded design.
+  buttonSecondaryText: "#0A0A0A",
+  cardBg: "#FFFFFF",
+  cardBorder: "#E8E3DC",
+  productNameText: "#0A0A0A",
+  priceText: "#000000",
+  pricePromoText: "#c0392b",
+  chipBg: "#F5F0EB",
+  chipBorder: "#E8E3DC",
+  chipText: "#0A0A0A",
+  filterActiveBg: "#0A0A0A",
+  filterActiveText: "#FFFFFF",
+  filterInactiveBg: "#FFFFFF",
+  filterInactiveText: "#0A0A0A",
+  filterBorder: "#E8E3DC",
+  badgeNewBg: "#0A0A0A",
+  badgeNewText: "#FFFFFF",
+  badgeStockBg: "#0A0A0A",
+  badgeStockText: "#FFFFFF",
+  badgePromoBg: "#c0392b",
+  badgePromoText: "#FFFFFF",
 };
 
 export const DEFAULT_TYPOGRAPHY: Typography = {
@@ -301,6 +344,27 @@ export function themeToCssVars(theme: ThemeColors): string {
     `--color-bg:${theme.bg}`,
     `--color-button-bg:${theme.buttonBg}`,
     `--color-button-text:${theme.buttonText}`,
+    // Phase 3 — global ecommerce colors.
+    `--color-button-secondary-text:${theme.buttonSecondaryText}`,
+    `--color-card-bg:${theme.cardBg}`,
+    `--color-card-border:${theme.cardBorder}`,
+    `--color-product-name:${theme.productNameText}`,
+    `--color-price:${theme.priceText}`,
+    `--color-price-promo:${theme.pricePromoText}`,
+    `--color-chip-bg:${theme.chipBg}`,
+    `--color-chip-border:${theme.chipBorder}`,
+    `--color-chip-text:${theme.chipText}`,
+    `--color-filter-active-bg:${theme.filterActiveBg}`,
+    `--color-filter-active-text:${theme.filterActiveText}`,
+    `--color-filter-inactive-bg:${theme.filterInactiveBg}`,
+    `--color-filter-inactive-text:${theme.filterInactiveText}`,
+    `--color-filter-border:${theme.filterBorder}`,
+    `--color-badge-new-bg:${theme.badgeNewBg}`,
+    `--color-badge-new-text:${theme.badgeNewText}`,
+    `--color-badge-stock-bg:${theme.badgeStockBg}`,
+    `--color-badge-stock-text:${theme.badgeStockText}`,
+    `--color-badge-promo-bg:${theme.badgePromoBg}`,
+    `--color-badge-promo-text:${theme.badgePromoText}`,
   ].join(";");
 }
 
