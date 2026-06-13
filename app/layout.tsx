@@ -77,13 +77,9 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: {
       canonical: "/",
     },
-    icons: {
-      icon: [
-        { url: "/images/logo-dark.png", type: "image/png" },
-        { url: "/images/logo-light.png", type: "image/png" },
-      ],
-      apple: [{ url: "/images/logo-dark.png", type: "image/png" }],
-    },
+    // El favicon y el apple-touch-icon los detecta Next.js automáticamente
+    // desde app/icon.png y app/apple-icon.png (convención de archivos), por eso
+    // no se declara aquí un bloque `icons`.
     openGraph: {
       type: "website",
       locale: "es_AR",
