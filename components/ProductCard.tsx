@@ -275,7 +275,7 @@ export default function ProductCard({
                 "var(--btn2-transform, uppercase)" as React.CSSProperties["textTransform"],
               textDecoration: "var(--btn2-underline, none)",
             }}
-            className="mt-2 hidden font-bold uppercase tracking-widest text-[11px] text-button-secondary-text underline-offset-4 hover:underline sm:inline-block"
+            className="mt-1 inline-flex min-h-11 items-center font-bold uppercase tracking-widest text-[11px] text-button-secondary-text underline-offset-4 hover:underline sm:mt-2 sm:min-h-0"
           >
             {viewDetailLabel}
           </Link>
@@ -319,7 +319,7 @@ export default function ProductCard({
             {priceDisplay}
 
             {paymentChips.length > 0 && (
-              <div className="mt-2 flex min-w-0 max-w-full flex-wrap gap-1.5">
+              <div className="mt-2 flex min-w-0 max-w-full flex-col items-start gap-1.5 sm:flex-row sm:flex-wrap">
                 {paymentChips.map((c) => (
                   <span
                     key={c.label}

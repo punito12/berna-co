@@ -509,6 +509,7 @@ export default function CheckoutPage() {
           >
             <input
               type="text"
+              autoComplete="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={inputClass}
@@ -522,6 +523,8 @@ export default function CheckoutPage() {
           >
             <input
               type="tel"
+              autoComplete="tel"
+              inputMode="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className={inputClass}
@@ -534,6 +537,8 @@ export default function CheckoutPage() {
           >
             <input
               type="email"
+              autoComplete="email"
+              inputMode="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={inputClass}
@@ -585,6 +590,7 @@ export default function CheckoutPage() {
               >
                 <input
                   type="text"
+                  autoComplete="street-address"
                   value={street}
                   onChange={(e) => {
                     setStreet(e.target.value);
@@ -604,6 +610,7 @@ export default function CheckoutPage() {
                 >
                   <input
                     type="text"
+                    autoComplete="address-level2"
                     value={locality}
                     onChange={(e) => {
                       setLocality(e.target.value);
@@ -620,6 +627,7 @@ export default function CheckoutPage() {
                 >
                   <input
                     type="text"
+                    autoComplete="postal-code"
                     inputMode="numeric"
                     value={postalCode}
                     onChange={(e) => {

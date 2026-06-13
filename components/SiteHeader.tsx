@@ -27,13 +27,13 @@ export default function SiteHeader({
       <div className="flex items-center gap-2 sm:gap-4">
         <Link
           href="/#productos"
-          className="px-2 py-2 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:text-muted"
+          className="inline-flex min-h-11 items-center px-2 py-2 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:text-muted"
         >
           {productsLabel}
         </Link>
         <Link
           href="/checkout"
-          className="flex items-center gap-2 px-2 py-2 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:text-muted"
+          className="inline-flex min-h-11 items-center gap-2 px-2 py-2 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:text-muted"
         >
           {cartLabel}
           <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-ink px-1.5 text-[11px] text-white shadow-sm">

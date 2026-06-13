@@ -140,7 +140,7 @@ export default function AddToCartPanel({
                 type="button"
                 onClick={() => onSelect(code)}
                 aria-pressed={active}
-                className={`rounded-full border border-black px-4 py-2 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
+                className={`inline-flex min-h-11 items-center rounded-full border border-black px-4 py-2.5 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
                   active ? "bg-black text-white shadow-sm" : "bg-white text-black hover:-translate-y-0.5 hover:bg-cream"
                 }`}
               >
@@ -168,7 +168,7 @@ export default function AddToCartPanel({
             type="button"
             onClick={() => setQty((q) => Math.max(1, q - 1))}
             aria-label="Quitar uno"
-            className="h-9 w-9 rounded-full border border-black bg-white font-bold text-ink transition-colors hover:bg-black hover:text-white"
+            className="h-11 w-11 rounded-full border border-black bg-white font-bold text-ink transition-colors hover:bg-black hover:text-white"
           >
             −
           </button>
@@ -180,7 +180,7 @@ export default function AddToCartPanel({
             onClick={() => setQty((q) => Math.min(maxAddable, q + 1))}
             disabled={qty >= maxAddable || outOfStock}
             aria-label="Agregar uno"
-            className="h-9 w-9 rounded-full border border-black bg-white font-bold text-ink transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            className="h-11 w-11 rounded-full border border-black bg-white font-bold text-ink transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
           >
             +
           </button>

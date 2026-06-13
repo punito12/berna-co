@@ -139,7 +139,7 @@ export default function Catalog({
           ))}
         </Reveal>
 
-        <div className="grid min-w-0 grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
           {visible.map((product, i) => (
             <Reveal key={product.id} className="min-w-0" delay={(i % 3) * 90}>
               <ProductCard
@@ -209,7 +209,7 @@ export default function Catalog({
                           type="button"
                           onClick={() => changeQuantity(line.key, -1)}
                           aria-label="Quitar uno"
-                          className="h-8 w-8 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
+                          className="h-11 w-11 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
                         >
                           −
                         </button>
@@ -224,7 +224,7 @@ export default function Catalog({
                             line.quantity >= line.maxStock
                           }
                           aria-label="Agregar uno"
-                          className="h-8 w-8 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-ink"
+                          className="h-11 w-11 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-ink"
                         >
                           +
                         </button>
@@ -237,7 +237,9 @@ export default function Catalog({
                 ))}
               </ul>
 
-              <div className="mx-auto max-w-6xl px-4 py-4">
+              {/* pr-20 en mobile: deja libre la esquina del botón flotante de
+                  WhatsApp para que no tape el botón "Continuar". */}
+              <div className="mx-auto max-w-6xl py-4 pl-4 pr-20 sm:px-4">
                 <Link
                   href="/checkout"
                   data-cms-style="button"
@@ -286,7 +288,7 @@ function FilterChip({
         textTransform:
           "var(--filter-transform, uppercase)" as React.CSSProperties["textTransform"],
       }}
-      className={`border px-4 py-2 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
+      className={`inline-flex min-h-11 items-center border px-4 py-2.5 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
         active
           ? "border-filter-active-bg bg-filter-active-bg text-filter-active-text shadow-sm"
           : "border-filter-border bg-filter-inactive-bg text-filter-inactive-text hover:-translate-y-0.5 hover:border-black"
