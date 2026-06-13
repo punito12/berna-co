@@ -84,6 +84,7 @@ export default function CmsHomeSection({
     return products.length > 0 ? (
       <Catalog
         products={products}
+        previewToken={preview ? previewToken : undefined}
         efectivoPct={payCfg.efectivoDiscountPercent}
         transferenciaPct={payCfg.transferenciaDiscountPercent}
         eyebrow={config.eyebrow || t("catalogo.eyebrow", "Congelados Caseros")}

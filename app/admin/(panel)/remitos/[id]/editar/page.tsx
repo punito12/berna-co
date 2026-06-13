@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import RemitoForm from "@/components/RemitoForm";
-import { formatRemitoNumber, getRemito } from "@/lib/remitos";
+import {
+  formatRemitoNumber,
+  getRemito,
+  listRemitoProductOptions,
+} from "@/lib/remitos";
 
 function dateInput(date: Date | null): string {
   return date ? date.toISOString().slice(0, 10) : "";
@@ -12,7 +16,10 @@ export default async function EditarRemitoPage({
 }: {
   params: { id: string };
 }) {
-  const remito = await getRemito(params.id);
+  const [remito, products] = await Promise.all([
+    getRemito(params.id),
+    listRemitoProductOptions(),
+  ]);
   if (!remito) notFound();
 
   return (
@@ -27,6 +34,7 @@ export default async function EditarRemitoPage({
         Editar {formatRemitoNumber(remito.number)}
       </h1>
       <RemitoForm
+        products={products}
         initial={{
           id: remito.id,
           date: dateInput(remito.date),

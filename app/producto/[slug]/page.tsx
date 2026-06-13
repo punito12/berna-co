@@ -7,7 +7,19 @@ import QuantityDiscountBanner from "@/components/QuantityDiscountBanner";
 import SiteHeader from "@/components/SiteHeader";
 import CmsFooter from "@/components/CmsFooter";
 import WhatsappFloat from "@/components/WhatsappFloat";
-import { getLogo, getSiteText, isPreview, loadCmsBundle } from "@/lib/cms";
+import {
+  getLogo,
+  getSiteText,
+  getThemeColors,
+  isPreview,
+  loadCmsBundle,
+  textStylesToCss,
+  themeToCssVars,
+} from "@/lib/cms";
+import {
+  getStyleSettings,
+  styleSettingsToCssVars,
+} from "@/lib/cms-style-settings";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 import {
   DEFAULT_OG_IMAGE,
@@ -75,6 +87,19 @@ export default async function ProductPage({
   if (!product) notFound();
   const preview = (await isPreview()) || isCmsPreviewRequest(searchParams?.preview);
   const logoUrl = getLogo(cms, preview);
+  // En preview, los colores/estilos publicados ya vienen del layout; acá
+  // inyectamos los valores de BORRADOR (incluida la fuente de las descripciones,
+  // --description-font) para que el cambio se vea en la vista previa del editor
+  // ANTES de publicar. Fuera de preview esto queda vacío y no cambia nada.
+  const previewCssVars = preview
+    ? [
+        themeToCssVars(getThemeColors(cms, true)),
+        styleSettingsToCssVars(getStyleSettings(cms, true)),
+      ]
+        .filter(Boolean)
+        .join(";")
+    : "";
+  const previewTextCss = preview ? textStylesToCss(cms, true) : "";
   const productLabels = {
     backToProducts: getSiteText(cms, "catalog.page_title", "productos", preview),
     chooseBreadcrumb: getSiteText(
@@ -114,6 +139,14 @@ export default async function ProductPage({
 
   return (
     <main className="min-h-screen bg-cream">
+      {previewCssVars && (
+        <style
+          dangerouslySetInnerHTML={{ __html: `:root{${previewCssVars}}` }}
+        />
+      )}
+      {previewTextCss && (
+        <style dangerouslySetInnerHTML={{ __html: previewTextCss }} />
+      )}
       <QuantityDiscountBanner />
       <SiteHeader
         logoUrl={logoUrl}

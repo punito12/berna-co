@@ -63,13 +63,15 @@ export default function ProductDetail({
         </h1>
 
         {/* Universal description (same for the whole cut). Falls back to the
-            short one. Rendered with RichText so markdown styles show. */}
-        <div style={descriptionStyle}>
-          <RichText
-            text={product.longDescription?.trim() || product.description}
-            className="mt-5 border-y border-line py-5 text-base leading-relaxed text-ink/80 sm:mt-6 sm:py-6 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
-          />
-        </div>
+            short one. Rendered with RichText so markdown styles show. La fuente
+            (--description-font) va DIRECTO en el contenedor del texto (igual que
+            la descripción corta de la card) para que el cambio de fuente del CMS
+            aplique sí o sí, sin depender de herencia desde un wrapper externo. */}
+        <RichText
+          text={product.longDescription?.trim() || product.description}
+          style={descriptionStyle}
+          className="mt-5 border-y border-line py-5 text-base leading-relaxed text-ink/80 sm:mt-6 sm:py-6 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
+        />
 
         {/* Per-empanado description: swaps when the customer picks a different
             empanado. Only shown when this empanado has its own text. */}
@@ -78,12 +80,11 @@ export default function ProductDetail({
             <p className="mb-1 font-bold uppercase tracking-wide text-[11px] text-muted">
               {BREADCRUMB_LABELS[selected] ?? selected}
             </p>
-            <div style={descriptionStyle}>
-              <RichText
-                text={product.empanadoDescriptionByBreadcrumb[selected]}
-                className="text-base leading-relaxed text-ink/80 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
-              />
-            </div>
+            <RichText
+              text={product.empanadoDescriptionByBreadcrumb[selected]}
+              style={descriptionStyle}
+              className="text-base leading-relaxed text-ink/80 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
+            />
           </div>
         )}
 

@@ -32,6 +32,7 @@ export default function ProductCard({
   lowStockLabel = "Solo quedan {count} disponibles",
   addedLabel = "Agregado ✓",
   noMoreStockLabel = "Sin más stock disponible",
+  previewToken,
 }: {
   product: ProductForUI;
   efectivoPct?: number;
@@ -47,8 +48,17 @@ export default function ProductCard({
   lowStockLabel?: string;
   addedLabel?: string;
   noMoreStockLabel?: string;
+  // Token de preview del CMS. Si está, los links al detalle lo arrastran para
+  // que la vista previa (fuentes/estilos de borrador) siga activa al entrar al
+  // producto. Sin token, links normales.
+  previewToken?: string;
 }) {
   const { addToCart, lines } = useCart();
+
+  // Link al detalle, arrastrando el token de preview si estamos en preview.
+  const productHref = previewToken
+    ? `/producto/${product.slug}?preview=${encodeURIComponent(previewToken)}`
+    : `/producto/${product.slug}`;
 
   // Which empanado is selected (desktop pill selector + mobile sheet).
   const [selected, setSelected] = useState<string>(
@@ -195,7 +205,7 @@ export default function ProductCard({
       >
         {/* Photo */}
         <Link
-          href={`/producto/${product.slug}`}
+          href={productHref}
           className="relative block aspect-[4/5] w-full overflow-hidden bg-white sm:aspect-[2/3]"
           aria-label={`Ver ${product.name}`}
         >
@@ -235,7 +245,7 @@ export default function ProductCard({
         </Link>
 
         <div className="flex min-w-0 flex-1 flex-col p-2.5 pt-2 sm:p-5 md:p-6">
-          <Link href={`/producto/${product.slug}`}>
+          <Link href={productHref}>
             <h3
               data-cms-style="name"
               style={nameStyle}
@@ -255,7 +265,7 @@ export default function ProductCard({
           </p>
 
           <Link
-            href={`/producto/${product.slug}`}
+            href={productHref}
             data-cms-style="button2"
             style={{
               fontFamily: "var(--btn2-font, inherit)",

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ArchiveRemitoButton from "@/components/ArchiveRemitoButton";
+import DeleteRemitoButton from "@/components/DeleteRemitoButton";
 import {
   formatRemitoMoney,
   formatRemitoNumber,
@@ -102,6 +103,10 @@ export default async function RemitosPage() {
                       {!remito.archived && (
                         <ArchiveRemitoButton id={remito.id} />
                       )}
+                      <DeleteRemitoButton
+                        id={remito.id}
+                        number={remito.number}
+                      />
                     </div>
                   </td>
                 </tr>

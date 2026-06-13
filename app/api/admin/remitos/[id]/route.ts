@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
-import { archiveRemito, updateRemito, type RemitoInput } from "@/lib/remitos";
+import {
+  archiveRemito,
+  deleteRemito,
+  updateRemito,
+  type RemitoInput,
+} from "@/lib/remitos";
 
 export async function PATCH(
   request: Request,
@@ -28,20 +33,33 @@ export async function PATCH(
   }
 }
 
+// DELETE archiva por defecto (recuperable). Con ?hard=1 borra definitivamente.
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   if (!isAuthenticated()) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
+  const hard = new URL(request.url).searchParams.get("hard") === "1";
+
   try {
-    await archiveRemito(params.id);
+    if (hard) {
+      await deleteRemito(params.id);
+    } else {
+      await archiveRemito(params.id);
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(
-      { error: (error as Error).message || "No se pudo archivar el remito." },
+      {
+        error:
+          (error as Error).message ||
+          (hard
+            ? "No se pudo eliminar el remito."
+            : "No se pudo archivar el remito."),
+      },
       { status: 400 }
     );
   }

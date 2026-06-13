@@ -9,13 +9,29 @@ type Item = {
   unit: "kg" | "paq.";
   description: string;
   unitPrice: string;
+  // id del producto elegido en el selector, o "" para descripción manual
+  // ("Producto personalizado"). Solo controla el <select>; el remito guarda la
+  // descripción y el precio copiados, no el id.
+  productId: string;
 };
+
+export type RemitoProductOption = {
+  id: string;
+  name: string;
+  price: number;
+};
+
+const CUSTOM_PRODUCT = "__custom__";
+
+// Los ítems iniciales vienen del server sin productId (el remito guardado solo
+// tiene descripción + precio copiados). El form lo agrega al cargar.
+type InitialItem = Omit<Item, "productId"> & { productId?: string };
 
 export type RemitoFormInitial = {
   id?: string;
   date: string;
   customerName: string;
-  items: Item[];
+  items: InitialItem[];
   discountPercent: string;
   discountAmount: string;
   paymentMethod: string;
@@ -41,19 +57,24 @@ const emptyItem: Item = {
   unit: "kg",
   description: "",
   unitPrice: "0",
+  productId: "",
 };
 
 export default function RemitoForm({
   initial,
+  products,
 }: {
   initial: RemitoFormInitial;
+  products: RemitoProductOption[];
 }) {
   const router = useRouter();
   const editing = Boolean(initial.id);
   const [date, setDate] = useState(initial.date);
   const [customerName, setCustomerName] = useState(initial.customerName);
   const [items, setItems] = useState<Item[]>(
-    initial.items.length > 0 ? initial.items : [{ ...emptyItem }]
+    initial.items.length > 0
+      ? initial.items.map((item) => ({ productId: "", ...item }))
+      : [{ ...emptyItem }]
   );
   const [discountPercent, setDiscountPercent] = useState(
     initial.discountPercent
@@ -98,6 +119,27 @@ export default function RemitoForm({
     setItems((current) =>
       current.map((item, i) => (i === index ? { ...item, ...patch } : item))
     );
+  }
+
+  // Al elegir un producto del selector: copia su nombre a la descripción y su
+  // precio actual al precio unitario (snapshot). "Producto personalizado" deja
+  // la descripción/precio para escribir a mano. La descripción y el precio
+  // siguen siendo editables después de elegir.
+  function selectProduct(index: number, value: string) {
+    if (value === CUSTOM_PRODUCT) {
+      setItem(index, { productId: "" });
+      return;
+    }
+    const product = products.find((p) => p.id === value);
+    if (!product) {
+      setItem(index, { productId: "" });
+      return;
+    }
+    setItem(index, {
+      productId: product.id,
+      description: product.name,
+      unitPrice: String(product.price),
+    });
   }
 
   function addItem() {
@@ -221,13 +263,28 @@ export default function RemitoForm({
                 </select>
               </label>
               <label className="col-span-12 sm:col-span-4">
-                <Label>Descripción</Label>
+                <Label>Producto</Label>
+                <select
+                  value={item.productId || CUSTOM_PRODUCT}
+                  onChange={(e) => selectProduct(index, e.target.value)}
+                  className={inputClass}
+                >
+                  <option value={CUSTOM_PRODUCT}>
+                    Producto personalizado
+                  </option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — {pesos(p.price)}
+                    </option>
+                  ))}
+                </select>
                 <input
                   value={item.description}
                   onChange={(e) =>
                     setItem(index, { description: e.target.value })
                   }
-                  className={inputClass}
+                  className={`${inputClass} mt-1`}
+                  placeholder="Descripción"
                 />
               </label>
               <label className="col-span-6 sm:col-span-2">

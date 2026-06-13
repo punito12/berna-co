@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type React from "react";
 import PrintButton from "@/components/PrintButton";
 import {
   formatRemitoMoney,
@@ -21,6 +20,10 @@ function decimal(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
+// Remito imprimible. Maquetado 100% en HTML/CSS (sin imagen/PDF de fondo) para
+// que imprima nítido y entre en una sola hoja A4. El PDF original se usó solo
+// como referencia visual. Los controles (volver/editar/imprimir) quedan fuera
+// del área imprimible con `print:hidden` y `.remito-sheet` define la hoja.
 export default async function ImprimirRemitoPage({
   params,
 }: {
@@ -45,128 +48,272 @@ export default async function ImprimirRemitoPage({
           >
             Editar
           </Link>
-          <PrintButton />
+          <PrintButton
+            documentTitle={`Remito ${String(remito.number).padStart(6, "0")} - Berna&co`}
+          />
         </div>
       </div>
+
+      <p className="mb-4 text-[11px] text-muted print:hidden">
+        Al tocar <strong>Imprimir / Descargar PDF</strong> se abre el diálogo del
+        navegador: elegí <strong>“Guardar como PDF”</strong> como destino para
+        descargar el archivo. Sale solo el remito, en una hoja A4.
+      </p>
 
       <style
         dangerouslySetInnerHTML={{
           __html: `
+            /* Vista en pantalla: simula la hoja A4 con su padding interno. */
+            .remito-sheet {
+              box-sizing: border-box;
+              width: 210mm;
+              min-height: 297mm;
+              margin: 0 auto;
+              padding: 18mm 16mm;
+              background: #fff;
+              color: #1a1a1a;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 11px;
+              line-height: 1.4;
+            }
+            .remito-sheet * { box-sizing: border-box; }
+
+            /* @page con margen 0: así el navegador NO dibuja sus encabezados/
+               pies (fecha, título, URL, "1/1"). El margen real lo da el padding
+               del propio remito en impresión, para que igual no se corte. */
             @page { size: A4; margin: 0; }
             @media print {
-              html, body { margin: 0 !important; padding: 0 !important; background: white !important; }
-              .admin-shell, main { padding: 0 !important; margin: 0 !important; }
+              /* Aislar: ocultar todo el panel admin y mostrar solo el remito. */
+              body * { visibility: hidden !important; }
+              #remito-print-root, #remito-print-root * { visibility: visible !important; }
+              #remito-print-root {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 14mm 12mm !important;
+                box-shadow: none !important;
+              }
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
             }
           `,
         }}
       />
 
-      <div className="relative h-[297mm] w-[210mm] overflow-hidden bg-white text-[#333] shadow print:shadow-none">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/templates/remito-original.png"
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full select-none"
-        />
+      <div id="remito-print-root" className="remito-sheet shadow print:shadow-none">
+        {/* Encabezado: logo (izq) + remito/fecha/datos (der) */}
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: "12mm",
+          }}
+        >
+          {/* Logo real de Berna&co (mismo archivo que usa el sitio). */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/logo-dark.png"
+            alt="Berna&co — Congelados Caseros"
+            style={{ width: "62mm", height: "auto", display: "block" }}
+          />
 
-        <Field x={414} y={96} w={108} bold>
-          {formatRemitoNumber(remito.number)}
-        </Field>
-        <Field x={414} y={119} w={100}>
-          {dateLabel(remito.date)}
-        </Field>
-        <Field x={78} y={251} w={430} bold>
-          {remito.customerName}
-        </Field>
-
-        {remito.items.slice(0, 9).map((item, index) => {
-          const y = 326 + index * 18;
-          return (
-            <div key={item.id}>
-              <Field x={104} y={y} w={72}>
-                {decimal(item.quantity)} {item.unit}
-              </Field>
-              <Field x={207} y={y} w={145}>
-                {item.description}
-              </Field>
-              <Field x={361} y={y} w={75} align="right">
-                {formatRemitoMoney(item.unitPrice)}
-              </Field>
-              <Field x={464} y={y} w={55} align="right">
-                {formatRemitoMoney(item.total)}
-              </Field>
+          <div style={{ textAlign: "right", paddingTop: "4px" }}>
+            <div style={{ fontSize: "13px", fontWeight: 800, letterSpacing: "0.06em" }}>
+              {formatRemitoNumber(remito.number)}
             </div>
-          );
-        })}
+            <div style={{ marginTop: "2px", color: "#444" }}>
+              Fecha: {dateLabel(remito.date)}
+            </div>
+            <div style={{ marginTop: "12px", color: "#333", lineHeight: 1.5 }}>
+              <div>Bernardo Petavs</div>
+              <div>Tel: 11 3212 5287</div>
+              <div>Mail: csberna2020@gmail.com</div>
+            </div>
+          </div>
+        </header>
 
-        <Field x={443} y={525} w={76} align="right">
-          {formatRemitoMoney(remito.subtotal)}
-        </Field>
-        <Field x={407} y={552} w={32} align="center">
-          {decimal(remito.discountPercent)}
-        </Field>
-        <Field x={443} y={552} w={76} align="right">
-          {formatRemitoMoney(remito.discountAmount)}
-        </Field>
-        <Field x={443} y={599} w={76} align="right" bold size={12}>
-          {formatRemitoMoney(remito.total)}
-        </Field>
+        {/* Nombre del cliente */}
+        <div style={{ marginTop: "10mm" }}>
+          <div
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              color: "#0a0a0a",
+            }}
+          >
+            NOMBRE
+          </div>
+          <div style={{ marginTop: "2px", fontSize: "14px", fontWeight: 700 }}>
+            {remito.customerName}
+          </div>
+        </div>
 
-        <Field x={79} y={675} w={200} bold>
-          {remito.paymentMethod}
-        </Field>
-        <Field x={79} y={724} w={200}>
-          {remito.note}
-        </Field>
+        {/* Tabla de ítems */}
+        <table
+          style={{
+            width: "100%",
+            marginTop: "8mm",
+            borderCollapse: "collapse",
+            fontSize: "11px",
+          }}
+        >
+          <thead>
+            <tr
+              style={{
+                borderTop: "1.5px solid #0a0a0a",
+                borderBottom: "1.5px solid #0a0a0a",
+              }}
+            >
+              <th style={thStyle("left")}>CANTIDAD</th>
+              <th style={thStyle("left")}>DESCRIPCION</th>
+              <th style={thStyle("right")}>PRECIO U.</th>
+              <th style={thStyle("right")}>TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {remito.items.map((item) => (
+              <tr key={item.id} style={{ borderBottom: "1px solid #e6e6e6" }}>
+                <td style={tdStyle("left")}>
+                  {decimal(item.quantity)} {item.unit}
+                </td>
+                <td style={tdStyle("left")}>{item.description}</td>
+                <td style={tdStyle("right")}>
+                  {formatRemitoMoney(item.unitPrice)}
+                </td>
+                <td style={tdStyle("right")}>{formatRemitoMoney(item.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-        <Field x={331} y={715} w={170}>
-          {remito.receivedSignature}
-        </Field>
-        <Field x={331} y={743} w={170}>
-          {remito.receivedClarification}
-        </Field>
-        <Field x={331} y={770} w={170}>
-          {dateLabel(remito.receivedDate)}
-        </Field>
+        {/* Totales (alineados a la derecha) */}
+        <div
+          style={{
+            marginTop: "8mm",
+            marginLeft: "auto",
+            width: "70mm",
+            fontSize: "11px",
+          }}
+        >
+          <div style={totalRow}>
+            <span style={{ color: "#444" }}>Subtotal</span>
+            <span>{formatRemitoMoney(remito.subtotal)}</span>
+          </div>
+          <div style={totalRow}>
+            <span style={{ color: "#444" }}>
+              Descuento ({decimal(remito.discountPercent)} %)
+            </span>
+            <span>{formatRemitoMoney(remito.discountAmount)}</span>
+          </div>
+          <div
+            style={{
+              ...totalRow,
+              borderTop: "1.5px solid #0a0a0a",
+              marginTop: "4px",
+              paddingTop: "6px",
+              fontWeight: 800,
+              fontSize: "14px",
+            }}
+          >
+            <span>TOTAL</span>
+            <span>{formatRemitoMoney(remito.total)}</span>
+          </div>
+        </div>
+
+        {/* Pie: forma de pago / nota / alias  |  recibí conforme */}
+        <div
+          style={{
+            marginTop: "14mm",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "10mm",
+          }}
+        >
+          <div style={{ paddingRight: "8mm" }}>
+            <div style={footerHeading}>FORMA DE PAGO</div>
+            <div style={{ marginTop: "2px", minHeight: "14px" }}>
+              {remito.paymentMethod}
+            </div>
+
+            <div style={{ ...footerHeading, marginTop: "10mm" }}>NOTA:</div>
+            <div style={{ marginTop: "2px", whiteSpace: "pre-wrap", minHeight: "14px" }}>
+              {remito.note}
+            </div>
+
+            <div style={{ ...footerHeading, marginTop: "10mm" }}>
+              ALIAS: BERNA.NUTS
+            </div>
+          </div>
+
+          <div style={{ borderLeft: "1px solid #cfcfcf", paddingLeft: "10mm" }}>
+            <div style={footerHeading}>RECIBÍ CONFORME</div>
+            <FooterField label="Firma" value={remito.receivedSignature} />
+            <FooterField label="Aclaración" value={remito.receivedClarification} />
+            <FooterField label="Fecha" value={dateLabel(remito.receivedDate)} />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function Field({
-  x,
-  y,
-  w,
-  children,
-  align = "left",
-  bold = false,
-  size = 10,
-}: {
-  x: number;
-  y: number;
-  w: number;
-  children: React.ReactNode;
-  align?: "left" | "center" | "right";
-  bold?: boolean;
-  size?: number;
-}) {
+const totalRow: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "3px 0",
+};
+
+const footerHeading: React.CSSProperties = {
+  fontSize: "11px",
+  fontWeight: 700,
+  letterSpacing: "0.1em",
+  color: "#0a0a0a",
+};
+
+function thStyle(align: "left" | "right"): React.CSSProperties {
+  return {
+    padding: "8px 6px",
+    textAlign: align,
+    fontWeight: 700,
+    letterSpacing: "0.08em",
+    color: "#0a0a0a",
+    fontSize: "11px",
+  };
+}
+
+function tdStyle(align: "left" | "right"): React.CSSProperties {
+  return {
+    padding: "7px 6px",
+    textAlign: align,
+    verticalAlign: "top",
+  };
+}
+
+function FooterField({ label, value }: { label: string; value: string }) {
   return (
-    <div
-      className="absolute overflow-hidden whitespace-nowrap bg-white/95 px-1"
-      style={{
-        left: `${(x / 596) * 100}%`,
-        top: `${(y / 842) * 100}%`,
-        width: `${(w / 596) * 100}%`,
-        fontSize: `${size}px`,
-        lineHeight: "1.25",
-        fontFamily: "Arial, Helvetica, sans-serif",
-        fontWeight: bold ? 700 : 500,
-        textAlign: align,
-        letterSpacing: "0.04em",
-      }}
-    >
-      {children}
+    <div style={{ marginTop: "10mm" }}>
+      <div style={{ minHeight: "16px", fontSize: "12px" }}>{value}</div>
+      <div
+        style={{
+          borderTop: "1px solid #9a9a9a",
+          marginTop: "2px",
+          paddingTop: "3px",
+          fontSize: "10px",
+          color: "#666",
+        }}
+      >
+        {label}
+      </div>
     </div>
   );
 }

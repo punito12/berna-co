@@ -20,6 +20,24 @@ export type RemitoInput = {
   receivedDate?: string | null;
 };
 
+export type RemitoProductOption = {
+  id: string;
+  name: string;
+  price: number;
+};
+
+// Productos para el selector del formulario de remitos. Trae TODOS (incluso no
+// disponibles en la web) porque un remito mayorista puede incluir cualquier
+// corte. Solo expone id/nombre/precio: al elegir un producto se COPIA el precio
+// actual al ítem del remito; nunca se modifica el producto.
+export async function listRemitoProductOptions(): Promise<RemitoProductOption[]> {
+  const rows = await prisma.product.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, price: true },
+  });
+  return rows.map((r) => ({ id: r.id, name: r.name, price: r.price }));
+}
+
 export function formatRemitoNumber(number: number): string {
   return `REMITO #${String(number).padStart(6, "0")}`;
 }
@@ -85,6 +103,13 @@ export async function updateRemito(id: string, input: RemitoInput) {
 
 export async function archiveRemito(id: string) {
   await prisma.remito.update({ where: { id }, data: { archived: true } });
+}
+
+// Borrado definitivo del remito (irreversible). Los RemitoItem se eliminan en
+// cascada (onDelete: Cascade en el schema). A diferencia de archivar, esto no
+// se puede recuperar.
+export async function deleteRemito(id: string) {
+  await prisma.remito.delete({ where: { id } });
 }
 
 function normalizeRemitoInput(input: RemitoInput) {

@@ -8,10 +8,12 @@ export default function RichText({
   text,
   className = "",
   textKey,
+  style,
 }: {
   text: string;
   className?: string;
   textKey?: string;
+  style?: React.CSSProperties;
 }) {
   const lines = text.split("\n");
   const blocks: React.ReactNode[] = [];
@@ -20,7 +22,7 @@ export default function RichText({
   const flushBullets = (key: string) => {
     if (bullets.length === 0) return;
     blocks.push(
-      <ul key={key} className="my-2 list-disc space-y-1 pl-5">
+      <ul key={key} className="my-2 list-disc space-y-1 pl-5" style={style}>
         {bullets.map((b, i) => (
           <li key={i}>{renderInline(b)}</li>
         ))}
@@ -38,13 +40,20 @@ export default function RichText({
     if (line.trim() === "") {
       blocks.push(<br key={`br-${i}`} />);
     } else {
-      blocks.push(<p key={`p-${i}`}>{renderInline(line)}</p>);
+      // El `style` (p. ej. la fuente del CMS) va DIRECTO en cada <p>/<ul> —el
+      // mismo elemento que tiene el texto— para que no dependa de herencia y la
+      // fuente aplique igual que en la descripción corta de la card.
+      blocks.push(
+        <p key={`p-${i}`} style={style}>
+          {renderInline(line)}
+        </p>
+      );
     }
   });
   flushBullets("ul-end");
 
   return (
-    <div className={className} data-cms-text={textKey}>
+    <div className={className} data-cms-text={textKey} style={style}>
       {blocks}
     </div>
   );

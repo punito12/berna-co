@@ -38,6 +38,7 @@ export default function Catalog({
   addedLabel = "Agregado ✓",
   noMoreStockLabel = "Sin más stock disponible",
   textKeys = {},
+  previewToken,
 }: {
   products: ProductForUI[];
   efectivoPct?: number;
@@ -72,6 +73,9 @@ export default function Catalog({
     | "newLabel",
     string
   >>;
+  // Token de preview del CMS: se pasa a cada card para arrastrarlo al link del
+  // detalle del producto y mantener la vista previa activa.
+  previewToken?: string;
 }) {
   const { lines, totalItems, totalPrice, changeQuantity } = useCart();
   const [open, setOpen] = useState(false);
@@ -153,6 +157,7 @@ export default function Catalog({
                 lowStockLabel={lowStockLabel}
                 addedLabel={addedLabel}
                 noMoreStockLabel={noMoreStockLabel}
+                previewToken={previewToken}
               />
             </Reveal>
           ))}

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import RemitoForm from "@/components/RemitoForm";
+import { listRemitoProductOptions } from "@/lib/remitos";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function NuevoRemitoPage() {
+export default async function NuevoRemitoPage() {
+  const products = await listRemitoProductOptions();
   return (
     <div className="mx-auto max-w-5xl">
       <Link
@@ -18,6 +20,7 @@ export default function NuevoRemitoPage() {
         Nuevo remito
       </h1>
       <RemitoForm
+        products={products}
         initial={{
           date: todayIso(),
           customerName: "",
