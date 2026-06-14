@@ -35,6 +35,10 @@ export default function ProductCard({
   noMoreStockLabel = "Sin más stock disponible",
   addButtonStyle,
   detailButtonStyle,
+  cardContainerStyle: cardContainerStyleProp,
+  cardImageStyle: cardImageStyleProp,
+  cardTitleStyle: cardTitleStyleProp,
+  cardTextStyle: cardTextStyleProp,
   previewToken,
 }: {
   product: ProductForUI;
@@ -53,6 +57,12 @@ export default function ProductCard({
   noMoreStockLabel?: string;
   addButtonStyle?: CSSProperties;
   detailButtonStyle?: CSSProperties;
+  // Diseño de la tarjeta (fase 3): estilos inline derivados del config del
+  // catálogo. Vacíos cuando no hay config → la tarjeta se ve como siempre.
+  cardContainerStyle?: CSSProperties;
+  cardImageStyle?: CSSProperties;
+  cardTitleStyle?: CSSProperties;
+  cardTextStyle?: CSSProperties;
   // Token de preview del CMS. Si está, los links al detalle lo arrastran para
   // que la vista previa (fuentes/estilos de borrador) siga activa al entrar al
   // producto. Sin token, links normales.
@@ -140,6 +150,8 @@ export default function ProductCard({
     borderRadius: "var(--card-radius, 0.5rem)",
     borderWidth: "var(--card-border-width, 1px)",
     boxShadow: "var(--card-shadow, 0 1px 0 rgba(10,10,10,0.03))",
+    // El diseño de tarjeta del editor (fase 3) pisa lo de arriba cuando existe.
+    ...cardContainerStyleProp,
   };
   // Note: font-size for name/price is handled in globals.css via data-cms-style
   // + media query, so the default Tailwind responsive sizes are preserved when
@@ -191,11 +203,14 @@ export default function ProductCard({
     <>
       <article
         style={cardStyle}
+        data-cms-element="product-card"
         className="group flex h-full min-w-0 max-w-full flex-col overflow-hidden border border-card-border bg-card-bg transition-all duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_22px_55px_rgba(10,10,10,0.10)]"
       >
         {/* Photo */}
         <Link
           href={productHref}
+          data-cms-el="card-image"
+          style={cardImageStyleProp}
           className="relative block aspect-[4/5] w-full overflow-hidden bg-white sm:aspect-[2/3]"
           aria-label={`Ver ${product.name}`}
         >
@@ -241,7 +256,8 @@ export default function ProductCard({
           <Link href={productHref}>
             <h3
               data-cms-style="name"
-              style={nameStyle}
+              data-cms-el="card-title"
+              style={{ ...nameStyle, ...cardTitleStyleProp }}
               className="break-words font-black uppercase tracking-tight text-base leading-tight text-product-name transition-colors hover:text-muted sm:text-xl"
             >
               {product.name}
@@ -251,7 +267,8 @@ export default function ProductCard({
             {formatWeight(product.weightGrams)}
           </p>
           <p
-            style={{ fontFamily: "var(--description-font, inherit)" }}
+            data-cms-el="card-text"
+            style={{ fontFamily: "var(--description-font, inherit)", ...cardTextStyleProp }}
             className="mt-3 hidden text-sm leading-relaxed text-muted sm:block"
           >
             {product.description}

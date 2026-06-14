@@ -45,6 +45,12 @@ export default function Catalog({
   addButtonStyle,
   detailButtonStyle,
   cartContinueButtonStyle,
+  cardContainerStyle,
+  cardImageStyle,
+  cardTitleStyle,
+  cardTextStyle,
+  chipStyle,
+  chipActiveStyle,
   previewToken,
 }: {
   products: ProductForUI[];
@@ -86,6 +92,14 @@ export default function Catalog({
   addButtonStyle?: CSSProperties;
   detailButtonStyle?: CSSProperties;
   cartContinueButtonStyle?: CSSProperties;
+  // Diseño de tarjetas (fase 3): se pasan a cada ProductCard.
+  cardContainerStyle?: CSSProperties;
+  cardImageStyle?: CSSProperties;
+  cardTitleStyle?: CSSProperties;
+  cardTextStyle?: CSSProperties;
+  // Diseño de chips de filtro (inactivo / activo).
+  chipStyle?: CSSProperties;
+  chipActiveStyle?: CSSProperties;
   // Token de preview del CMS: se pasa a cada card para arrastrarlo al link del
   // detalle del producto y mantener la vista previa activa.
   previewToken?: string;
@@ -145,6 +159,8 @@ export default function Catalog({
             active={category === "ALL"}
             onClick={() => setCategory("ALL")}
             textKey={textKeys.allLabel}
+            chipStyle={chipStyle}
+            chipActiveStyle={chipActiveStyle}
           >
             {allLabel}
           </FilterChip>
@@ -153,6 +169,8 @@ export default function Catalog({
               key={c}
               active={category === c}
               onClick={() => setCategory(c)}
+              chipStyle={chipStyle}
+              chipActiveStyle={chipActiveStyle}
             >
               {categoryLabels[c] ?? c}
             </FilterChip>
@@ -179,6 +197,10 @@ export default function Catalog({
                 noMoreStockLabel={noMoreStockLabel}
                 addButtonStyle={addButtonStyle}
                 detailButtonStyle={detailButtonStyle}
+                cardContainerStyle={cardContainerStyle}
+                cardImageStyle={cardImageStyle}
+                cardTitleStyle={cardTitleStyle}
+                cardTextStyle={cardTextStyle}
                 previewToken={previewToken}
               />
             </Reveal>
@@ -300,11 +322,15 @@ function FilterChip({
   onClick,
   children,
   textKey,
+  chipStyle,
+  chipActiveStyle,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
   textKey?: string;
+  chipStyle?: React.CSSProperties;
+  chipActiveStyle?: React.CSSProperties;
 }) {
   return (
     <button
@@ -313,11 +339,15 @@ function FilterChip({
       aria-pressed={active}
       data-cms-text={textKey}
       data-cms-style="filter"
+      data-cms-element="filter-chip"
+      data-cms-active={active ? "true" : "false"}
       style={{
         borderRadius: "var(--filter-radius, 9999px)",
         fontWeight: "var(--filter-weight, 700)" as React.CSSProperties["fontWeight"],
         textTransform:
           "var(--filter-transform, uppercase)" as React.CSSProperties["textTransform"],
+        // El diseño de filtros del editor (fase 3) pisa lo de arriba cuando existe.
+        ...(active ? chipActiveStyle : chipStyle),
       }}
       className={`inline-flex min-h-11 items-center border px-4 py-2.5 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
         active

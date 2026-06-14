@@ -52,6 +52,10 @@ export default function VisualEditor({
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [selectedButton, setSelectedButton] = useState<string | null>(null);
   const [selectedTextKey, setSelectedTextKey] = useState<string | null>(null);
+  // Elemento fino clickeado en la preview (data-cms-element): "product-card",
+  // "filter-chip", "button" o "section-bg" (clic en el fondo de la sección, sin
+  // botón/tarjeta/chip/texto). Sirve para auto-expandir el grupo de diseño justo.
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -107,13 +111,19 @@ export default function VisualEditor({
   function handlePreviewSelect(
     keys: string[],
     button: string | null,
-    textKey: string | null
+    textKey: string | null,
+    element: string | null
   ) {
     const match = keys.find((k) => validSectionIdsRef.current.has(k));
     if (match) {
       setSectionId(match);
       setSelectedButton(button);
       setSelectedTextKey(textKey);
+      // Si no se clickeó un elemento fino ni un botón/texto, es el fondo de la
+      // sección → auto-expandir "Diseño de la sección".
+      setSelectedElement(
+        button ? "button" : element ?? (textKey ? null : "section-bg")
+      );
     }
   }
 
@@ -122,6 +132,7 @@ export default function VisualEditor({
     setSectionId(null);
     setSelectedButton(null);
     setSelectedTextKey(null);
+    setSelectedElement(null);
   }
 
   // Marca visualmente la sección seleccionada dentro del iframe (clase editor-only).
@@ -212,6 +223,9 @@ export default function VisualEditor({
           const textKey = (e.target as Element | null)?.closest?.(
             "[data-cms-text]"
           )?.getAttribute("data-cms-text") ?? null;
+          const element = (e.target as Element | null)?.closest?.(
+            "[data-cms-element]"
+          )?.getAttribute("data-cms-element") ?? null;
           const keys: string[] = [];
           let node: Element | null = (e.target as Element | null)?.closest?.(
             "[data-cms-section]"
@@ -225,7 +239,7 @@ export default function VisualEditor({
           // En el editor, clic = seleccionar (no navegar).
           e.preventDefault();
           e.stopPropagation();
-          handlePreviewSelect(keys, button, textKey);
+          handlePreviewSelect(keys, button, textKey, element);
         },
         true
       );
@@ -530,6 +544,7 @@ export default function VisualEditor({
                     sectionId={section.id}
                     selectedButton={selectedButton}
                     selectedTextKey={selectedTextKey}
+                    selectedElement={selectedElement}
                     designTarget={viewport === "mobile" ? "mobile" : "desktop"}
                     sections={sections}
                     texts={texts}

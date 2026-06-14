@@ -5,8 +5,12 @@ import {
 import {
   sanitizeButtonDesignMap,
   sanitizeSectionDesign,
+  sanitizeCardDesign,
+  sanitizeFilterDesign,
   type CmsButtonDesignMap,
   type CmsSectionDesign,
+  type CmsCardDesign,
+  type CmsFilterDesign,
 } from "@/lib/cms-design";
 
 export const CMS_BLOCK_TYPES = [
@@ -40,6 +44,10 @@ export type CmsBlockConfig = {
   textStyles?: Record<string, CmsTextStyle>;
   design?: CmsSectionDesign;
   buttons?: CmsButtonDesignMap;
+  // Fase 3: diseño de tarjetas de producto y de chips de filtro del catálogo.
+  // Se guardan en el config de la sección home.products (host del catálogo).
+  cards?: CmsCardDesign;
+  filters?: CmsFilterDesign;
 };
 
 export const CMS_BLOCK_LABELS: Record<CmsBlockType, string> = {
@@ -160,6 +168,10 @@ export function sanitizeBlockConfig(input: Record<string, unknown>): CmsBlockCon
   if (Object.keys(design).length > 0) out.design = design;
   const buttons = sanitizeButtonDesignMap(input.buttons);
   if (Object.keys(buttons).length > 0) out.buttons = buttons;
+  const cards = sanitizeCardDesign(input.cards);
+  if (Object.keys(cards).length > 0) out.cards = cards;
+  const filters = sanitizeFilterDesign(input.filters);
+  if (Object.keys(filters).length > 0) out.filters = filters;
   return out;
 }
 

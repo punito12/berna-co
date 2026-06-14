@@ -42,6 +42,39 @@ export type CmsButtonDesign = CmsButtonDesignValues & {
 
 export type CmsButtonDesignMap = Record<string, CmsButtonDesign>;
 
+// ---- Tarjeta de producto (fase 3) ----
+export type CmsCardDesignValues = {
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: string;
+  borderRadius?: string;
+  shadow?: "none" | "soft" | "medium";
+  padding?: string;
+  titleColor?: string;
+  titleFontSize?: string;
+  textColor?: string;
+  textFontSize?: string;
+  imageBackgroundColor?: string;
+  imagePadding?: string;
+};
+export type CmsCardDesign = CmsCardDesignValues & { mobile?: CmsCardDesignValues };
+
+// ---- Filtros / chips (fase 3) ----
+export type CmsChipDesignValues = {
+  backgroundColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  borderRadius?: string;
+  paddingX?: string;
+  paddingY?: string;
+};
+export type CmsChipDesign = CmsChipDesignValues & { mobile?: CmsChipDesignValues };
+
+export type CmsFilterDesign = {
+  chip?: CmsChipDesign;
+  chipActive?: CmsChipDesign;
+};
+
 const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 const PX_RE = /^\d{1,3}px$/;
 const BORDER_RE = /^[0-8]px$/;
@@ -50,6 +83,7 @@ const ALIGN = new Set(["left", "center", "right"]);
 const WIDTH = new Set(["auto", "full"]);
 const UPPERCASE = new Set(["on", "off"]);
 const SHADOW = new Set(["none", "soft"]);
+const SHADOW3 = new Set(["none", "soft", "medium"]);
 
 const DEFAULT_SECTION_DESIGN: Required<CmsSectionDesignValues> = {
   backgroundColor: "#F7F1E8",
@@ -162,6 +196,39 @@ const BUTTON_DEFAULTS: Record<string, Partial<CmsButtonDesignValues>> = {
     paddingY: "16px",
     width: "full",
   },
+};
+
+// Defaults reales de la tarjeta de producto del catálogo (coinciden con el look
+// actual: blanco, borde fino, radio chico, sombra suave).
+const DEFAULT_CARD_DESIGN: Required<CmsCardDesignValues> = {
+  backgroundColor: "#FFFFFF",
+  borderColor: "#E8E3DC",
+  borderWidth: "1px",
+  borderRadius: "8px",
+  shadow: "none",
+  padding: "10px",
+  titleColor: "#0A0A0A",
+  titleFontSize: "16px",
+  textColor: "#6F655B",
+  textFontSize: "14px",
+  imageBackgroundColor: "#FFFFFF",
+  imagePadding: "0px",
+};
+
+// Defaults reales de los chips de filtro (inactivo y activo).
+const DEFAULT_CHIP_DESIGN: Required<CmsChipDesignValues> = {
+  backgroundColor: "#FFFFFF",
+  textColor: "#0A0A0A",
+  borderColor: "#E8E3DC",
+  borderRadius: "9999px",
+  paddingX: "16px",
+  paddingY: "10px",
+};
+const DEFAULT_CHIP_ACTIVE_DESIGN: Required<CmsChipDesignValues> = {
+  ...DEFAULT_CHIP_DESIGN,
+  backgroundColor: "#0A0A0A",
+  textColor: "#FFFFFF",
+  borderColor: "#0A0A0A",
 };
 
 function color(value: unknown): string | undefined {
@@ -458,6 +525,266 @@ function buttonValuesToStyle(
         ? "none"
         : undefined,
   }) as CSSProperties;
+}
+
+// ---- Tarjeta de producto: sanitizar / resolver / estilos ----
+function sanitizeCardValues(input: unknown): CmsCardDesignValues {
+  const raw =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as Record<string, unknown>)
+      : {};
+  return clean({
+    backgroundColor: color(raw.backgroundColor),
+    borderColor: color(raw.borderColor),
+    borderWidth: border(raw.borderWidth),
+    borderRadius: radius(raw.borderRadius),
+    shadow: pick<CmsCardDesignValues["shadow"] & string>(raw.shadow, SHADOW3),
+    padding: px(raw.padding),
+    titleColor: color(raw.titleColor),
+    titleFontSize: px(raw.titleFontSize),
+    textColor: color(raw.textColor),
+    textFontSize: px(raw.textFontSize),
+    imageBackgroundColor: color(raw.imageBackgroundColor),
+    imagePadding: px(raw.imagePadding),
+  });
+}
+
+export function sanitizeCardDesign(input: unknown): CmsCardDesign {
+  const raw =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as Record<string, unknown>)
+      : {};
+  const base = sanitizeCardValues(raw);
+  const mobile = sanitizeCardValues(raw.mobile);
+  return clean({ ...base, mobile: Object.keys(mobile).length > 0 ? mobile : undefined });
+}
+
+export function cardDesignDefaults(): Required<CmsCardDesignValues> {
+  return { ...DEFAULT_CARD_DESIGN };
+}
+
+export function effectiveCardDesign(
+  design: CmsCardDesign | undefined,
+  target: CmsDesignTarget
+): Required<CmsCardDesignValues> {
+  return {
+    ...DEFAULT_CARD_DESIGN,
+    ...(design ?? {}),
+    ...(target === "mobile" ? design?.mobile ?? {} : {}),
+  };
+}
+
+export function setCardDesignValue(
+  design: CmsCardDesign | undefined,
+  target: CmsDesignTarget,
+  key: keyof CmsCardDesignValues,
+  value: string
+): CmsCardDesign {
+  const current = sanitizeCardDesign(design);
+  if (target === "desktop") return sanitizeCardDesign({ ...current, [key]: value });
+  return sanitizeCardDesign({
+    ...current,
+    mobile: { ...(current.mobile ?? {}), [key]: value },
+  });
+}
+
+export function resetCardMobileDesign(
+  design: CmsCardDesign | undefined
+): CmsCardDesign {
+  const current = sanitizeCardDesign(design);
+  const { mobile: _m, ...desktop } = current;
+  return sanitizeCardDesign(desktop);
+}
+
+const SHADOW_CSS: Record<string, string> = {
+  none: "none",
+  soft: "0 1px 0 rgba(10,10,10,0.03)",
+  medium: "0 18px 45px rgba(10,10,10,0.10)",
+};
+
+function cardContainerStyle(v?: CmsCardDesignValues): CSSProperties {
+  if (!v) return {};
+  return clean({
+    backgroundColor: v.backgroundColor,
+    borderColor: v.borderColor,
+    borderWidth: v.borderWidth,
+    borderStyle: v.borderColor || v.borderWidth ? "solid" : undefined,
+    borderRadius: v.borderRadius,
+    boxShadow: v.shadow ? SHADOW_CSS[v.shadow] : undefined,
+    padding: v.padding,
+  }) as CSSProperties;
+}
+function cardTitleStyle(v?: CmsCardDesignValues): CSSProperties {
+  if (!v) return {};
+  return clean({ color: v.titleColor, fontSize: v.titleFontSize }) as CSSProperties;
+}
+function cardTextStyle(v?: CmsCardDesignValues): CSSProperties {
+  if (!v) return {};
+  return clean({ color: v.textColor, fontSize: v.textFontSize }) as CSSProperties;
+}
+function cardImageStyle(v?: CmsCardDesignValues): CSSProperties {
+  if (!v) return {};
+  return clean({
+    backgroundColor: v.imageBackgroundColor,
+    padding: v.imagePadding,
+  }) as CSSProperties;
+}
+
+export function cardContainerDesignToStyle(d?: CmsCardDesign): CSSProperties {
+  return cardContainerStyle(d);
+}
+export function cardTitleDesignToStyle(d?: CmsCardDesign): CSSProperties {
+  return cardTitleStyle(d);
+}
+export function cardTextDesignToStyle(d?: CmsCardDesign): CSSProperties {
+  return cardTextStyle(d);
+}
+export function cardImageDesignToStyle(d?: CmsCardDesign): CSSProperties {
+  return cardImageStyle(d);
+}
+
+// ---- Filtros / chips: sanitizar / resolver / estilos ----
+function sanitizeChipValues(input: unknown): CmsChipDesignValues {
+  const raw =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as Record<string, unknown>)
+      : {};
+  return clean({
+    backgroundColor: color(raw.backgroundColor),
+    textColor: color(raw.textColor),
+    borderColor: color(raw.borderColor),
+    borderRadius: radius(raw.borderRadius),
+    paddingX: px(raw.paddingX),
+    paddingY: px(raw.paddingY),
+  });
+}
+
+function sanitizeChipDesign(input: unknown): CmsChipDesign {
+  const raw =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as Record<string, unknown>)
+      : {};
+  const base = sanitizeChipValues(raw);
+  const mobile = sanitizeChipValues(raw.mobile);
+  return clean({ ...base, mobile: Object.keys(mobile).length > 0 ? mobile : undefined });
+}
+
+export function sanitizeFilterDesign(input: unknown): CmsFilterDesign {
+  const raw =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as Record<string, unknown>)
+      : {};
+  const chip = sanitizeChipDesign(raw.chip);
+  const chipActive = sanitizeChipDesign(raw.chipActive);
+  return clean({
+    chip: Object.keys(chip).length > 0 ? chip : undefined,
+    chipActive: Object.keys(chipActive).length > 0 ? chipActive : undefined,
+  });
+}
+
+export function effectiveChipDesign(
+  design: CmsChipDesign | undefined,
+  active: boolean,
+  target: CmsDesignTarget
+): Required<CmsChipDesignValues> {
+  const base = active ? DEFAULT_CHIP_ACTIVE_DESIGN : DEFAULT_CHIP_DESIGN;
+  return {
+    ...base,
+    ...(design ?? {}),
+    ...(target === "mobile" ? design?.mobile ?? {} : {}),
+  };
+}
+
+export function setFilterDesignValue(
+  design: CmsFilterDesign | undefined,
+  which: "chip" | "chipActive",
+  target: CmsDesignTarget,
+  key: keyof CmsChipDesignValues,
+  value: string
+): CmsFilterDesign {
+  const current = sanitizeFilterDesign(design);
+  const branch = sanitizeChipDesign(current[which]);
+  const nextBranch =
+    target === "desktop"
+      ? { ...branch, [key]: value }
+      : { ...branch, mobile: { ...(branch.mobile ?? {}), [key]: value } };
+  return sanitizeFilterDesign({ ...current, [which]: nextBranch });
+}
+
+export function resetFilterMobileDesign(
+  design: CmsFilterDesign | undefined
+): CmsFilterDesign {
+  const current = sanitizeFilterDesign(design);
+  const strip = (c?: CmsChipDesign) => {
+    if (!c) return undefined;
+    const { mobile: _m, ...rest } = c;
+    return rest;
+  };
+  return sanitizeFilterDesign({
+    chip: strip(current.chip),
+    chipActive: strip(current.chipActive),
+  });
+}
+
+function chipStyleFromValues(v?: CmsChipDesignValues): CSSProperties {
+  if (!v) return {};
+  return clean({
+    backgroundColor: v.backgroundColor,
+    color: v.textColor,
+    borderColor: v.borderColor,
+    borderStyle: v.borderColor ? "solid" : undefined,
+    borderRadius: v.borderRadius,
+    paddingLeft: v.paddingX,
+    paddingRight: v.paddingX,
+    paddingTop: v.paddingY,
+    paddingBottom: v.paddingY,
+  }) as CSSProperties;
+}
+
+// Estilo inline para un chip (desktop). `active` elige la rama activa/inactiva.
+export function chipDesignToStyle(
+  design: CmsFilterDesign | undefined,
+  active: boolean
+): CSSProperties {
+  const branch = active ? design?.chipActive : design?.chip;
+  return chipStyleFromValues(branch);
+}
+
+// ---- Reglas CSS mobile por marcador inerte (data-cms-element) ----
+function elementMobileRule(element: string, declarations: string): string {
+  if (!declarations) return "";
+  return `[data-cms-element="${cssEscape(element)}"]{${declarations}}`;
+}
+
+// Junta TODAS las reglas mobile de catálogo (tarjeta + filtros) en un solo bloque
+// @media. Apunta a los marcadores inertes del público.
+export function catalogMobileCss(config: {
+  cards?: CmsCardDesign;
+  filters?: CmsFilterDesign;
+}): string {
+  const rules: string[] = [];
+  const cardMobile = config.cards?.mobile;
+  if (cardMobile) {
+    const d = cssDeclarations(cardContainerStyle(cardMobile));
+    if (d) rules.push(elementMobileRule("product-card", d));
+    const t = cssDeclarations(cardTitleStyle(cardMobile));
+    if (t) rules.push(`[data-cms-element="product-card"] [data-cms-el="card-title"]{${t}}`);
+    const tx = cssDeclarations(cardTextStyle(cardMobile));
+    if (tx) rules.push(`[data-cms-element="product-card"] [data-cms-el="card-text"]{${tx}}`);
+    const im = cssDeclarations(cardImageStyle(cardMobile));
+    if (im) rules.push(`[data-cms-element="product-card"] [data-cms-el="card-image"]{${im}}`);
+  }
+  const chipM = config.filters?.chip?.mobile;
+  if (chipM) {
+    const d = cssDeclarations(chipStyleFromValues(chipM));
+    if (d) rules.push(`[data-cms-element="filter-chip"][data-cms-active="false"]{${d}}`);
+  }
+  const chipAM = config.filters?.chipActive?.mobile;
+  if (chipAM) {
+    const d = cssDeclarations(chipStyleFromValues(chipAM));
+    if (d) rules.push(`[data-cms-element="filter-chip"][data-cms-active="true"]{${d}}`);
+  }
+  return rules.length > 0 ? `@media (max-width: 640px){${rules.join("")}}` : "";
 }
 
 function cssEscape(value: string): string {

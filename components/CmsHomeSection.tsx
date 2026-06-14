@@ -21,6 +21,12 @@ import { textStyleCssRule } from "@/lib/cms-text-styles";
 import {
   buttonDesignToStyle,
   buttonMobileCssRule,
+  cardContainerDesignToStyle,
+  cardImageDesignToStyle,
+  cardTextDesignToStyle,
+  cardTitleDesignToStyle,
+  catalogMobileCss,
+  chipDesignToStyle,
   sectionDesignToStyle,
   sectionMobileCssRules,
   subtitleDesignToStyle,
@@ -165,6 +171,12 @@ export default function CmsHomeSection({
           addButtonStyle={buttonStyle("catalog.add")}
           detailButtonStyle={buttonStyle("catalog.detail")}
           cartContinueButtonStyle={buttonStyle("cart.continue")}
+          cardContainerStyle={cardContainerDesignToStyle(config.cards)}
+          cardImageStyle={cardImageDesignToStyle(config.cards)}
+          cardTitleStyle={cardTitleDesignToStyle(config.cards)}
+          cardTextStyle={cardTextDesignToStyle(config.cards)}
+          chipStyle={chipDesignToStyle(config.filters, false)}
+          chipActiveStyle={chipDesignToStyle(config.filters, true)}
         />
       </>
     ) : (
@@ -628,6 +640,8 @@ function sectionDesignCss(sectionKey: string, config: CmsBlockConfig): string {
     ...Object.entries(config.buttons ?? {}).map(([key, design]) =>
       buttonMobileCssRule(key, design)
     ),
+    // Fase 3: reglas mobile de tarjetas y filtros del catálogo (solo home.products).
+    catalogMobileCss({ cards: config.cards, filters: config.filters }),
   ]
     .filter(Boolean)
     .join("");

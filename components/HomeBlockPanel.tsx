@@ -109,6 +109,7 @@ export default function HomeBlockPanel({
   textBindings = [],
   selectedButton,
   selectedTextKey,
+  selectedElement,
   designTarget = "desktop",
 }: {
   sectionKey: string;
@@ -116,6 +117,7 @@ export default function HomeBlockPanel({
   textBindings?: HomeBlockTextBinding[];
   selectedButton?: string | null;
   selectedTextKey?: string | null;
+  selectedElement?: string | null;
   designTarget?: CmsDesignTarget;
 }) {
   const router = useRouter();
@@ -373,7 +375,11 @@ export default function HomeBlockPanel({
         </div>
       )}
 
-      <details className="rounded-lg border border-line bg-white p-3">
+      <details
+        // Se auto-expande al clickear el fondo de la sección en la preview.
+        open={selectedElement === "section-bg"}
+        className="rounded-lg border border-line bg-white p-3"
+      >
         <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-widest text-muted">
           Diseño de la sección
         </summary>
@@ -595,6 +601,9 @@ function SectionDesignControls({
         >
           Restablecer diseño de computadora
         </button>
+        <p className="w-full text-[10px] leading-4 text-muted">
+          Esto no borra textos, links ni acciones.
+        </p>
       </div>
     </div>
   );
@@ -732,6 +741,9 @@ function ButtonDesignControls({
         >
           Restablecer diseño de computadora
         </button>
+        <p className="w-full text-[10px] leading-4 text-muted">
+          Esto no borra textos, links ni acciones.
+        </p>
       </div>
     </div>
   );

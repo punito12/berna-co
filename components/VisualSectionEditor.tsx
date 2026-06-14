@@ -3,6 +3,7 @@
 import Link from "next/link";
 import CmsTextField from "@/components/CmsTextField";
 import CmsImageField from "@/components/CmsImageField";
+import CatalogDesignPanel from "@/components/CatalogDesignPanel";
 import HomeBlockPanel, {
   type HomeBlockBoundTextField,
   type HomeBlockTextBinding,
@@ -842,6 +843,7 @@ export default function VisualSectionEditor({
   sectionId,
   selectedButton,
   selectedTextKey,
+  selectedElement,
   designTarget,
   sections,
   texts,
@@ -851,6 +853,7 @@ export default function VisualSectionEditor({
   sectionId: string;
   selectedButton?: string | null;
   selectedTextKey?: string | null;
+  selectedElement?: string | null;
   designTarget?: CmsDesignTarget;
   sections: VisualSectionData[];
   texts: VisualTextRow[];
@@ -1039,7 +1042,18 @@ export default function VisualSectionEditor({
     const footerSection = sectionId === "global.footer"
       ? sections.find((s) => s.key === "home.footer")
       : null;
-    if (rows.length === 0) {
+    // Diseño de catálogo (fase 3): tarjetas / filtros viven en el config de
+    // home.products. Mostramos el panel de diseño en estas dos secciones.
+    const catalogDesignWhich: "cards" | "filters" | null =
+      sectionId === "catalog.cards"
+        ? "cards"
+        : sectionId === "catalog.filters"
+        ? "filters"
+        : null;
+    const productsSection = catalogDesignWhich
+      ? sections.find((s) => s.key === "home.products")
+      : null;
+    if (rows.length === 0 && !catalogDesignWhich) {
       return (
         <InfoPanel
           text={
@@ -1090,9 +1104,45 @@ export default function VisualSectionEditor({
               sectionKey="home.footer"
               configDraft={footerSection.configDraft}
               selectedTextKey={selectedTextKey}
+              selectedElement={selectedElement}
               designTarget={designTarget}
             />
           </div>
+        )}
+        {catalogDesignWhich && productsSection && (
+          <details
+            // Se auto-expande al clickear la tarjeta/chip en la vista previa.
+            open={
+              (catalogDesignWhich === "cards" &&
+                selectedElement === "product-card") ||
+              (catalogDesignWhich === "filters" &&
+                selectedElement === "filter-chip")
+            }
+            className="rounded-lg border border-line bg-white p-3"
+          >
+            <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-widest text-muted">
+              {catalogDesignWhich === "cards"
+                ? "Diseño de tarjetas"
+                : "Diseño de filtros"}
+              {(() => {
+                const cfg = parseBlockConfig(productsSection.configDraft);
+                const has =
+                  catalogDesignWhich === "cards" ? !!cfg.cards : !!cfg.filters;
+                return (
+                  <span className="ml-2 font-normal normal-case tracking-normal text-muted/80">
+                    · {has ? "personalizado" : "por defecto"}
+                  </span>
+                );
+              })()}
+            </summary>
+            <div className="mt-3">
+              <CatalogDesignPanel
+                which={catalogDesignWhich}
+                productsConfigDraft={productsSection.configDraft}
+                designTarget={designTarget}
+              />
+            </div>
+          </details>
         )}
       </div>
     );
@@ -1128,6 +1178,7 @@ export default function VisualSectionEditor({
         textBindings={textBindings}
         selectedButton={selectedButton}
         selectedTextKey={selectedTextKey}
+        selectedElement={selectedElement}
         designTarget={designTarget}
       />
 
