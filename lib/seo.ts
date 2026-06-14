@@ -5,6 +5,7 @@ export const SITE_TITLE =
 export const SITE_DESCRIPTION =
   "Comprá carnes, milanesas y productos congelados premium de Berna&co. Pedidos online, productos seleccionados y entrega en zonas disponibles.";
 export const DEFAULT_OG_IMAGE = "/images/hero.jpg";
+export const DEFAULT_SITE_ICON = "/icon.png";
 
 export function getSiteUrl(): URL {
   const raw = process.env.NEXT_PUBLIC_BASE_URL;

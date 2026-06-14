@@ -17,6 +17,7 @@ import { cmsGoogleFontsUrl } from "@/lib/cms-fonts";
 import { getGlobalSeo } from "@/lib/cms-seo";
 import {
   DEFAULT_OG_IMAGE,
+  DEFAULT_SITE_ICON,
   SITE_DESCRIPTION,
   SITE_NAME,
   SITE_TITLE,
@@ -58,6 +59,7 @@ export async function generateMetadata(): Promise<Metadata> {
     ogTitle: SITE_TITLE,
     ogDescription: SITE_DESCRIPTION,
     ogImage: DEFAULT_OG_IMAGE,
+    siteIcon: DEFAULT_SITE_ICON,
   };
   try {
     const bundle = await loadCmsBundle();
@@ -66,6 +68,7 @@ export async function generateMetadata(): Promise<Metadata> {
     // DB unavailable — keep hardcoded fallbacks.
   }
   const ogImageUrl = absoluteUrl(seo.ogImage);
+  const siteIconUrl = absoluteUrl(seo.siteIcon);
   return {
     metadataBase: getSiteUrl(),
     title: {
@@ -77,9 +80,10 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: {
       canonical: "/",
     },
-    // El favicon y el apple-touch-icon los detecta Next.js automáticamente
-    // desde app/icon.png y app/apple-icon.png (convención de archivos), por eso
-    // no se declara aquí un bloque `icons`.
+    icons: {
+      icon: [{ url: siteIconUrl }],
+      apple: [{ url: siteIconUrl }],
+    },
     openGraph: {
       type: "website",
       locale: "es_AR",

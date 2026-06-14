@@ -10,6 +10,7 @@ import {
   SITE_TITLE,
   SITE_DESCRIPTION,
   DEFAULT_OG_IMAGE,
+  DEFAULT_SITE_ICON,
 } from "@/lib/seo";
 
 // --- Keys -------------------------------------------------------------------
@@ -21,6 +22,7 @@ export const SEO_GLOBAL = {
   ogDescription: "seo.share.description",
 };
 export const SEO_OG_IMAGE_KEY = "seo.share.image";
+export const SEO_SITE_ICON_KEY = "seo.site.icon";
 
 // Per-page title/description keys (only the safe, high-value pages).
 export const SEO_PAGES = {
@@ -55,7 +57,10 @@ export function getGlobalSeo(cms: CmsBundle, preview = false) {
     DEFAULT_OG_IMAGE,
     preview
   );
-  return { title, description, ogTitle, ogDescription, ogImage };
+  const siteIcon = cms.images.has(SEO_SITE_ICON_KEY)
+    ? getSiteImage(cms, SEO_SITE_ICON_KEY, DEFAULT_SITE_ICON, preview)
+    : DEFAULT_SITE_ICON;
+  return { title, description, ogTitle, ogDescription, ogImage, siteIcon };
 }
 
 // Per-page title/description, falling back to the provided current values.
@@ -93,32 +98,18 @@ export const SEO_CMS_TEXTS = [
 
 export const SEO_CMS_IMAGES = [
   { key: SEO_OG_IMAGE_KEY, url: DEFAULT_OG_IMAGE },
+  { key: SEO_SITE_ICON_KEY, url: DEFAULT_SITE_ICON },
 ];
 
 // Creates missing SEO text + image rows so they're editable. Never overwrites
-// existing (edited/published) values. Single batch transaction (safe on Neon).
+// existing (edited/published) values.
 export async function ensureSeoCmsRows(): Promise<void> {
-  const textKeys = SEO_CMS_TEXTS.map((t) => t.key);
-  const imageKeys = SEO_CMS_IMAGES.map((i) => i.key);
-  const [existingTexts, existingImages] = await Promise.all([
-    prisma.siteText.findMany({
-      where: { key: { in: textKeys } },
-      select: { key: true },
-    }),
-    prisma.siteImage.findMany({
-      where: { key: { in: imageKeys } },
-      select: { key: true },
-    }),
-  ]);
-  const textPresent = new Set(existingTexts.map((r) => r.key));
-  const imagePresent = new Set(existingImages.map((r) => r.key));
-  const textsToCreate = SEO_CMS_TEXTS.filter((t) => !textPresent.has(t.key));
-  const imagesToCreate = SEO_CMS_IMAGES.filter((i) => !imagePresent.has(i.key));
-
   const ops = [
-    ...textsToCreate.map((t) =>
-      prisma.siteText.create({
-        data: {
+    ...SEO_CMS_TEXTS.map((t) =>
+      prisma.siteText.upsert({
+        where: { key: t.key },
+        update: { maxLength: t.maxLength, category: "seo" },
+        create: {
           key: t.key,
           value: t.value,
           valueDraft: t.value,
@@ -127,12 +118,13 @@ export async function ensureSeoCmsRows(): Promise<void> {
         },
       })
     ),
-    ...imagesToCreate.map((i) =>
-      prisma.siteImage.create({
-        data: { key: i.key, url: i.url, urlDraft: i.url, category: "seo" },
+    ...SEO_CMS_IMAGES.map((i) =>
+      prisma.siteImage.upsert({
+        where: { key: i.key },
+        update: { category: "seo" },
+        create: { key: i.key, url: i.url, urlDraft: i.url, category: "seo" },
       })
     ),
   ];
-  if (ops.length === 0) return;
   await prisma.$transaction(ops);
 }

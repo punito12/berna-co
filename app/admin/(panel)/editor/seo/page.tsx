@@ -4,6 +4,7 @@ import {
   SEO_GLOBAL,
   SEO_PAGES,
   SEO_OG_IMAGE_KEY,
+  SEO_SITE_ICON_KEY,
   SEO_CMS_TEXTS,
   ensureSeoCmsRows,
 } from "@/lib/cms-seo";
@@ -12,18 +13,19 @@ export default async function EditorSeoPage() {
   // Create any missing SEO rows so they're editable. Never overwrites edits.
   await ensureSeoCmsRows();
 
-  const [texts, image] = await Promise.all([
+  const [texts, images] = await Promise.all([
     prisma.siteText.findMany({
       where: { key: { in: SEO_CMS_TEXTS.map((t) => t.key) } },
       select: { key: true, valueDraft: true },
     }),
-    prisma.siteImage.findUnique({
-      where: { key: SEO_OG_IMAGE_KEY },
+    prisma.siteImage.findMany({
+      where: { key: { in: [SEO_OG_IMAGE_KEY, SEO_SITE_ICON_KEY] } },
       select: { key: true, url: true, urlDraft: true },
     }),
   ]);
   const draft = (key: string) =>
     texts.find((t) => t.key === key)?.valueDraft ?? "";
+  const imageByKey = new Map(images.map((image) => [image.key, image]));
 
   return (
     <div className="space-y-6">
@@ -63,8 +65,13 @@ export default async function EditorSeoPage() {
         }}
         ogImage={{
           key: SEO_OG_IMAGE_KEY,
-          published: image?.url ?? "",
-          draft: image?.urlDraft ?? "",
+          published: imageByKey.get(SEO_OG_IMAGE_KEY)?.url ?? "",
+          draft: imageByKey.get(SEO_OG_IMAGE_KEY)?.urlDraft ?? "",
+        }}
+        siteIcon={{
+          key: SEO_SITE_ICON_KEY,
+          published: imageByKey.get(SEO_SITE_ICON_KEY)?.url ?? "",
+          draft: imageByKey.get(SEO_SITE_ICON_KEY)?.urlDraft ?? "",
         }}
       />
     </div>

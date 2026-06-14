@@ -73,6 +73,7 @@ export default function SeoEditor({
   keys,
   initial,
   ogImage,
+  siteIcon,
 }: {
   keys: {
     title: string;
@@ -86,9 +87,12 @@ export default function SeoEditor({
   };
   initial: SeoValues;
   ogImage: { key: string; published: string; draft: string };
+  siteIcon: { key: string; published: string; draft: string };
 }) {
   const [v, setV] = useState(initial);
   const [saved, setSaved] = useState(initial);
+  const [ogImageDraft, setOgImageDraft] = useState(ogImage.draft);
+  const [siteIconDraft, setSiteIconDraft] = useState(siteIcon.draft);
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +111,14 @@ export default function SeoEditor({
     setSavedTick(false);
     setError(null);
   }, [initial]);
+
+  useEffect(() => {
+    setOgImageDraft(ogImage.draft);
+  }, [ogImage.draft]);
+
+  useEffect(() => {
+    setSiteIconDraft(siteIcon.draft);
+  }, [siteIcon.draft]);
 
   // Discard: reset inputs immediately.
   useEffect(() => {
@@ -231,6 +243,57 @@ export default function SeoEditor({
         </div>
       </section>
 
+      {/* Site icon */}
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+        <div className="mb-4 border-b border-line pb-3">
+          <p className="mb-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+            Icono del sitio
+          </p>
+          <h3 className="font-black uppercase tracking-tight text-lg text-ink">
+            Favicon y circulito de Google
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            Es el ícono chico del navegador y puede aparecer como el circulito
+            en Google. No es la imagen grande de compartir.
+          </p>
+        </div>
+        <p className="mb-3 rounded-lg border border-line bg-cream/40 px-3 py-2 text-xs leading-5 text-muted">
+          Recomendado: PNG cuadrado 512×512, simple y legible.
+        </p>
+        <CmsImageField
+          imageKey={siteIcon.key}
+          label="Icono del sitio / favicon"
+          published={siteIcon.published}
+          draft={siteIcon.draft}
+          onSaved={setSiteIconDraft}
+        />
+        <div className="mt-4 rounded-xl border border-line bg-cream/30 p-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted">
+            Vista del icono
+          </p>
+          <div className="mt-2 flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-line bg-white">
+              {siteIconDraft ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={siteIconDraft}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-[10px] text-muted">Sin icono</span>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-green-800">{DOMAIN}</p>
+              <p className="text-sm font-bold text-blue-800">
+                {v.title.trim() || "Título del sitio"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Share */}
       <section className="rounded-2xl border border-line bg-white p-5 shadow-sm">
         <div className="mb-4 border-b border-line pb-3">
@@ -265,14 +328,15 @@ export default function SeoEditor({
               Imagen al compartir
             </p>
             <p className="mb-2 text-xs leading-5 text-muted">
-              Se recomienda una imagen de 1200×630 px. Es la que aparece grande
-              en la tarjeta al compartir el link.
+              Recomendado: 1200×630 px, JPG/PNG, con logo y producto visible.
+              Es la que aparece grande en la tarjeta al compartir el link.
             </p>
             <CmsImageField
               imageKey={ogImage.key}
               label="Imagen para compartir"
               published={ogImage.published}
               draft={ogImage.draft}
+              onSaved={setOgImageDraft}
             />
           </div>
         </div>
@@ -282,10 +346,10 @@ export default function SeoEditor({
             Vista al compartir
           </p>
           <div className="mt-2 max-w-md overflow-hidden rounded-xl border border-line bg-white">
-            {ogImage.draft ? (
+            {ogImageDraft ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={ogImage.draft}
+                src={ogImageDraft}
                 alt="Vista de la imagen al compartir"
                 className="aspect-[1200/630] w-full object-cover"
               />

@@ -4,7 +4,11 @@ import { getAvailableProducts } from "@/lib/products";
 import { listSectionsAdmin } from "@/lib/cms-admin";
 import { ensureCatalogCmsLabels } from "@/lib/cms-catalog-texts";
 import { ensureCheckoutCmsTexts } from "@/lib/cms-checkout-texts";
-import { ensureSeoCmsRows, SEO_OG_IMAGE_KEY } from "@/lib/cms-seo";
+import {
+  ensureSeoCmsRows,
+  SEO_OG_IMAGE_KEY,
+  SEO_SITE_ICON_KEY,
+} from "@/lib/cms-seo";
 import { ensureLegalCmsTexts } from "@/lib/cms-legal";
 import { prisma } from "@/lib/db";
 
@@ -25,7 +29,7 @@ export default async function VisualEditorPage() {
     ensureSeoCmsRows().catch(() => {}),
     ensureLegalCmsTexts().catch(() => {}),
   ]);
-  const [products, homeSections, texts, content, seoImage] = await Promise.all([
+  const [products, homeSections, texts, content, seoImages] = await Promise.all([
     getAvailableProducts().catch(() => []),
     listSectionsAdmin("home").catch(() => []),
     prisma.siteText
@@ -49,8 +53,8 @@ export default async function VisualEditorPage() {
       .findFirst({ select: { logoUrl: true, logoUrlDraft: true } })
       .catch(() => null),
     prisma.siteImage
-      .findUnique({
-        where: { key: SEO_OG_IMAGE_KEY },
+      .findMany({
+        where: { key: { in: [SEO_OG_IMAGE_KEY, SEO_SITE_ICON_KEY] } },
         select: { key: true, url: true, urlDraft: true },
       })
       .catch(() => null),
@@ -58,6 +62,9 @@ export default async function VisualEditorPage() {
   const productSlug = products[0]?.slug ?? null;
   // Logo de borrador (lo que se ve en la vista previa del editor).
   const logoUrl = content?.logoUrlDraft || content?.logoUrl || "";
+  const seoImageByKey = new Map(
+    (seoImages ?? []).map((image) => [image.key, image])
+  );
 
   return (
     <VisualEditor
@@ -71,9 +78,14 @@ export default async function VisualEditorPage() {
       texts={texts}
       logoUrl={logoUrl}
       seoImage={{
-        key: seoImage?.key ?? SEO_OG_IMAGE_KEY,
-        published: seoImage?.url ?? "",
-        draft: seoImage?.urlDraft ?? "",
+        key: SEO_OG_IMAGE_KEY,
+        published: seoImageByKey.get(SEO_OG_IMAGE_KEY)?.url ?? "",
+        draft: seoImageByKey.get(SEO_OG_IMAGE_KEY)?.urlDraft ?? "",
+      }}
+      siteIcon={{
+        key: SEO_SITE_ICON_KEY,
+        published: seoImageByKey.get(SEO_SITE_ICON_KEY)?.url ?? "",
+        draft: seoImageByKey.get(SEO_SITE_ICON_KEY)?.urlDraft ?? "",
       }}
     />
   );

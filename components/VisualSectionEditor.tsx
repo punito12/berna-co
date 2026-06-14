@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import CmsTextField from "@/components/CmsTextField";
 import CmsImageField from "@/components/CmsImageField";
 import CatalogDesignPanel from "@/components/CatalogDesignPanel";
@@ -849,6 +850,7 @@ export default function VisualSectionEditor({
   texts,
   logoUrl,
   seoImage,
+  siteIcon,
 }: {
   sectionId: string;
   selectedButton?: string | null;
@@ -859,9 +861,20 @@ export default function VisualSectionEditor({
   texts: VisualTextRow[];
   logoUrl?: string;
   seoImage?: VisualSeoImage;
+  siteIcon?: VisualSeoImage;
 }) {
   const editor = SECTION_EDITORS[sectionId];
   const textByKey = new Map(texts.map((t) => [t.key, t]));
+  const [seoImageDraft, setSeoImageDraft] = useState(seoImage?.draft ?? "");
+  const [siteIconDraft, setSiteIconDraft] = useState(siteIcon?.draft ?? "");
+
+  useEffect(() => {
+    setSeoImageDraft(seoImage?.draft ?? "");
+  }, [seoImage?.draft]);
+
+  useEffect(() => {
+    setSiteIconDraft(siteIcon?.draft ?? "");
+  }, [siteIcon?.draft]);
 
   // SEO: imagen para compartir (reusa CmsImageField + el SiteImage existente).
   if (sectionId === "seo.image") {
@@ -879,10 +892,68 @@ export default function VisualSectionEditor({
             label="Imagen para compartir"
             published={seoImage.published}
             draft={seoImage.draft}
+            onSaved={setSeoImageDraft}
           />
         ) : (
           <InfoPanel
             text="No pudimos cargar la imagen. Editala en Modo avanzado."
+            href="/admin/editor/seo"
+            hrefLabel="Abrir Modo avanzado"
+          />
+        )}
+      </div>
+    );
+  }
+
+  // SEO: favicon / icono del sitio (SiteImage dedicado).
+  if (sectionId === "seo.site_icon") {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm leading-6 text-muted">
+          El ícono chico del navegador y el que puede aparecer como circulito en
+          Google. No es la imagen grande de compartir.
+        </p>
+        <p className="rounded-lg border border-line bg-cream/40 px-3 py-2 text-xs leading-5 text-muted">
+          Recomendado: PNG cuadrado 512×512, simple y legible.
+        </p>
+        {siteIcon ? (
+          <>
+            <CmsImageField
+              imageKey={siteIcon.key}
+              label="Icono del sitio / favicon"
+              published={siteIcon.published}
+              draft={siteIcon.draft}
+              onSaved={setSiteIconDraft}
+            />
+            <div className="rounded-xl border border-line bg-cream/30 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted">
+                Vista del icono
+              </p>
+              <div className="mt-2 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-line bg-white">
+                  {siteIconDraft ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={siteIconDraft}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-[10px] text-muted">Sin icono</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-green-800">csberna.com.ar</p>
+                  <p className="text-sm font-bold text-blue-800">
+                    Berna&co
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <InfoPanel
+            text="No pudimos cargar el icono. Editalo en Modo avanzado."
             href="/admin/editor/seo"
             hrefLabel="Abrir Modo avanzado"
           />
@@ -897,7 +968,8 @@ export default function VisualSectionEditor({
     const title =
       draftOf("seo.share.title") || draftOf("seo.site.title") || "Berna&co";
     const desc = draftOf("seo.share.description") || draftOf("seo.site.description");
-    const img = seoImage?.draft || "";
+    const img = seoImageDraft;
+    const icon = siteIconDraft;
     return (
       <div className="space-y-4">
         <p className="text-sm leading-6 text-muted">
@@ -908,13 +980,25 @@ export default function VisualSectionEditor({
           <p className="text-[10px] font-black uppercase tracking-widest text-muted">
             Vista en Google
           </p>
-          <p className="mt-2 text-xs text-green-800">csberna.com.ar</p>
-          <p className="text-base leading-snug text-blue-800">
-            {draftOf("seo.site.title") || "Título del sitio"}
-          </p>
-          <p className="text-sm leading-6 text-ink/70">
-            {draftOf("seo.site.description") || "Descripción para Google."}
-          </p>
+          <div className="mt-2 flex items-start gap-3">
+            <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-white">
+              {icon ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={icon} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-[9px] text-muted">Icono</span>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-green-800">csberna.com.ar</p>
+              <p className="text-base leading-snug text-blue-800">
+                {draftOf("seo.site.title") || "Título del sitio"}
+              </p>
+              <p className="text-sm leading-6 text-ink/70">
+                {draftOf("seo.site.description") || "Descripción para Google."}
+              </p>
+            </div>
+          </div>
         </div>
         <div className="rounded-xl border border-line bg-cream/30 p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-muted">

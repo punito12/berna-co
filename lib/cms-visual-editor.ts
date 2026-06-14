@@ -722,6 +722,15 @@ export const CMS_VISUAL_PAGES: CmsVisualPage[] = [
         advancedHref: "/admin/editor/seo",
       },
       {
+        id: "seo.site_icon",
+        label: "Icono del sitio",
+        page: "seo",
+        description: "El favicon chico del navegador y Google.",
+        status: "partial",
+        groups: ["image"],
+        advancedHref: "/admin/editor/seo",
+      },
+      {
         id: "seo.preview",
         label: "Vista previa",
         page: "seo",

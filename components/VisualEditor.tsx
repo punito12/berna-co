@@ -39,6 +39,7 @@ export default function VisualEditor({
   texts,
   logoUrl,
   seoImage,
+  siteIcon,
 }: {
   previewToken: string | null;
   productSlug: string | null;
@@ -46,6 +47,7 @@ export default function VisualEditor({
   texts: VisualTextRow[];
   logoUrl?: string;
   seoImage?: VisualSeoImage;
+  siteIcon?: VisualSeoImage;
 }) {
   const router = useRouter();
   const [pageId, setPageId] = useState("home");
@@ -550,6 +552,7 @@ export default function VisualEditor({
                     texts={texts}
                     logoUrl={logoUrl}
                     seoImage={seoImage}
+                    siteIcon={siteIcon}
                   />
                 ) : (
                   <>

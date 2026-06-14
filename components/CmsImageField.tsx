@@ -8,11 +8,13 @@ export default function CmsImageField({
   label,
   published,
   draft,
+  onSaved,
 }: {
   imageKey: string;
   label: string;
   published: string;
   draft: string;
+  onSaved?: (url: string) => void;
 }) {
   const [url, setUrl] = useState(draft);
   const [savedUrl, setSavedUrl] = useState(draft);
@@ -66,6 +68,7 @@ export default function CmsImageField({
         return false;
       }
       setSavedUrl(nextUrl);
+      onSaved?.(nextUrl);
       notifyCmsDraftChanged();
       flashSaved();
       return true;

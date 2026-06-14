@@ -61,6 +61,41 @@ const REQUIRED_TEXT_KEYS = [
   "footer.slogan",
 ];
 
+const SECTION_TITLE_TEXT_SOURCES: Record<
+  string,
+  { key: string; fallback: string; fallbackKey?: string }
+> = {
+  "home.hero": {
+    key: "home.hero.title",
+    fallback: "Milanesas premium\ny congelados caseros",
+  },
+  "home.products": {
+    key: "catalogo.title",
+    fallback: "Nuestros productos",
+  },
+  "home.ingredients": {
+    key: "home.ingredients.title",
+    fallback: "Nuestros ingredientes",
+    fallbackKey: "home.features.title",
+  },
+  "home.about": {
+    key: "home.about.title",
+    fallback: "BERNA & CO",
+  },
+  "home.features": {
+    key: "home.features.title",
+    fallback: "Cómo comprar",
+  },
+  "home.pos": {
+    key: "home.pos.title",
+    fallback: "Puntos de venta",
+  },
+  "home.newsletter": {
+    key: "home.newsletter.title",
+    fallback: "Sumate al newsletter",
+  },
+};
+
 function parseSnapshot(raw: string): SiteSnapshot {
   const parsed = JSON.parse(raw) as Partial<SiteSnapshot>;
   if (
@@ -83,6 +118,69 @@ function parseObject(raw: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function effectiveDraftText(
+  textsByKey: Map<
+    string,
+    { value: string; valueDraft: string }
+  >,
+  key: string,
+  fallback: string
+): string {
+  const row = textsByKey.get(key);
+  if (!row) return fallback;
+
+  // Draft is authoritative when it differs from the published value. This keeps
+  // validation honest: if the owner intentionally clears a required title in the
+  // draft, publish must stay blocked instead of falling back silently.
+  if (row.valueDraft !== row.value) return row.valueDraft;
+
+  return row.valueDraft || row.value || fallback;
+}
+
+function effectiveDraftTextWithFallback({
+  textsByKey,
+  key,
+  fallbackKey,
+  fallback,
+}: {
+  textsByKey: Map<string, { value: string; valueDraft: string }>;
+  key: string;
+  fallbackKey?: string;
+  fallback: string;
+}): string {
+  const value = effectiveDraftText(textsByKey, key, "");
+  if (value.trim().length > 0) return value;
+
+  const row = textsByKey.get(key);
+  if (row && row.valueDraft !== row.value) return value;
+
+  return fallbackKey
+    ? effectiveDraftText(textsByKey, fallbackKey, fallback)
+    : fallback;
+}
+
+function configWithEffectiveTitle({
+  sectionKey,
+  config,
+  textsByKey,
+}: {
+  sectionKey: string;
+  config: ReturnType<typeof parseBlockConfig>;
+  textsByKey: Map<string, { value: string; valueDraft: string }>;
+}) {
+  const source = SECTION_TITLE_TEXT_SOURCES[sectionKey];
+  if (!source) return config;
+  return {
+    ...config,
+    title: effectiveDraftTextWithFallback({
+      textsByKey,
+      key: source.key,
+      fallbackKey: source.fallbackKey,
+      fallback: source.fallback,
+    }),
+  };
 }
 
 function isHex(value: unknown): value is string {
@@ -166,6 +264,12 @@ export async function validateCmsDrafts(): Promise<CmsSafetyIssue[]> {
   ]);
 
   const issues: CmsSafetyIssue[] = [];
+  const textsByKey = new Map(
+    texts.map((text) => [
+      text.key,
+      { value: text.value, valueDraft: text.valueDraft },
+    ])
+  );
 
   const colors = parseObject(content?.themeColorsDraft ?? "{}");
   for (const key of ["ink", "cream", "line", "muted", "accent"]) {
@@ -239,9 +343,14 @@ export async function validateCmsDrafts(): Promise<CmsSafetyIssue[]> {
     }
     if (Object.keys(parsedConfig).length === 0) continue;
     const type = normalizeBlockType(section.type, section.key);
+    const config = configWithEffectiveTitle({
+      sectionKey: section.key,
+      config: parseBlockConfig(section.configDraft),
+      textsByKey,
+    });
     const configIssues = validateBlockConfig(
       type,
-      parseBlockConfig(section.configDraft)
+      config
     );
     for (const detail of configIssues) {
       issues.push({

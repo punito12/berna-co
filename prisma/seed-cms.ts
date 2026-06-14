@@ -404,6 +404,8 @@ const IMAGES: [string, string, string][] = [
   ["home.features.background", "", "home"],
   ["home.testimonials.background", "", "home"],
   ["branding.logo", DEFAULT_LOGO, "branding"],
+  ["seo.share.image", "/images/hero.jpg", "seo"],
+  ["seo.site.icon", "/icon.png", "seo"],
 ];
 
 const SECTIONS: [string, number, string, boolean][] = [
