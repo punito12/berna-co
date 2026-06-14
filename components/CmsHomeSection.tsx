@@ -18,6 +18,14 @@ import {
   type CmsBlockConfig,
 } from "@/lib/cms-blocks";
 import { textStyleCssRule } from "@/lib/cms-text-styles";
+import {
+  buttonDesignToStyle,
+  buttonMobileCssRule,
+  sectionDesignToStyle,
+  sectionMobileCssRules,
+  subtitleDesignToStyle,
+  titleDesignToStyle,
+} from "@/lib/cms-design";
 import type { ProductForUI } from "@/lib/products";
 
 type PaymentDiscounts = {
@@ -46,6 +54,11 @@ export default function CmsHomeSection({
   const image = (key: string, fb: string) => getSiteImage(cms, key, fb, preview);
   const logoUrl = getLogo(cms, preview);
   const blockStyleCss = blockTextStylesCss(section.key, config);
+  const sectionStyle = sectionDesignToStyle(config.design);
+  const titleStyle = titleDesignToStyle(config.design);
+  const subtitleStyle = subtitleDesignToStyle(config.design);
+  const buttonStyle = (key: string) => buttonDesignToStyle(config.buttons?.[key]);
+  const designCss = sectionDesignCss(section.key, config);
 
   if (section.key === "home.hero" || type === "hero") {
     return (
@@ -55,19 +68,14 @@ export default function CmsHomeSection({
         {blockStyleCss && (
           <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />
         )}
+        {designCss && <style dangerouslySetInnerHTML={{ __html: designCss }} />}
         <Hero
-          title={
-            config.title ||
-            t("home.hero.title", "Milanesas premium\ny congelados caseros")
-          }
-          subtitle={
-            config.subtitle ||
-            t(
-              "home.hero.subtitle",
-              "Elegí online, coordiná la entrega y pagá como prefieras."
-            )
-          }
-          cta={config.ctaLabel || t("home.hero.cta_primary", "Comprar ahora")}
+          title={t("home.hero.title", "Milanesas premium\ny congelados caseros")}
+          subtitle={t(
+            "home.hero.subtitle",
+            "Elegí online, coordiná la entrega y pagá como prefieras."
+          )}
+          cta={t("home.hero.cta_primary", "Comprar ahora")}
           backgroundUrl={
             config.imageUrl || image("home.hero.background", "/images/hero.jpg")
           }
@@ -75,6 +83,10 @@ export default function CmsHomeSection({
           titleKey="home.hero.title"
           subtitleKey="home.hero.subtitle"
           ctaKey="home.hero.cta_primary"
+          sectionStyle={sectionStyle}
+          titleStyle={titleStyle}
+          subtitleStyle={subtitleStyle}
+          buttonStyle={buttonStyle("hero.primary")}
         />
       </>
     );
@@ -82,70 +94,79 @@ export default function CmsHomeSection({
 
   if (section.key === "home.products" || type === "products_grid") {
     return products.length > 0 ? (
-      <Catalog
-        products={products}
-        previewToken={preview ? previewToken : undefined}
-        efectivoPct={payCfg.efectivoDiscountPercent}
-        transferenciaPct={payCfg.transferenciaDiscountPercent}
-        eyebrow={config.eyebrow || t("catalogo.eyebrow", "Congelados Caseros")}
-        title={config.title || t("catalogo.title", "Nuestros productos")}
-        subtitle={
-          config.subtitle ||
-          t("catalogo.subtitle", "Elegí tu corte y tu empanado. Listas para el horno.")
-        }
-        allLabel={t("catalog.filter.all", t("catalogo.filter.all", "Todos"))}
-        outOfStockLabel={t(
-          "catalog.product.out_of_stock",
-          t("catalogo.outOfStock", "Sin stock")
-        )}
-        addToCartLabel={t("catalog.product.add_to_cart", "Agregar al carrito")}
-        chooseBreadcrumbLabel={t(
-          "catalog.product.breadcrumb_label",
-          t("catalog.product.choose_breadcrumb", "Empanado")
-        )}
-        newLabel={t("catalog.badge.new", "New")}
-        paymentCashLabel={t("catalog.product.payment_cash_label", "efectivo")}
-        paymentTransferLabel={t(
-          "catalog.product.payment_transfer_label",
-          "transferencia"
-        )}
-        paymentTransferShortLabel={t(
-          "catalog.product.payment_transfer_short_label",
-          "transf."
-        )}
-        viewDetailLabel={t(
-          "catalog.product.view_detail_label",
-          "Ver detalle y fotos →"
-        )}
-        cartShowLabel={t("catalog.cart.show_label", "Ver carrito")}
-        cartHideLabel={t("catalog.cart.hide_label", "Ocultar carrito")}
-        cartContinueLabel={t("catalog.cart.continue_label", "Continuar")}
-        lowStockLabel={t(
-          "catalog.product.low_stock_label",
-          "Solo quedan {count} disponibles"
-        )}
-        addedLabel={t("catalog.product.added_label", "Agregado ✓")}
-        noMoreStockLabel={t(
-          "catalog.product.no_more_stock_label",
-          "Sin más stock disponible"
-        )}
-        categoryLabels={{
-          CARNE: t("catalog.filter.carne", "Carne"),
-          POLLO: t("catalog.filter.pollo", "Pollo"),
-          CERDO: t("catalog.filter.cerdo", "Cerdo"),
-          VEGANO: t("catalog.filter.vegano", "Vegano"),
-        }}
-        textKeys={{
-          eyebrow: "catalogo.eyebrow",
-          title: "catalogo.title",
-          subtitle: "catalogo.subtitle",
-          allLabel: "catalog.filter.all",
-          outOfStockLabel: "catalog.product.out_of_stock",
-          addToCartLabel: "catalog.product.add_to_cart",
-          chooseBreadcrumbLabel: "catalog.product.choose_breadcrumb",
-          newLabel: "catalog.badge.new",
-        }}
-      />
+      <>
+        {designCss && <style dangerouslySetInnerHTML={{ __html: designCss }} />}
+        <Catalog
+          products={products}
+          previewToken={preview ? previewToken : undefined}
+          efectivoPct={payCfg.efectivoDiscountPercent}
+          transferenciaPct={payCfg.transferenciaDiscountPercent}
+          eyebrow={t("catalogo.eyebrow", "Congelados Caseros")}
+          title={t("catalogo.title", "Nuestros productos")}
+          subtitle={t(
+            "catalogo.subtitle",
+            "Elegí tu corte y tu empanado. Listas para el horno."
+          )}
+          allLabel={t("catalog.filter.all", t("catalogo.filter.all", "Todos"))}
+          outOfStockLabel={t(
+            "catalog.product.out_of_stock",
+            t("catalogo.outOfStock", "Sin stock")
+          )}
+          addToCartLabel={t("catalog.product.add_to_cart", "Agregar al carrito")}
+          chooseBreadcrumbLabel={t(
+            "catalog.product.breadcrumb_label",
+            t("catalog.product.choose_breadcrumb", "Empanado")
+          )}
+          newLabel={t("catalog.badge.new", "New")}
+          paymentCashLabel={t("catalog.product.payment_cash_label", "efectivo")}
+          paymentTransferLabel={t(
+            "catalog.product.payment_transfer_label",
+            "transferencia"
+          )}
+          paymentTransferShortLabel={t(
+            "catalog.product.payment_transfer_short_label",
+            "transf."
+          )}
+          viewDetailLabel={t(
+            "catalog.product.view_detail_label",
+            "Ver detalle y fotos →"
+          )}
+          cartShowLabel={t("catalog.cart.show_label", "Ver carrito")}
+          cartHideLabel={t("catalog.cart.hide_label", "Ocultar carrito")}
+          cartContinueLabel={t("catalog.cart.continue_label", "Continuar")}
+          lowStockLabel={t(
+            "catalog.product.low_stock_label",
+            "Solo quedan {count} disponibles"
+          )}
+          addedLabel={t("catalog.product.added_label", "Agregado ✓")}
+          noMoreStockLabel={t(
+            "catalog.product.no_more_stock_label",
+            "Sin más stock disponible"
+          )}
+          categoryLabels={{
+            CARNE: t("catalog.filter.carne", "Carne"),
+            POLLO: t("catalog.filter.pollo", "Pollo"),
+            CERDO: t("catalog.filter.cerdo", "Cerdo"),
+            VEGANO: t("catalog.filter.vegano", "Vegano"),
+          }}
+          textKeys={{
+            eyebrow: "catalogo.eyebrow",
+            title: "catalogo.title",
+            subtitle: "catalogo.subtitle",
+            allLabel: "catalog.filter.all",
+            outOfStockLabel: "catalog.product.out_of_stock",
+            addToCartLabel: "catalog.product.add_to_cart",
+            chooseBreadcrumbLabel: "catalog.product.choose_breadcrumb",
+            newLabel: "catalog.badge.new",
+          }}
+          sectionStyle={sectionStyle}
+          titleStyle={titleStyle}
+          subtitleStyle={subtitleStyle}
+          addButtonStyle={buttonStyle("catalog.add")}
+          detailButtonStyle={buttonStyle("catalog.detail")}
+          cartContinueButtonStyle={buttonStyle("cart.continue")}
+        />
+      </>
     ) : (
       <section className="bg-cream px-4 py-24 text-center">
         <p className="font-bold uppercase tracking-wide text-muted">
@@ -223,25 +244,27 @@ export default function CmsHomeSection({
         {blockStyleCss && (
           <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />
         )}
+        {designCss && <style dangerouslySetInnerHTML={{ __html: designCss }} />}
         <Ingredients
-          eyebrow={config.eyebrow || t("home.ingredients.eyebrow", "Lo que hay adentro")}
-          title={
-            config.title ||
-            t("home.ingredients.title", t("home.features.title", "Nuestros ingredientes"))
-          }
-          item1={
-            config.items?.[0]?.title ||
-            t("home.ingredients.item1", t("home.features.item3.title", "Huevos de gallinas libres"))
-          }
-          item2={
-            config.items?.[1]?.title ||
-            t("home.ingredients.item2", t("home.features.item2.title", "Pollo pastoril"))
-          }
-          item3={
-            config.items?.[2]?.title ||
-            t("home.ingredients.item3", "Peceto de pastura")
-          }
+          eyebrow={t("home.ingredients.eyebrow", "Lo que hay adentro")}
+          title={t(
+            "home.ingredients.title",
+            t("home.features.title", "Nuestros ingredientes")
+          )}
+          item1={t(
+            "home.ingredients.item1",
+            t("home.features.item3.title", "Huevos de gallinas libres")
+          )}
+          item2={t(
+            "home.ingredients.item2",
+            t("home.features.item2.title", "Pollo pastoril")
+          )}
+          item3={t("home.ingredients.item3", "Peceto de pastura")}
           previewToken={preview ? previewToken : undefined}
+          sectionStyle={sectionStyle}
+          titleStyle={titleStyle}
+          subtitleStyle={subtitleStyle}
+          benefitsButtonStyle={buttonStyle("ingredients.benefits")}
         />
       </>
     );
@@ -442,40 +465,45 @@ export default function CmsHomeSection({
 
   if (type === "footer") {
     return (
-      <Footer
-        slogan={t("footer.slogan", "¡La vida es rica!")}
-        instagram={t("footer.instagram", "@berna.and.co")}
-        instagramUrl={t("footer.instagramUrl", "https://instagram.com/berna.and.co")}
-        email={t("footer.email", "csberna2020@gmail.com")}
-        whatsapp={t("footer.whatsapp", "+54 11 2545-0304")}
-        copyright={t(
-          "footer.copyright",
-          "© Berna&co. Todos los derechos reservados."
-        )}
-        logoUrl={logoUrl}
-        newsletterTitle={t("home.newsletter.title", "Sumate al newsletter")}
-        newsletterSubtitle={t(
-          "home.newsletter.subtitle",
-          "Novedades, recetas y promos. Sin spam."
-        )}
-        newsletterPlaceholder={t("home.newsletter.placeholder", "tu@email.com")}
-        newsletterButton={t("home.newsletter.button", "Sumarme")}
-        newsletterSuccess={t(
-          "home.newsletter.success",
-          "¡Gracias! Te vas a enterar de las novedades."
-        )}
-        textKeys={{
-          slogan: "footer.slogan",
-          instagram: "footer.instagram",
-          email: "footer.email",
-          whatsapp: "footer.whatsapp",
-          copyright: "footer.copyright",
-          newsletterTitle: "home.newsletter.title",
-          newsletterSubtitle: "home.newsletter.subtitle",
-          newsletterPlaceholder: "home.newsletter.placeholder",
-          newsletterButton: "home.newsletter.button",
-        }}
-      />
+      <>
+        {designCss && <style dangerouslySetInnerHTML={{ __html: designCss }} />}
+        <Footer
+          slogan={t("footer.slogan", "¡La vida es rica!")}
+          instagram={t("footer.instagram", "@berna.and.co")}
+          instagramUrl={t("footer.instagramUrl", "https://instagram.com/berna.and.co")}
+          email={t("footer.email", "csberna2020@gmail.com")}
+          whatsapp={t("footer.whatsapp", "+54 11 2545-0304")}
+          copyright={t(
+            "footer.copyright",
+            "© Berna&co. Todos los derechos reservados."
+          )}
+          logoUrl={logoUrl}
+          newsletterTitle={t("home.newsletter.title", "Sumate al newsletter")}
+          newsletterSubtitle={t(
+            "home.newsletter.subtitle",
+            "Novedades, recetas y promos. Sin spam."
+          )}
+          newsletterPlaceholder={t("home.newsletter.placeholder", "tu@email.com")}
+          newsletterButton={t("home.newsletter.button", "Sumarme")}
+          newsletterSuccess={t(
+            "home.newsletter.success",
+            "¡Gracias! Te vas a enterar de las novedades."
+          )}
+          textKeys={{
+            slogan: "footer.slogan",
+            instagram: "footer.instagram",
+            email: "footer.email",
+            whatsapp: "footer.whatsapp",
+            copyright: "footer.copyright",
+            newsletterTitle: "home.newsletter.title",
+            newsletterSubtitle: "home.newsletter.subtitle",
+            newsletterPlaceholder: "home.newsletter.placeholder",
+            newsletterButton: "home.newsletter.button",
+          }}
+          sectionStyle={sectionStyle}
+          titleStyle={titleStyle}
+        />
+      </>
     );
   }
 
@@ -566,6 +594,41 @@ function blockTextStylesCss(sectionKey: string, config: CmsBlockConfig): string 
     .map(([part, style]) =>
       textStyleCssRule(blockPartKey(sectionKey, part), style)
     )
+    .filter(Boolean)
+    .join("");
+}
+
+function sectionDesignCss(sectionKey: string, config: CmsBlockConfig): string {
+  const selectorSectionKey = sectionKey === "home.footer" ? "global.footer" : sectionKey;
+  const titleTextKey =
+    sectionKey === "home.products"
+      ? "catalogo.title"
+      : sectionKey === "home.hero"
+      ? "home.hero.title"
+      : sectionKey === "home.ingredients"
+      ? "home.ingredients.title"
+      : sectionKey === "home.footer"
+      ? "footer.slogan"
+      : undefined;
+  const subtitleTextKey =
+    sectionKey === "home.products"
+      ? "catalogo.subtitle"
+      : sectionKey === "home.hero"
+      ? "home.hero.subtitle"
+      : sectionKey === "home.ingredients"
+      ? "home.ingredients.eyebrow"
+      : undefined;
+  return [
+    sectionMobileCssRules({
+      sectionKey: selectorSectionKey,
+      titleTextKey,
+      subtitleTextKey,
+      design: config.design,
+    }),
+    ...Object.entries(config.buttons ?? {}).map(([key, design]) =>
+      buttonMobileCssRule(key, design)
+    ),
+  ]
     .filter(Boolean)
     .join("");
 }

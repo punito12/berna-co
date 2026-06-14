@@ -3,7 +3,12 @@
 import Link from "next/link";
 import CmsTextField from "@/components/CmsTextField";
 import CmsImageField from "@/components/CmsImageField";
-import HomeBlockPanel from "@/components/HomeBlockPanel";
+import HomeBlockPanel, {
+  type HomeBlockBoundTextField,
+  type HomeBlockTextBinding,
+} from "@/components/HomeBlockPanel";
+import { parseBlockConfig, type CmsBlockConfig } from "@/lib/cms-blocks";
+import type { CmsDesignTarget } from "@/lib/cms-design";
 
 // Datos que el editor visual recibe del server (mismas filas del CMS actual).
 export type VisualSectionData = {
@@ -630,16 +635,223 @@ const SECTION_EDITORS: Record<string, SectionEditorKind> = {
 const SAVE_HELPER =
   "Guardá los cambios como borrador (botón de cada campo) y publicalos arriba.";
 
+function draftText(
+  textByKey: Map<string, VisualTextRow>,
+  key: string,
+  fallback: string
+): string {
+  const row = textByKey.get(key);
+  return row?.valueDraft || row?.value || fallback;
+}
+
+type StringBlockField =
+  | "eyebrow"
+  | "title"
+  | "subtitle"
+  | "body"
+  | "ctaLabel"
+  | "ctaHref"
+  | "imageUrl"
+  | "imageAlt"
+  | "mapSrc";
+
+function fillText(config: CmsBlockConfig, field: StringBlockField, value: string) {
+  config[field] = value;
+}
+
+function resolveVisualBlockConfigDraft(
+  sectionKey: string,
+  configDraft: string,
+  textByKey: Map<string, VisualTextRow>
+): string {
+  const config = parseBlockConfig(configDraft);
+
+  // Son los mismos fallbacks públicos que usa CmsHomeSection. Si una sección
+  // tiene configDraft vacío ("{}"), el sitio igual muestra estos SiteText;
+  // el editor visual también debe mostrarlos en vez de campos vacíos.
+  if (sectionKey === "home.products") {
+    fillText(
+      config,
+      "eyebrow",
+      draftText(textByKey, "catalogo.eyebrow", "Congelados Caseros")
+    );
+    fillText(
+      config,
+      "title",
+      draftText(textByKey, "catalogo.title", "Nuestros productos")
+    );
+    fillText(
+      config,
+      "subtitle",
+      draftText(
+        textByKey,
+        "catalogo.subtitle",
+        "Elegí tu corte y tu empanado. Listas para el horno."
+      )
+    );
+  }
+
+  if (sectionKey === "home.hero") {
+    fillText(
+      config,
+      "title",
+      draftText(textByKey, "home.hero.title", "Milanesas premium\ny congelados caseros")
+    );
+    fillText(
+      config,
+      "subtitle",
+      draftText(
+        textByKey,
+        "home.hero.subtitle",
+        "Elegí online, coordiná la entrega y pagá como prefieras."
+      )
+    );
+    fillText(
+      config,
+      "ctaLabel",
+      draftText(textByKey, "home.hero.cta_primary", "Comprar ahora")
+    );
+  }
+
+  if (sectionKey === "home.ingredients") {
+    fillText(
+      config,
+      "eyebrow",
+      draftText(textByKey, "home.ingredients.eyebrow", "Lo que hay adentro")
+    );
+    fillText(
+      config,
+      "title",
+      draftText(textByKey, "home.ingredients.title", "Nuestros ingredientes")
+    );
+    const items = [...(config.items ?? [])];
+    const titles = [
+      draftText(textByKey, "home.ingredients.item1", "Huevos de gallinas libres"),
+      draftText(textByKey, "home.ingredients.item2", "Pollo pastoril"),
+      draftText(textByKey, "home.ingredients.item3", "Peceto de pastura"),
+    ];
+    for (let index = 0; index < titles.length; index += 1) {
+      const current = items[index];
+      if (!current?.title?.trim()) {
+        items[index] = { ...(current ?? { title: "" }), title: titles[index] };
+      }
+    }
+    config.items = items;
+  }
+
+  return JSON.stringify(config);
+}
+
+function textBinding(
+  textByKey: Map<string, VisualTextRow>,
+  key: string,
+  fallback: string,
+  target:
+    | { kind: "field"; field: HomeBlockBoundTextField }
+    | { kind: "itemTitle"; index: number }
+): HomeBlockTextBinding | null {
+  const row = textByKey.get(key);
+  if (!row) return null;
+  const base = {
+    key,
+    published: row.value || fallback,
+    draft: row.valueDraft || row.value || fallback,
+  };
+  return target.kind === "field"
+    ? { ...base, kind: "field", field: target.field }
+    : { ...base, kind: "itemTitle", index: target.index };
+}
+
+function visualBlockTextBindings(
+  sectionKey: string,
+  textByKey: Map<string, VisualTextRow>
+): HomeBlockTextBinding[] {
+  const bindings: Array<HomeBlockTextBinding | null> = [];
+  if (sectionKey === "home.products") {
+    bindings.push(
+      textBinding(textByKey, "catalogo.eyebrow", "Congelados Caseros", {
+        kind: "field",
+        field: "eyebrow",
+      }),
+      textBinding(textByKey, "catalogo.title", "Nuestros productos", {
+        kind: "field",
+        field: "title",
+      }),
+      textBinding(
+        textByKey,
+        "catalogo.subtitle",
+        "Elegí tu corte y tu empanado. Listas para el horno.",
+        { kind: "field", field: "subtitle" }
+      )
+    );
+  }
+  if (sectionKey === "home.hero") {
+    bindings.push(
+      textBinding(
+        textByKey,
+        "home.hero.title",
+        "Milanesas premium\ny congelados caseros",
+        { kind: "field", field: "title" }
+      ),
+      textBinding(
+        textByKey,
+        "home.hero.subtitle",
+        "Elegí online, coordiná la entrega y pagá como prefieras.",
+        { kind: "field", field: "subtitle" }
+      ),
+      textBinding(textByKey, "home.hero.cta_primary", "Comprar ahora", {
+        kind: "field",
+        field: "ctaLabel",
+      })
+    );
+  }
+  if (sectionKey === "home.ingredients") {
+    bindings.push(
+      textBinding(textByKey, "home.ingredients.eyebrow", "Lo que hay adentro", {
+        kind: "field",
+        field: "eyebrow",
+      }),
+      textBinding(textByKey, "home.ingredients.title", "Nuestros ingredientes", {
+        kind: "field",
+        field: "title",
+      }),
+      textBinding(
+        textByKey,
+        "home.ingredients.item1",
+        "Huevos de gallinas libres",
+        { kind: "itemTitle", index: 0 }
+      ),
+      textBinding(textByKey, "home.ingredients.item2", "Pollo pastoril", {
+        kind: "itemTitle",
+        index: 1,
+      }),
+      textBinding(textByKey, "home.ingredients.item3", "Peceto de pastura", {
+        kind: "itemTitle",
+        index: 2,
+      })
+    );
+  }
+  return bindings.filter((binding): binding is HomeBlockTextBinding =>
+    Boolean(binding)
+  );
+}
+
 export type VisualSeoImage = { key: string; published: string; draft: string };
 
 export default function VisualSectionEditor({
   sectionId,
+  selectedButton,
+  selectedTextKey,
+  designTarget,
   sections,
   texts,
   logoUrl,
   seoImage,
 }: {
   sectionId: string;
+  selectedButton?: string | null;
+  selectedTextKey?: string | null;
+  designTarget?: CmsDesignTarget;
   sections: VisualSectionData[];
   texts: VisualTextRow[];
   logoUrl?: string;
@@ -824,6 +1036,9 @@ export default function VisualSectionEditor({
     const rows = editor.keys
       .map((k) => textByKey.get(k))
       .filter((t): t is VisualTextRow => Boolean(t));
+    const footerSection = sectionId === "global.footer"
+      ? sections.find((s) => s.key === "home.footer")
+      : null;
     if (rows.length === 0) {
       return (
         <InfoPanel
@@ -869,6 +1084,16 @@ export default function VisualSectionEditor({
             )}
           </div>
         )}
+        {footerSection && (
+          <div className="border-t border-line pt-3">
+            <HomeBlockPanel
+              sectionKey="home.footer"
+              configDraft={footerSection.configDraft}
+              selectedTextKey={selectedTextKey}
+              designTarget={designTarget}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -888,12 +1113,22 @@ export default function VisualSectionEditor({
   const extraRows = (editor.extraTextKeys ?? [])
     .map((k) => textByKey.get(k))
     .filter((t): t is VisualTextRow => Boolean(t));
+  const resolvedConfigDraft = resolveVisualBlockConfigDraft(
+    section.key,
+    section.configDraft,
+    textByKey
+  );
+  const textBindings = visualBlockTextBindings(section.key, textByKey);
 
   return (
     <div className="space-y-4">
       <HomeBlockPanel
         sectionKey={section.key}
-        configDraft={section.configDraft}
+        configDraft={resolvedConfigDraft}
+        textBindings={textBindings}
+        selectedButton={selectedButton}
+        selectedTextKey={selectedTextKey}
+        designTarget={designTarget}
       />
 
       {/* Textos de tarjetas (catálogo): pocos labels, colapsados y agrupados.

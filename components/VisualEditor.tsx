@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CMS_VISUAL_PAGES,
@@ -46,8 +47,11 @@ export default function VisualEditor({
   logoUrl?: string;
   seoImage?: VisualSeoImage;
 }) {
+  const router = useRouter();
   const [pageId, setPageId] = useState("home");
   const [sectionId, setSectionId] = useState<string | null>(null);
+  const [selectedButton, setSelectedButton] = useState<string | null>(null);
+  const [selectedTextKey, setSelectedTextKey] = useState<string | null>(null);
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -100,14 +104,24 @@ export default function VisualEditor({
   // página actual (así, dentro de la grilla de productos, "catalog.cards" gana
   // en la página Catálogo y "home.products" en la página Home). No cambia la
   // página.
-  function handlePreviewSelect(keys: string[]) {
+  function handlePreviewSelect(
+    keys: string[],
+    button: string | null,
+    textKey: string | null
+  ) {
     const match = keys.find((k) => validSectionIdsRef.current.has(k));
-    if (match) setSectionId(match);
+    if (match) {
+      setSectionId(match);
+      setSelectedButton(button);
+      setSelectedTextKey(textKey);
+    }
   }
 
   // Volver al listado de secciones (estado A del panel, estilo Tiendanube).
   function backToSections() {
     setSectionId(null);
+    setSelectedButton(null);
+    setSelectedTextKey(null);
   }
 
   // Marca visualmente la sección seleccionada dentro del iframe (clase editor-only).
@@ -116,9 +130,18 @@ export default function VisualEditor({
       doc
         .querySelectorAll("[data-cms-section].cms-ve-selected")
         .forEach((el) => el.classList.remove("cms-ve-selected"));
+      doc
+        .querySelectorAll("[data-cms-button].cms-ve-button-selected")
+        .forEach((el) => el.classList.remove("cms-ve-button-selected"));
       if (id) {
         const el = doc.querySelector(`[data-cms-section="${cssEscape(id)}"]`);
         el?.classList.add("cms-ve-selected");
+      }
+      if (selectedButton) {
+        const button = doc.querySelector(
+          `[data-cms-button="${cssEscape(selectedButton)}"]`
+        );
+        button?.classList.add("cms-ve-button-selected");
       }
     } catch {
       /* iframe no listo */
@@ -144,8 +167,10 @@ export default function VisualEditor({
       style.id = "cms-ve-style";
       style.textContent = `
         [data-cms-section]{cursor:pointer;}
+        [data-cms-button]{cursor:pointer;}
         [data-cms-section].cms-ve-hover{outline:2px dashed rgba(10,10,10,.55);outline-offset:-2px;}
         [data-cms-section].cms-ve-selected{outline:3px solid #c0392b;outline-offset:-3px;}
+        [data-cms-button].cms-ve-button-selected{outline:3px solid #111;outline-offset:2px;}
       `;
       doc.head?.appendChild(style);
     }
@@ -181,6 +206,12 @@ export default function VisualEditor({
           // Junta los marcadores desde el más interno hacia el más externo,
           // para resolver secciones anidadas (p. ej. catalog.cards dentro de
           // home.products) según la página actual.
+          const button = (e.target as Element | null)?.closest?.(
+            "[data-cms-button]"
+          )?.getAttribute("data-cms-button") ?? null;
+          const textKey = (e.target as Element | null)?.closest?.(
+            "[data-cms-text]"
+          )?.getAttribute("data-cms-text") ?? null;
           const keys: string[] = [];
           let node: Element | null = (e.target as Element | null)?.closest?.(
             "[data-cms-section]"
@@ -194,7 +225,7 @@ export default function VisualEditor({
           // En el editor, clic = seleccionar (no navegar).
           e.preventDefault();
           e.stopPropagation();
-          handlePreviewSelect(keys);
+          handlePreviewSelect(keys, button, textKey);
         },
         true
       );
@@ -214,7 +245,7 @@ export default function VisualEditor({
       doc = null;
     }
     if (doc) applySelectedHighlight(doc, sectionId);
-  }, [sectionId]);
+  }, [sectionId, selectedButton]);
 
   // URL pública a previsualizar. Una sección puede tener su propia ruta (ej.
   // cada página legal) → al seleccionarla, el iframe navega a esa página.
@@ -265,12 +296,16 @@ export default function VisualEditor({
   // Al cambiar de página, reseteo la sección seleccionada.
   useEffect(() => {
     setSectionId(null);
+    setSelectedButton(null);
+    setSelectedTextKey(null);
   }, [pageId]);
 
   // Selección desde el panel: además de marcar la sección, si tiene ancla
   // pública desplazo la vista previa hasta ahí (mismo origen → sin recargar).
   function selectSection(s: CmsVisualSection) {
     setSectionId(s.id);
+    setSelectedButton(null);
+    setSelectedTextKey(null);
     if (!s.anchor) return;
     try {
       const win = iframeRef.current?.contentWindow;
@@ -288,6 +323,7 @@ export default function VisualEditor({
     if (!ok) return;
     setBusy("discard");
     setMessage(null);
+    window.dispatchEvent(new Event("cms:drafts-discarding"));
     try {
       const res = await fetch("/api/admin/cms/discard", { method: "POST" });
       const data = await res.json();
@@ -296,7 +332,9 @@ export default function VisualEditor({
         return;
       }
       setMessage("Borradores descartados.");
+      window.dispatchEvent(new Event("cms:drafts-discarded"));
       await refreshPending();
+      router.refresh();
       reloadPreview();
     } finally {
       setBusy(null);
@@ -320,6 +358,7 @@ export default function VisualEditor({
       }
       setMessage(data.version ? "Cambios publicados." : "No había cambios.");
       await refreshPending();
+      router.refresh();
       reloadPreview();
     } finally {
       setBusy(null);
@@ -489,6 +528,9 @@ export default function VisualEditor({
                 pageId === "legales" ? (
                   <VisualSectionEditor
                     sectionId={section.id}
+                    selectedButton={selectedButton}
+                    selectedTextKey={selectedTextKey}
+                    designTarget={viewport === "mobile" ? "mobile" : "desktop"}
                     sections={sections}
                     texts={texts}
                     logoUrl={logoUrl}

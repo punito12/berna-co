@@ -198,6 +198,7 @@ export default function AddToCartPanel({
           onClick={handleAdd}
           disabled={outOfStock}
           data-cms-style="button"
+          data-cms-button="product.add"
           style={{
             borderRadius: "var(--btn-radius, 0px)",
             fontFamily: "var(--btn-font, inherit)",

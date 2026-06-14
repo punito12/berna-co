@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useCart } from "@/components/CartProvider";
 import {
@@ -32,6 +33,8 @@ export default function ProductCard({
   lowStockLabel = "Solo quedan {count} disponibles",
   addedLabel = "Agregado ✓",
   noMoreStockLabel = "Sin más stock disponible",
+  addButtonStyle,
+  detailButtonStyle,
   previewToken,
 }: {
   product: ProductForUI;
@@ -48,6 +51,8 @@ export default function ProductCard({
   lowStockLabel?: string;
   addedLabel?: string;
   noMoreStockLabel?: string;
+  addButtonStyle?: CSSProperties;
+  detailButtonStyle?: CSSProperties;
   // Token de preview del CMS. Si está, los links al detalle lo arrastran para
   // que la vista previa (fuentes/estilos de borrador) siga activa al entrar al
   // producto. Sin token, links normales.
@@ -255,6 +260,7 @@ export default function ProductCard({
           <Link
             href={productHref}
             data-cms-style="button2"
+            data-cms-button="catalog.detail"
             style={{
               fontFamily: "var(--btn2-font, inherit)",
               fontWeight:
@@ -262,6 +268,7 @@ export default function ProductCard({
               textTransform:
                 "var(--btn2-transform, uppercase)" as React.CSSProperties["textTransform"],
               textDecoration: "var(--btn2-underline, none)",
+              ...detailButtonStyle,
             }}
             className="mt-2 hidden font-bold uppercase tracking-widest text-[11px] text-button-secondary-text underline-offset-4 hover:underline sm:inline-flex sm:items-center"
           >
@@ -334,7 +341,8 @@ export default function ProductCard({
               onClick={handleAdd}
               disabled={selectedOutOfStock || selectedAtLimit}
               data-cms-style="button"
-              style={primaryBtnStyle}
+              data-cms-button="catalog.add"
+              style={{ ...primaryBtnStyle, ...addButtonStyle }}
               className="mt-3 hidden w-full overflow-hidden bg-button px-4 py-3.5 font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:mt-4 sm:block"
             >
               {selectedOutOfStock
@@ -352,7 +360,8 @@ export default function ProductCard({
               onClick={handleMobileAdd}
               disabled={allOutOfStock || allAtCartLimit}
               data-cms-style="button"
-              style={primaryBtnStyle}
+              data-cms-button="catalog.add"
+              style={{ ...primaryBtnStyle, ...addButtonStyle }}
               className="mt-2.5 w-full overflow-hidden bg-button px-3 py-1.5 font-bold uppercase tracking-wide text-[10px] text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:hidden"
             >
               {allOutOfStock

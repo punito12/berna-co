@@ -1,6 +1,7 @@
 import Reveal from "@/components/Reveal";
 import { INGREDIENT_PAGES } from "@/lib/ingredients";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 // "Nuestros ingredientes" — three pillars, each with a hand-drawn line icon in
 // the brand's black/line style. Title only (no body copy).
@@ -100,6 +101,10 @@ export default function Ingredients({
   item2 = "Pollo pastoril",
   item3 = "Peceto de pastura",
   previewToken,
+  sectionStyle,
+  titleStyle,
+  subtitleStyle,
+  benefitsButtonStyle,
 }: {
   eyebrow?: string;
   title?: string;
@@ -107,6 +112,10 @@ export default function Ingredients({
   item2?: string;
   item3?: string;
   previewToken?: string;
+  sectionStyle?: CSSProperties;
+  titleStyle?: CSSProperties;
+  subtitleStyle?: CSSProperties;
+  benefitsButtonStyle?: CSSProperties;
 }) {
   const ITEMS = [item1, item2, item3].map((t, i) => ({
     title: t,
@@ -116,18 +125,25 @@ export default function Ingredients({
       : INGREDIENT_PAGES[i].href,
   }));
   return (
-    <section id="ingredientes" data-cms-section="home.ingredients" className="bg-cream">
+    <section
+      id="ingredientes"
+      data-cms-section="home.ingredients"
+      style={sectionStyle}
+      className="bg-cream"
+    >
       <div className="mx-auto max-w-5xl px-4 py-14 sm:py-24">
         <Reveal className="mb-10 text-center sm:mb-14">
           <p
             data-cms-text="home.ingredients.eyebrow"
             className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
+            style={subtitleStyle}
           >
             {eyebrow}
           </p>
           <h2
             data-cms-text="home.ingredients.title"
             className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
+            style={titleStyle}
           >
             {title}
           </h2>
@@ -152,7 +168,11 @@ export default function Ingredients({
                 <h3 className="flex items-center justify-center font-black uppercase tracking-tight text-base leading-tight text-ink sm:min-h-[3.5rem] sm:text-xl">
                   {item.title}
                 </h3>
-                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-accent transition-colors group-hover:text-ink sm:text-xs">
+                <span
+                  data-cms-button="ingredients.benefits"
+                  className="text-[11px] font-black uppercase tracking-[0.2em] text-accent transition-colors group-hover:text-ink sm:text-xs"
+                  style={benefitsButtonStyle}
+                >
                   Ver beneficios
                 </span>
               </Link>

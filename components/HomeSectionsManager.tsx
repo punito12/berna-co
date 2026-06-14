@@ -93,8 +93,16 @@ type TextRow = {
   maxLength: number;
 };
 
+type HiddenBlockField =
+  | "eyebrow"
+  | "title"
+  | "subtitle"
+  | "ctaLabel"
+  | "ctaHref"
+  | "items";
+
 const LEGACY_TEXT_KEYS: Record<string, string[]> = {
-  "home.hero": ["home.hero.title", "home.hero.subtitle", "home.hero.cta"],
+  "home.hero": ["home.hero.title", "home.hero.subtitle", "home.hero.cta_primary"],
   "home.ingredients": [
     "home.ingredients.eyebrow",
     "home.ingredients.title",
@@ -107,7 +115,31 @@ const LEGACY_TEXT_KEYS: Record<string, string[]> = {
   "home.pos": ["home.pos.eyebrow", "home.pos.title", "home.pos.subtitle"],
 };
 
+const SITE_TEXT_BACKED_BLOCKS: Record<
+  string,
+  { primaryKey: string; keys: string[]; hiddenFields: HiddenBlockField[] }
+> = {
+  "home.hero": {
+    primaryKey: "home.hero.title",
+    keys: LEGACY_TEXT_KEYS["home.hero"],
+    hiddenFields: ["title", "subtitle", "ctaLabel"],
+  },
+  "home.products": {
+    primaryKey: "catalogo.title",
+    keys: LEGACY_TEXT_KEYS["home.products"],
+    hiddenFields: ["eyebrow", "title", "subtitle"],
+  },
+  "home.ingredients": {
+    primaryKey: "home.ingredients.title",
+    keys: LEGACY_TEXT_KEYS["home.ingredients"],
+    hiddenFields: ["eyebrow", "title", "items"],
+  },
+};
+
 export function legacyKeysForSection(key: string, config: CmsBlockConfig): string[] {
+  const siteTextBacked = SITE_TEXT_BACKED_BLOCKS[key];
+  if (siteTextBacked) return siteTextBacked.keys;
+
   // If the block config already has its own content fields, the legacy SiteText
   // keys are no longer read by the storefront — hide them to avoid duplication.
   const hasBlockContent = !!(config.title || config.body || config.eyebrow ||
@@ -119,8 +151,14 @@ export function legacyKeysForSection(key: string, config: CmsBlockConfig): strin
 function sectionDisplayName(
   sectionKey: string,
   type: CmsBlockType,
-  config: CmsBlockConfig
+  config: CmsBlockConfig,
+  textByKey?: Map<string, TextRow>
 ): string {
+  const primaryTextKey = SITE_TEXT_BACKED_BLOCKS[sectionKey]?.primaryKey;
+  const primaryText = primaryTextKey ? textByKey?.get(primaryTextKey) : null;
+  if (primaryText?.valueDraft || primaryText?.value) {
+    return primaryText.valueDraft || primaryText.value;
+  }
   return config.title || SECTION_NAMES[sectionKey] || OWNER_BLOCK_LABELS[type];
 }
 
@@ -324,8 +362,9 @@ export default function HomeSectionsManager({
         const open = editing === section.key;
         const config = parseBlockConfig(section.configDraft);
         const legacyKeys = legacyKeysForSection(section.key, config);
-        const displayName = sectionDisplayName(section.key, type, config);
+        const displayName = sectionDisplayName(section.key, type, config, textByKey);
         const description = sectionDescription(section.key, type);
+        const hiddenFields = SITE_TEXT_BACKED_BLOCKS[section.key]?.hiddenFields ?? [];
         return (
           <article
             key={section.key}
@@ -432,6 +471,7 @@ export default function HomeSectionsManager({
                   <BlockConfigEditor
                     type={type}
                     config={config}
+                    hiddenFields={hiddenFields}
                     onSave={(next) => saveConfig(section.key, next)}
                   />
                 )}
@@ -447,12 +487,15 @@ export default function HomeSectionsManager({
 export function BlockConfigEditor({
   type,
   config,
+  hiddenFields = [],
   onSave,
 }: {
   type: CmsBlockType;
   config: CmsBlockConfig;
+  hiddenFields?: HiddenBlockField[];
   onSave: (config: CmsBlockConfig) => Promise<CmsSaveResult>;
 }) {
+  const hiddenFieldSet = useMemo(() => new Set(hiddenFields), [hiddenFields]);
   const initialDraft = useMemo(
     () => ({
       ...defaultBlockConfig(type),
@@ -593,21 +636,23 @@ export function BlockConfigEditor({
         </div>
       </div>
       <div className="grid gap-3">
-        {["hero", "products_grid", "features", "image_text", "map"].includes(type) && (
+        {["hero", "products_grid", "features", "image_text", "map"].includes(type) &&
+          !hiddenFieldSet.has("eyebrow") && (
           <TextInput
             label="Bajada"
             value={draft.eyebrow ?? ""}
             onChange={(v) => update({ ...draft, eyebrow: v })}
           />
         )}
-        {type !== "map" && (
+        {type !== "map" && !hiddenFieldSet.has("title") && (
           <TextInput
             label="Título"
             value={draft.title ?? ""}
             onChange={(v) => update({ ...draft, title: v })}
           />
         )}
-        {["hero", "products_grid", "image_text", "cta", "newsletter", "map"].includes(type) && (
+        {["hero", "products_grid", "image_text", "cta", "newsletter", "map"].includes(type) &&
+          !hiddenFieldSet.has("subtitle") && (
           <TextInput
             label="Subtítulo"
             value={draft.subtitle ?? ""}
@@ -621,18 +666,23 @@ export function BlockConfigEditor({
             onChange={(v) => update({ ...draft, body: v })}
           />
         )}
-        {["hero", "cta", "image_text"].includes(type) && (
+        {["hero", "cta", "image_text"].includes(type) &&
+          (!hiddenFieldSet.has("ctaLabel") || !hiddenFieldSet.has("ctaHref")) && (
           <div className="grid gap-3 sm:grid-cols-2">
-            <TextInput
-              label="Texto del botón"
-              value={draft.ctaLabel ?? ""}
-              onChange={(v) => update({ ...draft, ctaLabel: v })}
-            />
-            <TextInput
-              label="Link del botón"
-              value={draft.ctaHref ?? ""}
-              onChange={(v) => update({ ...draft, ctaHref: v })}
-            />
+            {!hiddenFieldSet.has("ctaLabel") && (
+              <TextInput
+                label="Texto del botón"
+                value={draft.ctaLabel ?? ""}
+                onChange={(v) => update({ ...draft, ctaLabel: v })}
+              />
+            )}
+            {!hiddenFieldSet.has("ctaHref") && (
+              <TextInput
+                label="Link del botón"
+                value={draft.ctaHref ?? ""}
+                onChange={(v) => update({ ...draft, ctaHref: v })}
+              />
+            )}
           </div>
         )}
         {["hero", "image_text"].includes(type) && (
@@ -663,7 +713,7 @@ export function BlockConfigEditor({
             onChange={(v) => update({ ...draft, mapSrc: v })}
           />
         )}
-        {type === "features" && (
+        {type === "features" && !hiddenFieldSet.has("items") && (
           <Repeater
             label="Items"
             rows={draft.items ?? []}

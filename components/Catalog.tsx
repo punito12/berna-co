@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import ProductCard from "@/components/ProductCard";
 import Reveal from "@/components/Reveal";
@@ -38,6 +39,12 @@ export default function Catalog({
   addedLabel = "Agregado ✓",
   noMoreStockLabel = "Sin más stock disponible",
   textKeys = {},
+  sectionStyle,
+  titleStyle,
+  subtitleStyle,
+  addButtonStyle,
+  detailButtonStyle,
+  cartContinueButtonStyle,
   previewToken,
 }: {
   products: ProductForUI[];
@@ -73,6 +80,12 @@ export default function Catalog({
     | "newLabel",
     string
   >>;
+  sectionStyle?: CSSProperties;
+  titleStyle?: CSSProperties;
+  subtitleStyle?: CSSProperties;
+  addButtonStyle?: CSSProperties;
+  detailButtonStyle?: CSSProperties;
+  cartContinueButtonStyle?: CSSProperties;
   // Token de preview del CMS: se pasa a cada card para arrastrarlo al link del
   // detalle del producto y mantener la vista previa activa.
   previewToken?: string;
@@ -96,7 +109,12 @@ export default function Catalog({
   );
 
   return (
-    <section id="productos" data-cms-section="home.products" className="bg-cream">
+    <section
+      id="productos"
+      data-cms-section="home.products"
+      style={sectionStyle}
+      className="bg-cream"
+    >
       <div className="mx-auto max-w-6xl px-4 py-10 sm:py-20">
         <Reveal as="header" dataCmsSection="catalog.header" className="mb-8 text-center sm:mb-12">
           <p
@@ -107,12 +125,14 @@ export default function Catalog({
           </p>
           <h2
             className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
+            style={titleStyle}
             data-cms-text={textKeys.title}
           >
             {title}
           </h2>
           <p
             className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted"
+            style={subtitleStyle}
             data-cms-text={textKeys.subtitle}
           >
             {subtitle}
@@ -157,6 +177,8 @@ export default function Catalog({
                 lowStockLabel={lowStockLabel}
                 addedLabel={addedLabel}
                 noMoreStockLabel={noMoreStockLabel}
+                addButtonStyle={addButtonStyle}
+                detailButtonStyle={detailButtonStyle}
                 previewToken={previewToken}
               />
             </Reveal>
@@ -250,6 +272,7 @@ export default function Catalog({
                 <Link
                   href="/checkout"
                   data-cms-style="button"
+                  data-cms-button="cart.continue"
                   style={{
                     borderRadius: "var(--btn-radius, 0px)",
                     fontFamily: "var(--btn-font, inherit)",
@@ -257,6 +280,7 @@ export default function Catalog({
                       "var(--btn-weight, 700)" as React.CSSProperties["fontWeight"],
                     textTransform:
                       "var(--btn-transform, uppercase)" as React.CSSProperties["textTransform"],
+                    ...cartContinueButtonStyle,
                   }}
                   className="block w-full bg-button px-4 py-4 text-center font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0"
                 >

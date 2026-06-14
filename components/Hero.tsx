@@ -1,4 +1,5 @@
 import BernaLogo from "@/components/BernaLogo";
+import type { CSSProperties } from "react";
 
 // Dark hero. Texts + background image come from the CMS (with the original
 // hardcoded values as fallbacks).
@@ -11,6 +12,10 @@ export default function Hero({
   titleKey = "home.hero.title",
   subtitleKey = "home.hero.subtitle",
   ctaKey = "home.hero.cta_primary",
+  sectionStyle,
+  titleStyle,
+  subtitleStyle,
+  buttonStyle,
 }: {
   title?: string;
   subtitle?: string;
@@ -20,11 +25,19 @@ export default function Hero({
   titleKey?: string;
   subtitleKey?: string;
   ctaKey?: string;
+  sectionStyle?: CSSProperties;
+  titleStyle?: CSSProperties;
+  subtitleStyle?: CSSProperties;
+  buttonStyle?: CSSProperties;
 }) {
   // Title may contain a newline (rendered as <br/>).
   const titleLines = title.split("\n");
   return (
-    <section data-cms-section="home.hero" className="relative isolate flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-ink px-4 py-16 text-center sm:min-h-screen sm:py-24">
+    <section
+      data-cms-section="home.hero"
+      style={sectionStyle}
+      className="relative isolate flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-ink px-4 py-16 text-center sm:min-h-screen sm:py-24"
+    >
       {/* Background photo with a slow drift + flat dark overlay for legibility */}
       <div
         aria-hidden
@@ -46,7 +59,7 @@ export default function Hero({
       <h1
         data-cms-text={titleKey}
         className="mt-10 animate-fade-up font-black uppercase tracking-tight text-white text-[3.3rem] leading-[0.86] sm:mt-12 sm:text-8xl"
-        style={{ animationDelay: "220ms" }}
+        style={{ animationDelay: "220ms", ...titleStyle }}
       >
         {titleLines.map((line, i) => (
           <span key={i}>
@@ -59,7 +72,7 @@ export default function Hero({
       <p
         data-cms-text={subtitleKey}
         className="mt-6 animate-fade-up font-serif italic text-cream text-xl sm:text-2xl"
-        style={{ animationDelay: "360ms" }}
+        style={{ animationDelay: "360ms", ...subtitleStyle }}
       >
         {subtitle}
       </p>
@@ -68,6 +81,7 @@ export default function Hero({
         href="#productos"
         data-cms-text={ctaKey}
         data-cms-style="hero-btn"
+        data-cms-button="hero.primary"
         className="group mt-9 inline-flex animate-fade-up items-center gap-3 bg-hero-btn-bg px-9 py-4 font-bold uppercase tracking-widest text-sm text-hero-btn-text shadow-[0_18px_40px_rgba(0,0,0,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(0,0,0,0.3)] active:translate-y-0 sm:mt-12"
         style={{
           animationDelay: "500ms",
@@ -75,6 +89,7 @@ export default function Hero({
           fontFamily: "var(--hero-btn-font, inherit)",
           fontWeight: "var(--hero-btn-weight, 700)" as React.CSSProperties["fontWeight"],
           textTransform: "var(--hero-btn-transform, uppercase)" as React.CSSProperties["textTransform"],
+          ...buttonStyle,
         }}
       >
         {cta}

@@ -1008,6 +1008,16 @@ export default function CheckoutPage() {
           type="button"
           onClick={handleSubmit}
           disabled={submitting}
+          data-cms-button="checkout.submit"
+          data-cms-style="button"
+          style={{
+            borderRadius: "var(--btn-radius, 0px)",
+            fontFamily: "var(--btn-font, inherit)",
+            fontWeight:
+              "var(--btn-weight, 700)" as React.CSSProperties["fontWeight"],
+            textTransform:
+              "var(--btn-transform, uppercase)" as React.CSSProperties["textTransform"],
+          }}
           {...cmsText(
             paymentMethod === "MERCADOPAGO"
               ? "checkout.cta.pay"

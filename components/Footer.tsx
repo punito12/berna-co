@@ -2,6 +2,7 @@ import BernaLogo from "@/components/BernaLogo";
 import NewsletterForm from "@/components/NewsletterForm";
 import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 const legalLinks = [
   { href: "/confianza", label: "Cómo comprar" },
@@ -25,6 +26,8 @@ export default function Footer({
   newsletterButton = "Sumarme",
   newsletterSuccess = "¡Gracias! Te vas a enterar de las novedades.",
   textKeys = {},
+  sectionStyle,
+  titleStyle,
 }: {
   slogan?: string;
   instagram?: string;
@@ -38,6 +41,8 @@ export default function Footer({
   newsletterPlaceholder?: string;
   newsletterButton?: string;
   newsletterSuccess?: string;
+  sectionStyle?: CSSProperties;
+  titleStyle?: CSSProperties;
   textKeys?: Partial<Record<
     | "slogan"
     | "instagram"
@@ -52,12 +57,17 @@ export default function Footer({
   >>;
 }) {
   return (
-    <footer data-cms-section="global.footer" className="bg-ink text-white">
+    <footer
+      data-cms-section="global.footer"
+      style={sectionStyle}
+      className="bg-ink text-white"
+    >
       {/* Slogan banner with hairline rules */}
       <div className="border-b border-white/10 px-4 py-10 text-center">
         <p
           className="font-black uppercase tracking-[0.32em] text-lg sm:text-2xl sm:tracking-[0.4em]"
           data-cms-text={textKeys.slogan}
+          style={titleStyle}
         >
           {slogan}
         </p>

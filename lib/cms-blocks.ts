@@ -2,6 +2,12 @@ import {
   sanitizeTextStyle,
   type CmsTextStyle,
 } from "@/lib/cms-text-styles";
+import {
+  sanitizeButtonDesignMap,
+  sanitizeSectionDesign,
+  type CmsButtonDesignMap,
+  type CmsSectionDesign,
+} from "@/lib/cms-design";
 
 export const CMS_BLOCK_TYPES = [
   "hero",
@@ -32,6 +38,8 @@ export type CmsBlockConfig = {
   faqs?: { question: string; answer: string }[];
   imageSide?: "left" | "right";
   textStyles?: Record<string, CmsTextStyle>;
+  design?: CmsSectionDesign;
+  buttons?: CmsButtonDesignMap;
 };
 
 export const CMS_BLOCK_LABELS: Record<CmsBlockType, string> = {
@@ -148,6 +156,10 @@ export function sanitizeBlockConfig(input: Record<string, unknown>): CmsBlockCon
     }
     if (Object.keys(styles).length > 0) out.textStyles = styles;
   }
+  const design = sanitizeSectionDesign(input.design);
+  if (Object.keys(design).length > 0) out.design = design;
+  const buttons = sanitizeButtonDesignMap(input.buttons);
+  if (Object.keys(buttons).length > 0) out.buttons = buttons;
   return out;
 }
 
