@@ -74,6 +74,7 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
   {
     title: "Configuración",
     links: [
+      { href: "/admin/config/envios", label: "Envíos y localidades" },
       { href: "/admin/config/zonas", label: "Zonas" },
       { href: "/admin/config/horarios", label: "Días y horarios" },
       { href: "/admin/config/metodos-pago", label: "Métodos de pago" },

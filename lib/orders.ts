@@ -24,6 +24,7 @@ import {
   discountPercentFor,
   normalizePaymentMethod,
 } from "@/lib/payment-config";
+import { getDeliveryConfig, findLocality } from "@/lib/delivery-config";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -40,6 +41,9 @@ export type CreateOrderInput = {
   locality?: string;
   postalCode?: string;
   floor?: string;
+  // Only used in manual-localities mode (optional extras shown to the courier).
+  barrio?: string;
+  lote?: string;
   scheduledDate: string; // ISO date string
   scheduledSlot: string;
   paymentMethod: string; // CASH | MERCADOPAGO
@@ -68,23 +72,53 @@ export async function createOrder(
   if (!DELIVERY_TYPES.includes(input.deliveryType)) {
     throw new OrderValidationError("Tipo de entrega inválido.");
   }
+  // Delivery validation mode (manual localities vs map/geocoding). Default "map"
+  // preserves the existing behavior until the admin switches it.
+  const deliveryConfig = await getDeliveryConfig();
+  const deliveryMode = deliveryConfig.mode;
+
   // Structured address parts for delivery.
   const street = input.street?.trim();
   const locality = input.locality?.trim();
+  const barrio = input.barrio?.trim();
+  const lote = input.lote?.trim();
   if (input.deliveryType === "DELIVERY") {
-    if (!street) throw new OrderValidationError("Falta la calle y número.");
-    if (!locality) throw new OrderValidationError("Falta la localidad.");
+    if (deliveryMode === "manual") {
+      // Manual mode: locality must be selected AND enabled. Street still required.
+      if (!locality) {
+        throw new OrderValidationError(
+          "Seleccioná una localidad para continuar con el envío."
+        );
+      }
+      const match = findLocality(deliveryConfig, locality);
+      if (!match || !match.enabled) {
+        throw new OrderValidationError(
+          `Por el momento no realizamos envíos a esa localidad. Podés elegir pasar a retirar por ${deliveryConfig.pickupAddress}.`
+        );
+      }
+      if (!street) throw new OrderValidationError("Falta la calle y número.");
+    } else {
+      if (!street) throw new OrderValidationError("Falta la calle y número.");
+      if (!locality) throw new OrderValidationError("Falta la localidad.");
+    }
   }
-  // The full one-line address we store on the order.
-  const address =
-    input.deliveryType === "DELIVERY"
-      ? formatAddress({
-          street: street ?? "",
-          locality: locality ?? "",
-          postalCode: input.postalCode,
-          floor: input.floor,
-        })
-      : undefined;
+  // The full one-line address we store on the order. In manual mode we append
+  // barrio/lote (optional) so they show up in the admin order detail.
+  let address: string | undefined;
+  if (input.deliveryType === "DELIVERY") {
+    address = formatAddress({
+      street: street ?? "",
+      locality: locality ?? "",
+      postalCode: input.postalCode,
+      floor: input.floor,
+    });
+    if (deliveryMode === "manual") {
+      const extras: string[] = [];
+      if (barrio) extras.push(`Barrio: ${barrio}`);
+      if (lote) extras.push(`Lote: ${lote}`);
+      if (extras.length) address = `${address} — ${extras.join(" — ")}`;
+    }
+  }
 
   if (!PAYMENT_METHODS.includes(input.paymentMethod)) {
     throw new OrderValidationError(
@@ -126,8 +160,27 @@ export async function createOrder(
   // is kept so we can add the zone's shipping fee once the subtotal is known.
   let deliveryCoords: { lat: number; lng: number } | null = null;
   let deliveryZone: Awaited<ReturnType<typeof findZoneByPoint>> = null;
+  // Flat shipping cost coming from the chosen locality (manual mode only).
+  let manualShipping: number | null = null;
 
-  if (input.deliveryType === "DELIVERY") {
+  if (input.deliveryType === "DELIVERY" && deliveryMode === "manual") {
+    // Manual mode: the locality was already validated as enabled above. We do
+    // NOT geocode or test zone polygons here — that's exactly the gate we want
+    // to bypass. The day is validated against the DELIVERY schedule (the same
+    // one the checkout shows), and shipping comes from the locality config.
+    const enabledDay = await prisma.availableDeliveryDay.findFirst({
+      where: {
+        dayOfWeek: scheduledDate.getDay(),
+        available: true,
+        scheduleType: "DELIVERY",
+      },
+    });
+    if (!enabledDay) {
+      throw new OrderValidationError("Ese día no hacemos entregas.");
+    }
+    const match = findLocality(deliveryConfig, locality ?? "");
+    manualShipping = match ? Math.max(0, Math.round(match.shippingCost)) : 0;
+  } else if (input.deliveryType === "DELIVERY") {
     // Coverage is decided by geocoding the structured address and testing the
     // zone polygons. We re-geocode server-side (don't trust client coordinates).
     const geo = await geocodeStructured({
@@ -252,8 +305,14 @@ export async function createOrder(
   // Normalize the stored payment method (CASH -> EFECTIVO).
   const storedMethod = normalizePaymentMethod(input.paymentMethod);
 
-  // Add the delivery fee for the zone (free if the subtotal hits the threshold).
-  const shipping = deliveryZone ? shippingFor(deliveryZone, total) : 0;
+  // Add the delivery fee. Map mode: zone fee (free above threshold). Manual mode:
+  // flat per-locality cost. Pickup / no zone: 0.
+  const shipping =
+    manualShipping !== null
+      ? manualShipping
+      : deliveryZone
+        ? shippingFor(deliveryZone, total)
+        : 0;
   total += shipping;
 
   // --- stock check: units requested per (product, empanado) ---

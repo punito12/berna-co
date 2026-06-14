@@ -80,6 +80,35 @@ export default function CheckoutPage() {
   const [locality, setLocality] = useState(""); // localidad
   const [postalCode, setPostalCode] = useState(""); // CP (opcional)
   const [floor, setFloor] = useState(""); // piso/depto (opcional)
+  // Manual-localities mode only: barrio + lote (opcionales).
+  const [barrio, setBarrio] = useState("");
+  const [lote, setLote] = useState("");
+
+  // --- delivery validation mode (manual localities vs map) ---
+  // Default "map" preserves the current behavior until the config loads.
+  const [deliveryMode, setDeliveryMode] = useState<"map" | "manual">("map");
+  const [manualLocalities, setManualLocalities] = useState<string[]>([]);
+  const [pickupAddress, setPickupAddress] = useState(
+    "Aristóbulo del Valle 5155, Benavídez"
+  );
+  useEffect(() => {
+    fetch("/api/delivery-config")
+      .then((r) => r.json())
+      .then((d) => {
+        setDeliveryMode(d.mode === "manual" ? "manual" : "map");
+        setManualLocalities(
+          Array.isArray(d.localities)
+            ? d.localities.map((l: { name: string }) => l.name).filter(Boolean)
+            : []
+        );
+        if (typeof d.pickupAddress === "string" && d.pickupAddress.trim())
+          setPickupAddress(d.pickupAddress.trim());
+      })
+      .catch(() => {
+        // Fallback: keep map mode (current behavior).
+        setDeliveryMode("map");
+      });
+  }, []);
   const [dateIso, setDateIso] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<
@@ -269,11 +298,22 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     resetZone();
-    if (deliveryType !== "PICKUP") return;
+    // Which schedule to load up-front:
+    //  - PICKUP: always the PICKUP schedule.
+    //  - DELIVERY + manual mode: the DELIVERY schedule (no zone verification —
+    //    the locality dropdown replaces it).
+    //  - DELIVERY + map mode: nothing here; loaded after verifying the address.
+    const scheduleType =
+      deliveryType === "PICKUP"
+        ? "PICKUP"
+        : deliveryMode === "manual"
+        ? "DELIVERY"
+        : null;
+    if (!scheduleType) return;
 
     let cancelled = false;
     setLoadingPickupOptions(true);
-    fetch("/api/delivery-options?type=PICKUP")
+    fetch(`/api/delivery-options?type=${scheduleType}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
@@ -292,9 +332,9 @@ export default function CheckoutPage() {
     return () => {
       cancelled = true;
     };
-    // Resetting schedule when the delivery type changes is intentional.
+    // Resetting schedule when the delivery type / mode changes is intentional.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deliveryType]);
+  }, [deliveryType, deliveryMode]);
 
   // Geocodes the structured address and checks which zone polygon it lands in.
   // If covered, loads that zone's days + slots; otherwise shows the right msg.
@@ -345,12 +385,26 @@ export default function CheckoutPage() {
     if (!name.trim()) return setError(ct("checkout.validation.name", "Ingresá tu nombre."));
     if (!phone.trim()) return setError(ct("checkout.validation.phone", "Ingresá tu teléfono."));
     if (deliveryType === "DELIVERY") {
-      if (!street.trim()) return setError(ct("checkout.validation.street", "Ingresá la calle y número."));
-      if (!locality.trim()) return setError(ct("checkout.validation.locality", "Ingresá la localidad."));
-      if (notCovered || notLocated)
-        return setError(ct("checkout.step2.outside_zone", "Lo sentimos, por ahora no llegamos a tu dirección."));
-      if (!covered)
-        return setError(ct("checkout.validation.verify_address", "Verificá tu dirección (paso 2) antes de seguir."));
+      if (deliveryMode === "manual") {
+        if (!locality.trim())
+          return setError("Seleccioná una localidad para continuar con el envío.");
+        const enabled = manualLocalities.some(
+          (l) => l.toLowerCase() === locality.trim().toLowerCase()
+        );
+        if (!enabled)
+          return setError(
+            `Por el momento no realizamos envíos a esa localidad. Podés elegir pasar a retirar por ${pickupAddress}.`
+          );
+        if (!street.trim())
+          return setError(ct("checkout.validation.street", "Ingresá la calle y número."));
+      } else {
+        if (!street.trim()) return setError(ct("checkout.validation.street", "Ingresá la calle y número."));
+        if (!locality.trim()) return setError(ct("checkout.validation.locality", "Ingresá la localidad."));
+        if (notCovered || notLocated)
+          return setError(ct("checkout.step2.outside_zone", "Lo sentimos, por ahora no llegamos a tu dirección."));
+        if (!covered)
+          return setError(ct("checkout.validation.verify_address", "Verificá tu dirección (paso 2) antes de seguir."));
+      }
     }
     if (!dateIso)
       return setError(
@@ -379,6 +433,14 @@ export default function CheckoutPage() {
               : undefined,
           floor:
             deliveryType === "DELIVERY" ? floor.trim() || undefined : undefined,
+          barrio:
+            deliveryType === "DELIVERY" && deliveryMode === "manual"
+              ? barrio.trim() || undefined
+              : undefined,
+          lote:
+            deliveryType === "DELIVERY" && deliveryMode === "manual"
+              ? lote.trim() || undefined
+              : undefined,
           scheduledDate: `${dateIso}T12:00:00`,
           scheduledSlot: slot,
           paymentMethod,
@@ -589,7 +651,74 @@ export default function CheckoutPage() {
               {pickupOptionLabel()}
             </ChoiceButton>
           </div>
-          {deliveryType === "DELIVERY" && (
+          {deliveryType === "PICKUP" && (
+            <p className="mt-4 rounded-lg border border-line bg-cream/70 px-4 py-3 text-sm text-ink">
+              Podés retirar tu pedido por{" "}
+              <span className="font-bold">{pickupAddress}</span>. Te vamos a
+              avisar cuando esté listo para retirar.
+            </p>
+          )}
+          {deliveryType === "DELIVERY" && deliveryMode === "manual" && (
+            <div className="mt-4 space-y-3">
+              <p className="rounded-lg border border-line bg-cream/70 px-4 py-3 text-sm text-ink">
+                Por el momento solo realizamos envíos a las localidades
+                disponibles en la lista. Si no encontrás tu localidad, podés
+                elegir pasar a retirar.
+              </p>
+
+              <Field label="Localidad" required>
+                <select
+                  value={locality}
+                  onChange={(e) => setLocality(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Elegí tu localidad…</option>
+                  {manualLocalities.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Dirección (calle y número)" required>
+                <input
+                  type="text"
+                  autoComplete="street-address"
+                  value={street}
+                  onChange={(e) => setStreet(e.target.value)}
+                  className={inputClass}
+                  placeholder="Ej: Avenida Italia 600"
+                />
+              </Field>
+
+              <Field label="Barrio (opcional)">
+                <input
+                  type="text"
+                  value={barrio}
+                  onChange={(e) => setBarrio(e.target.value)}
+                  className={inputClass}
+                  placeholder="Ej: Los Robles"
+                />
+              </Field>
+
+              <Field label="Lote (opcional)">
+                <input
+                  type="text"
+                  value={lote}
+                  onChange={(e) => setLote(e.target.value)}
+                  className={inputClass}
+                  placeholder="Ej: Lote 12"
+                />
+              </Field>
+
+              <p className="text-xs leading-5 text-muted">
+                Si tu localidad no aparece, podés elegir pasar a retirar por{" "}
+                {pickupAddress} o consultarnos por WhatsApp.
+              </p>
+            </div>
+          )}
+          {deliveryType === "DELIVERY" && deliveryMode === "map" && (
             <div className="mt-4 space-y-3">
               <Field
                 label={ct("checkout.step2.street_label", "Calle y número")}
@@ -982,12 +1111,22 @@ export default function CheckoutPage() {
                 <span>− {formatPrice(methodDiscount)}</span>
               </div>
             )}
-            {deliveryType === "DELIVERY" && covered && (
-              <div className="flex items-center justify-between text-muted">
-                <span>{ct("checkout.summary.shipping", "Envío")}{zoneName ? ` (${zoneName})` : ""}</span>
-                <span>{shipping === 0 ? ct("checkout.summary.free", "Gratis") : formatPrice(shipping)}</span>
-              </div>
-            )}
+            {deliveryType === "DELIVERY" &&
+              deliveryMode === "map" &&
+              covered && (
+                <div className="flex items-center justify-between text-muted">
+                  <span>{ct("checkout.summary.shipping", "Envío")}{zoneName ? ` (${zoneName})` : ""}</span>
+                  <span>{shipping === 0 ? ct("checkout.summary.free", "Gratis") : formatPrice(shipping)}</span>
+                </div>
+              )}
+            {deliveryType === "DELIVERY" &&
+              deliveryMode === "manual" &&
+              locality.trim() && (
+                <div className="flex items-center justify-between text-muted">
+                  <span>{ct("checkout.summary.shipping", "Envío")}</span>
+                  <span>Se calcula al confirmar</span>
+                </div>
+              )}
           </div>
 
           <div className="mt-2 flex items-center justify-between border-t border-line pt-3">
@@ -996,7 +1135,9 @@ export default function CheckoutPage() {
             </span>
             <span className="font-black text-2xl text-ink">
               {formatPrice(
-                deliveryType === "DELIVERY" ? grandTotal : afterDiscounts
+                deliveryType === "DELIVERY" && deliveryMode === "map"
+                  ? grandTotal
+                  : afterDiscounts
               )}
             </span>
           </div>

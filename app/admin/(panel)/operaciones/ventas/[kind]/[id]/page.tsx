@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getSaleDetail, type SaleKind } from "@/lib/sales-detail";
 import { SALE_CHANNEL_LABELS } from "@/lib/management";
 import SaleDetailActions from "@/components/SaleDetailActions";
+import { getDeliveryConfig } from "@/lib/delivery-config";
 
 function pesos(n: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -45,6 +46,12 @@ export default async function SaleDetailPage({
 
   const sale = await getSaleDetail(kind, params.id);
   if (!sale) notFound();
+
+  // Pickup address (centralized in the delivery config) to show on PICKUP sales.
+  const pickupAddress =
+    sale.deliveryType === "PICKUP"
+      ? (await getDeliveryConfig()).pickupAddress
+      : null;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -146,6 +153,9 @@ export default async function SaleDetailPage({
               />
             )}
             {sale.address && <Row label="Dirección" value={sale.address} />}
+            {pickupAddress && (
+              <Row label="Retiro en" value={pickupAddress} />
+            )}
             {sale.scheduledDate && (
               <Row label="Fecha" value={longDate(sale.scheduledDate)} />
             )}
