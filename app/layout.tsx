@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo, Fraunces } from "next/font/google";
 import * as Sentry from "@sentry/nextjs";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
 import {
@@ -160,6 +161,7 @@ export default async function RootLayout({
       <body className="font-sans">
         <CartProvider>{children}</CartProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
