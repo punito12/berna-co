@@ -28,12 +28,24 @@ export default async function AdminPromosPage() {
         Promociones
       </h2>
 
+      <div className="mb-5 rounded-lg border border-line bg-cream/40 p-4 text-sm leading-6 text-muted">
+        Son cuatro cosas distintas:{" "}
+        <span className="font-bold text-ink">Oferta del producto</span> (badge 2x1/3x2
+        o % off propio de un producto, se carga en Productos),{" "}
+        <span className="font-bold text-ink">Descuento por cantidad de unidades</span>{" "}
+        (regla por volumen del pedido),{" "}
+        <span className="font-bold text-ink">Cupón de descuento</span> (código que
+        escribe el cliente en el checkout) y{" "}
+        <span className="font-bold text-ink">Descuento por forma de pago</span>{" "}
+        (efectivo/transferencia, en Configuración → Métodos de pago).
+      </div>
+
       <PromosTabs
         codes={
           <div>
             <p className="mb-4 text-sm text-muted">
-              Códigos de descuento que el cliente escribe en el checkout. Las
-              promos por producto (2x1, 3x2 o % off) se configuran en cada
+              Cupones de descuento que el cliente escribe en el checkout. La
+              oferta del producto (2x1, 3x2 o % off) se configura en cada
               producto, en <span className="font-bold text-ink">Productos</span>.
             </p>
             <DiscountManager

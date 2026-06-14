@@ -107,7 +107,7 @@ const LEGACY_TEXT_KEYS: Record<string, string[]> = {
   "home.pos": ["home.pos.eyebrow", "home.pos.title", "home.pos.subtitle"],
 };
 
-function legacyKeysForSection(key: string, config: CmsBlockConfig): string[] {
+export function legacyKeysForSection(key: string, config: CmsBlockConfig): string[] {
   // If the block config already has its own content fields, the legacy SiteText
   // keys are no longer read by the storefront — hide them to avoid duplication.
   const hasBlockContent = !!(config.title || config.body || config.eyebrow ||
@@ -444,7 +444,7 @@ export default function HomeSectionsManager({
   );
 }
 
-function BlockConfigEditor({
+export function BlockConfigEditor({
   type,
   config,
   onSave,

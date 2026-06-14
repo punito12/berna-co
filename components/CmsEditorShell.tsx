@@ -14,6 +14,13 @@ export default function CmsEditorShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+
+  // El Editor visual usa lienzo completo (sin el menú del CMS clásico). El
+  // resto del editor conserva intacto su shell de siempre.
+  if (pathname.startsWith("/admin/editor/visual")) {
+    return <>{children}</>;
+  }
+
   const current = currentCmsEditorSection(pathname);
 
   return (
@@ -33,13 +40,21 @@ export default function CmsEditorShell({
                 hasta que lo publiques.
               </p>
             </div>
-            <Link
-              href="/"
-              target="_blank"
-              className="rounded-full border border-line bg-white px-4 py-2 text-[11px] font-black uppercase tracking-widest text-ink transition-colors hover:border-ink"
-            >
-              Ver sitio público
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/admin/editor/visual"
+                className="rounded-full border border-ink bg-ink px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white transition-colors hover:bg-ink/85"
+              >
+                Probar editor visual
+              </Link>
+              <Link
+                href="/"
+                target="_blank"
+                className="rounded-full border border-line bg-white px-4 py-2 text-[11px] font-black uppercase tracking-widest text-ink transition-colors hover:border-ink"
+              >
+                Ver sitio público
+              </Link>
+            </div>
           </div>
         </div>
         <div className="grid gap-0 lg:grid-cols-[280px_1fr]">

@@ -10,12 +10,13 @@ export default async function CodigosDescuentoPage() {
   return (
     <div>
       <h1 className="mb-2 font-black uppercase tracking-tight text-3xl text-ink">
-        Códigos de descuento
+        Cupones de descuento
       </h1>
       <p className="mb-6 text-sm text-muted">
-        Códigos que el cliente escribe en el checkout. Las promos por producto
-        (2x1, 3x2 o % off) se configuran en cada producto, en{" "}
-        <span className="font-bold text-ink">Productos</span>.
+        Cupones: códigos que el cliente escribe en el checkout. No confundir con
+        la oferta del producto (2x1, 3x2 o % off, se carga en cada producto, en{" "}
+        <span className="font-bold text-ink">Productos</span>), el descuento por
+        cantidad de unidades, ni el descuento por forma de pago.
       </p>
 
       <DiscountManager

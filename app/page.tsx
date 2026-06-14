@@ -60,7 +60,7 @@ export default async function HomePage({
   const previewTextCss = preview ? textStylesToCss(cms, true) : "";
 
   return (
-    <main>
+    <main data-cms-page="home">
       {previewCssVars && (
         <style
           dangerouslySetInnerHTML={{ __html: `:root{${previewCssVars}}` }}

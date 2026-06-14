@@ -69,7 +69,7 @@ const STYLE_GROUPS: StyleGroup[] = [
     ],
   },
   {
-    title: "Chips de pago",
+    title: "Etiquetas de formas de pago",
     applies: "Los chips de precio por efectivo / transferencia en cada producto.",
     fields: [
       { key: "chipBg", label: "Fondo" },
@@ -101,7 +101,7 @@ const STYLE_GROUPS: StyleGroup[] = [
     ],
   },
   {
-    title: "Botón del inicio (Ver productos)",
+    title: "Botón de portada (Ver productos)",
     applies: 'El botón grande de la portada que lleva a los productos.',
     fields: [
       { key: "heroBtnBg", label: "Fondo" },
@@ -202,7 +202,7 @@ const GROUP_CONTROLS: Record<string, StyleControl[]> = {
     { kind: "size", key: "priceSizeMobile", label: "Tamaño mobile", placeholder: "Ej: 20px" },
     { kind: "size", key: "priceSizeDesktop", label: "Tamaño desktop", placeholder: "Ej: 24px" },
   ],
-  "Chips de pago": [
+  "Etiquetas de formas de pago": [
     { kind: "select", key: "chipRadius", label: "Bordes", options: RADIUS_OPTIONS },
     { kind: "select", key: "chipWeight", label: "Peso", options: WEIGHT_OPTIONS },
     { kind: "size", key: "chipSize", label: "Tamaño", placeholder: "Ej: 11px" },
@@ -220,7 +220,7 @@ const GROUP_CONTROLS: Record<string, StyleControl[]> = {
     { kind: "size", key: "badgeSize", label: "Tamaño", placeholder: "Ej: 11px" },
     { kind: "toggle", key: "badgeUppercase", label: "Mayúsculas" },
   ],
-  "Botón del inicio (Ver productos)": [
+  "Botón de portada (Ver productos)": [
     { kind: "select", key: "heroBtnRadius", label: "Bordes", options: RADIUS_OPTIONS },
     { kind: "select", key: "heroBtnFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
     { kind: "select", key: "heroBtnWeight", label: "Peso", options: WEIGHT_OPTIONS },
@@ -882,7 +882,7 @@ function GroupPreview({
       </div>
     );
   }
-  if (title === "Chips de pago") {
+  if (title === "Etiquetas de formas de pago") {
     return (
       <div className={box + " flex flex-wrap gap-2"}>
         {["efectivo", "transf."].map((l) => (
@@ -970,7 +970,7 @@ function GroupPreview({
       </div>
     );
   }
-  if (title === "Botón del inicio (Ver productos)") {
+  if (title === "Botón de portada (Ver productos)") {
     return (
       <div className="rounded-lg bg-ink p-4">
         <span

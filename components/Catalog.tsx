@@ -96,9 +96,9 @@ export default function Catalog({
   );
 
   return (
-    <section id="productos" className="bg-cream">
+    <section id="productos" data-cms-section="home.products" className="bg-cream">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:py-20">
-        <Reveal as="header" className="mb-8 text-center sm:mb-12">
+        <Reveal as="header" dataCmsSection="catalog.header" className="mb-8 text-center sm:mb-12">
           <p
             className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
             data-cms-text={textKeys.eyebrow}
@@ -120,7 +120,7 @@ export default function Catalog({
         </Reveal>
 
         {/* Category filter */}
-        <Reveal className="mb-8 flex flex-wrap justify-center gap-2 sm:mb-12" delay={80}>
+        <Reveal dataCmsSection="catalog.filters" className="mb-8 flex flex-wrap justify-center gap-2 sm:mb-12" delay={80}>
           <FilterChip
             active={category === "ALL"}
             onClick={() => setCategory("ALL")}
@@ -139,7 +139,7 @@ export default function Catalog({
           ))}
         </Reveal>
 
-        <div className="grid min-w-0 grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
+        <div data-cms-section="catalog.cards" className="grid min-w-0 grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
           {visible.map((product, i) => (
             <Reveal key={product.id} className="min-w-0" delay={(i % 3) * 90}>
               <ProductCard
@@ -166,7 +166,7 @@ export default function Catalog({
 
       {/* Sticky cart bar — only when there is something in the cart */}
       {totalItems > 0 && (
-        <div className="sticky bottom-0 z-20 border-t border-line bg-white/95 shadow-[0_-18px_45px_rgba(10,10,10,0.08)] backdrop-blur-xl">
+        <div data-cms-section="catalog.cart" className="sticky bottom-0 z-20 border-t border-line bg-white/95 shadow-[0_-18px_45px_rgba(10,10,10,0.08)] backdrop-blur-xl">
           {/* Extra right padding (pr-20) keeps the total clear of the floating
               WhatsApp button in the corner. */}
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 py-3 pl-4 pr-20 sm:pr-4">

@@ -62,7 +62,7 @@ export default function PaymentConfigForm({
     >
       <div>
         <h2 className="mb-3 font-black uppercase tracking-tight text-sm text-muted">
-          Descuento por pago
+          Descuento por forma de pago
         </h2>
         <Field label="Descuento efectivo y transferencia (%)">
           <input

@@ -29,7 +29,7 @@ const LABELS: Record<string, string> = {
   "checkout.step.delivery": "Entrega · Título del paso (alt.)",
   "checkout.step2.title": "Entrega · Título del paso",
   "checkout.step2.delivery_option": "Entrega · Opción envío a domicilio",
-  "checkout.step2.pickup_option": "Entrega · Opción retiro en local",
+  "checkout.step2.pickup_option": "Entrega · Opción pasar a retirar",
   "checkout.step2.street_label": "Entrega · Etiqueta calle",
   "checkout.step2.street_placeholder": "Entrega · Ejemplo calle",
   "checkout.step2.locality_label": "Entrega · Etiqueta localidad",
@@ -304,6 +304,13 @@ export default async function EditorCheckoutPage() {
             Editá los textos que ve el cliente durante el checkout. Los cambios
             quedan como borrador hasta publicar.
           </p>
+        </div>
+        <div className="mt-4 rounded-xl border border-line bg-cream/35 p-4 text-sm leading-6 text-muted">
+          Acá editás solo los <span className="font-bold text-ink">textos</span>{" "}
+          del checkout (carrito, envío/retiro, pagos y mensajes). Las{" "}
+          <span className="font-bold text-ink">reglas</span> de pago y descuentos
+          viven en <span className="font-bold text-ink">Configuración → Métodos de pago</span>;
+          el stock y los precios, en sus propias secciones.
         </div>
         <div className="mt-4 rounded-xl border border-line bg-cream/35 p-4 text-sm leading-6 text-muted">
           En el mensaje de WhatsApp podés usar{" "}

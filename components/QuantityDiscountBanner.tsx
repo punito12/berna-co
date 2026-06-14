@@ -13,7 +13,7 @@ export default async function QuantityDiscountBanner() {
   );
 
   return (
-    <div className="bg-black px-4 py-2 text-center">
+    <div data-cms-section="global.top-banner" className="bg-black px-4 py-2 text-center">
       <p className="text-xs font-bold uppercase tracking-wide text-white sm:text-sm">
         🎉 Descuento por cantidad: {parts.join(" · ")}
       </p>

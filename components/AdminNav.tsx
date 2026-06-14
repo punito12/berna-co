@@ -57,7 +57,7 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
       { href: "/admin/productos", label: "Productos" },
       { href: "/admin/catalogo/costos", label: "Costos y Precios" },
       { href: "/admin/ventas/promociones", label: "Promociones" },
-      { href: "/admin/catalogo/codigos", label: "Códigos de descuento" },
+      { href: "/admin/catalogo/codigos", label: "Cupones de descuento" },
     ],
   },
   {
@@ -66,7 +66,10 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
   },
   {
     title: "Editor del sitio",
-    links: [{ href: "/admin/editor/home", label: "Editar sitio web" }],
+    links: [
+      { href: "/admin/editor/visual", label: "Editor visual (nuevo)" },
+      { href: "/admin/editor/home", label: "Editar sitio web (avanzado)" },
+    ],
   },
   {
     title: "Configuración",

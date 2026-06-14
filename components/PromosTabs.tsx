@@ -16,13 +16,13 @@ export default function PromosTabs({
     <div>
       <div className="mb-5 flex gap-1 border-b border-line">
         <TabButton active={tab === "codigos"} onClick={() => setTab("codigos")}>
-          Códigos
+          Cupones de descuento
         </TabButton>
         <TabButton
           active={tab === "cantidad"}
           onClick={() => setTab("cantidad")}
         >
-          Descuento por cantidad
+          Descuento por cantidad de unidades
         </TabButton>
       </div>
       {tab === "codigos" ? codes : cantidad}

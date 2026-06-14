@@ -24,7 +24,7 @@ export default function Hero({
   // Title may contain a newline (rendered as <br/>).
   const titleLines = title.split("\n");
   return (
-    <section className="relative isolate flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-ink px-4 py-16 text-center sm:min-h-screen sm:py-24">
+    <section data-cms-section="home.hero" className="relative isolate flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-ink px-4 py-16 text-center sm:min-h-screen sm:py-24">
       {/* Background photo with a slow drift + flat dark overlay for legibility */}
       <div
         aria-hidden

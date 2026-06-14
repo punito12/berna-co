@@ -430,7 +430,7 @@ export default function ProductForm({
               </label>
               <label className="block">
                 <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
-                  Promo % off
+                  Oferta · % off
                 </span>
                 <input
                   type="number"
@@ -446,7 +446,7 @@ export default function ProductForm({
               </label>
               <label className="block">
                 <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
-                  Promo cant.
+                  Oferta · 2x1/3x2
                 </span>
                 <select
                   value={promoTypes[b] ?? ""}

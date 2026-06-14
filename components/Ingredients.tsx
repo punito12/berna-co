@@ -116,7 +116,7 @@ export default function Ingredients({
       : INGREDIENT_PAGES[i].href,
   }));
   return (
-    <section id="ingredientes" className="bg-cream">
+    <section id="ingredientes" data-cms-section="home.ingredients" className="bg-cream">
       <div className="mx-auto max-w-5xl px-4 py-14 sm:py-24">
         <Reveal className="mb-10 text-center sm:mb-14">
           <p

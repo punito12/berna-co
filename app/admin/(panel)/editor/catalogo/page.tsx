@@ -1,14 +1,14 @@
 import { listTextsByCategory } from "@/lib/cms-admin";
 import { humanizeCmsKey } from "@/lib/cms-labels";
 import { CATALOG_CMS_LABELS } from "@/lib/catalog-cms-labels";
-import { prisma } from "@/lib/db";
+import { ensureCatalogCmsLabels } from "@/lib/cms-catalog-texts";
 import CmsTextField from "@/components/CmsTextField";
 
 const ECOMMERCE_LABEL_GROUPS = [
   {
     id: "payment",
-    title: "Chips de pago",
-    description: "Etiquetas cortas que aparecen en las cards de producto.",
+    title: "Etiquetas de formas de pago",
+    description: "Etiquetas cortas que aparecen en las tarjetas de producto.",
   },
   {
     id: "cart",
@@ -72,6 +72,11 @@ export default async function EditorCatalogoPage() {
             Editá los textos generales que acompañan la grilla. Los cambios se
             guardan como borrador hasta que publiques.
           </p>
+        </div>
+        <div className="mb-5 rounded-xl border border-line bg-cream/35 p-4 text-sm leading-6 text-muted">
+          Los nombres, precios, stock e imágenes reales de los productos se
+          editan en <span className="font-bold text-ink">Admin → Productos</span>.
+          Esta sección solo cambia los textos visibles del catálogo.
         </div>
         <div className="grid gap-3">
           {generalTexts.map((t) => (
@@ -153,53 +158,5 @@ export default async function EditorCatalogoPage() {
         </div>
       </section>
     </div>
-  );
-}
-
-async function ensureCatalogCmsLabels() {
-  const existingTexts = await prisma.siteText.findMany({
-    where: {
-      key: {
-        in: [
-          "catalog.product.choose_breadcrumb",
-          "catalog.product.out_of_stock",
-        ],
-      },
-    },
-    select: { key: true, value: true },
-  });
-  const existingTextValues = new Map(
-    existingTexts.map((text) => [text.key, text.value])
-  );
-  const defaultValueFor = (label: (typeof CATALOG_CMS_LABELS)[number]) => {
-    if (label.key === "catalog.product.breadcrumb_label") {
-      return (
-        existingTextValues.get("catalog.product.choose_breadcrumb") ??
-        label.value
-      );
-    }
-    if (label.key === "catalog.product.out_of_stock_label_detail") {
-      return (
-        existingTextValues.get("catalog.product.out_of_stock") ?? label.value
-      );
-    }
-    return label.value;
-  };
-
-  await prisma.$transaction(
-    CATALOG_CMS_LABELS.map((label) => {
-      const defaultValue = defaultValueFor(label);
-      return prisma.siteText.upsert({
-        where: { key: label.key },
-        update: { maxLength: label.maxLength, category: label.category },
-        create: {
-          key: label.key,
-          value: defaultValue,
-          valueDraft: defaultValue,
-          maxLength: label.maxLength,
-          category: label.category,
-        },
-      });
-    })
   );
 }

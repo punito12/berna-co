@@ -52,7 +52,7 @@ export default function Footer({
   >>;
 }) {
   return (
-    <footer className="bg-ink text-white">
+    <footer data-cms-section="global.footer" className="bg-ink text-white">
       {/* Slogan banner with hairline rules */}
       <div className="border-b border-white/10 px-4 py-10 text-center">
         <p

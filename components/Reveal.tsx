@@ -10,6 +10,10 @@ type RevealProps = {
   delay?: number;
   className?: string;
   as?: "div" | "section" | "li" | "header";
+  // Marcador inerte opcional para el editor visual (data-cms-section). No afecta
+  // el diseño público: es solo un atributo data-* que el editor usa para
+  // seleccionar/resaltar la sección dentro de su iframe.
+  dataCmsSection?: string;
 };
 
 export default function Reveal({
@@ -17,6 +21,7 @@ export default function Reveal({
   delay = 0,
   className = "",
   as = "div",
+  dataCmsSection,
 }: RevealProps) {
   const ref = useRef<HTMLElement | null>(null);
   const [visible, setVisible] = useState(false);
@@ -45,6 +50,7 @@ export default function Reveal({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ref={ref as any}
       data-reveal
+      data-cms-section={dataCmsSection}
       className={`${visible ? "is-visible" : ""} ${className}`}
       style={{ animationDelay: `${delay}ms` }}
     >

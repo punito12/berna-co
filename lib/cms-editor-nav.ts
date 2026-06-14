@@ -12,22 +12,22 @@ export const CMS_EDITOR_NAV: CmsEditorNavItem[] = [
   {
     href: "/admin/editor/home",
     label: "Inicio",
-    description: "Hero, secciones y contenido principal",
+    description: "Portada, banner superior y secciones del inicio",
   },
   {
     href: "/admin/editor/catalogo",
     label: "Productos",
-    description: "Grilla, cards, filtros y textos de venta",
+    description: "Textos del catálogo, tarjetas y etiquetas de pago",
   },
   {
     href: "/admin/editor/ingredientes",
     label: "Ingredientes",
-    description: "Cards del inicio y páginas de detalle",
+    description: "Tarjetas del inicio y páginas de detalle",
   },
   {
     href: "/admin/editor/checkout",
     label: "Finalizar compra",
-    description: "Pasos, ayuda, entrega, pago y mensajes",
+    description: "Textos del carrito, envío/retiro, pagos y pedido",
   },
   {
     href: "/admin/editor/confianza",
