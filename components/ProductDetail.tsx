@@ -18,6 +18,13 @@ type ProductDetailLabels = {
   addedDetail?: string;
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  CARNE: "CARNE",
+  POLLO: "POLLO",
+  CERDO: "CERDO",
+  VEGANO: "VEGGIE",
+};
+
 // Two-column product detail. Holds the selected empanado so the gallery (left)
 // and the buy controls (right) stay in sync: choosing a breadcrumb swaps the
 // photos to that variant's packaging.
@@ -36,6 +43,7 @@ export default function ProductDetail({
   const descriptionStyle: React.CSSProperties = {
     fontFamily: "var(--description-font, var(--font-fraunces), serif)",
   };
+  const categoryLabel = CATEGORY_LABELS[product.category] ?? product.category;
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.02fr)_minmax(320px,0.98fr)] lg:gap-14">
@@ -45,14 +53,14 @@ export default function ProductDetail({
         images={images}
         name={product.name}
         isNew={product.isNew}
-        category={product.category}
+        category={categoryLabel}
       />
 
       {/* Info + buy */}
       <div className="lg:pt-4" data-cms-section="product.info">
         <div className="flex flex-wrap items-center gap-2">
           <p className="rounded-full border border-line bg-white px-3 py-1 font-bold uppercase tracking-[0.22em] text-[11px] text-muted">
-            {product.category}
+            {categoryLabel}
           </p>
           <p className="rounded-full border border-line bg-white px-3 py-1 font-bold uppercase tracking-wide text-[11px] text-muted">
             {formatWeight(product.weightGrams)}

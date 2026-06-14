@@ -159,7 +159,7 @@ export default function CmsHomeSection({
             CARNE: t("catalog.filter.carne", "Carne"),
             POLLO: t("catalog.filter.pollo", "Pollo"),
             CERDO: t("catalog.filter.cerdo", "Cerdo"),
-            VEGANO: t("catalog.filter.vegano", "Vegano"),
+            VEGANO: t("catalog.filter.vegano", "Veggie"),
           }}
           textKeys={{
             eyebrow: "catalogo.eyebrow",
@@ -214,7 +214,7 @@ export default function CmsHomeSection({
               </div>
             )}
           </div>
-          <div className="text-center md:text-left">
+          <div className="text-left">
             {(() => {
               // "Nuestra historia" eyebrow: uses its own (optional) text. No
               // hardcoded "LA VIDA ES RICA!" fallback — only renders if there's

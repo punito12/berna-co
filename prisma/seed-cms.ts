@@ -156,7 +156,7 @@ const TEXTS: [string, string, number, string][] = [
   ["catalog.filter.carne", "Carne", 20, "catalogo"],
   ["catalog.filter.pollo", "Pollo", 20, "catalogo"],
   ["catalog.filter.cerdo", "Cerdo", 20, "catalogo"],
-  ["catalog.filter.vegano", "Vegano", 20, "catalogo"],
+  ["catalog.filter.vegano", "Veggie", 20, "catalogo"],
   ["catalog.product.add_to_cart", "Agregar al carrito", 30, "catalogo"],
   ["catalog.product.out_of_stock", "Sin stock", 20, "catalogo"],
   ["catalog.product.choose_breadcrumb", "Elegí tu empanado", 30, "catalogo"],

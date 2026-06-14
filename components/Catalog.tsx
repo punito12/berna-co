@@ -12,7 +12,7 @@ const DEFAULT_CATEGORY_LABELS: Record<string, string> = {
   CARNE: "Carne",
   POLLO: "Pollo",
   CERDO: "Cerdo",
-  VEGANO: "Vegano",
+  VEGANO: "Veggie",
 };
 
 export default function Catalog({
@@ -122,6 +122,11 @@ export default function Catalog({
     [products, category]
   );
 
+  function categoryLabel(code: string): string {
+    if (code === "VEGANO") return "Veggie";
+    return categoryLabels[code] ?? code;
+  }
+
   return (
     <section
       id="productos"
@@ -172,7 +177,7 @@ export default function Catalog({
               chipStyle={chipStyle}
               chipActiveStyle={chipActiveStyle}
             >
-              {categoryLabels[c] ?? c}
+              {categoryLabel(c)}
             </FilterChip>
           ))}
         </Reveal>
