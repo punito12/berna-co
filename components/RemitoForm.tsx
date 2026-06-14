@@ -3,6 +3,7 @@
 import type React from "react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BREADCRUMB_LABELS } from "@/lib/products";
 
 type Item = {
   quantity: string;
@@ -13,22 +14,35 @@ type Item = {
   // ("Producto personalizado"). Solo controla el <select>; el remito guarda la
   // descripción y el precio copiados, no el id.
   productId: string;
+  // Empanado elegido solo para controlar el formulario. El remito histórico lo
+  // guarda copiado en `description`, sin depender del producto vivo.
+  breadcrumbType: string;
 };
 
 export type RemitoProductOption = {
   id: string;
   name: string;
   price: number;
+  breadcrumbs: string[];
+  prices: Record<string, number>;
 };
 
 const CUSTOM_PRODUCT = "__custom__";
 
 // Los ítems iniciales vienen del server sin productId (el remito guardado solo
 // tiene descripción + precio copiados). El form lo agrega al cargar.
-type InitialItem = Omit<Item, "productId"> & { productId?: string };
+type InitialItem = Omit<Item, "productId" | "breadcrumbType"> & {
+  productId?: string;
+  breadcrumbType?: string;
+};
 
 export type RemitoFormInitial = {
   id?: string;
+  // Número de remito ya formateado a 6 dígitos (ej. "000241"). En "nuevo" viene
+  // el sugerido por el server; el admin lo puede cambiar.
+  number: string;
+  // URL pública del QR (solo al editar): para el botón "Ver remito".
+  publicUrl?: string;
   date: string;
   customerName: string;
   items: InitialItem[];
@@ -58,6 +72,7 @@ const emptyItem: Item = {
   description: "",
   unitPrice: "0",
   productId: "",
+  breadcrumbType: "",
 };
 
 export default function RemitoForm({
@@ -69,11 +84,16 @@ export default function RemitoForm({
 }) {
   const router = useRouter();
   const editing = Boolean(initial.id);
+  const [number, setNumber] = useState(initial.number);
   const [date, setDate] = useState(initial.date);
   const [customerName, setCustomerName] = useState(initial.customerName);
   const [items, setItems] = useState<Item[]>(
     initial.items.length > 0
-      ? initial.items.map((item) => ({ productId: "", ...item }))
+      ? initial.items.map((item) => ({
+          productId: "",
+          breadcrumbType: "",
+          ...item,
+        }))
       : [{ ...emptyItem }]
   );
   const [discountPercent, setDiscountPercent] = useState(
@@ -121,24 +141,52 @@ export default function RemitoForm({
     );
   }
 
+  function priceFor(product: RemitoProductOption, breadcrumb: string): number {
+    const specific = product.prices?.[breadcrumb];
+    if (typeof specific === "number" && specific > 0) return specific;
+    return product.price;
+  }
+
+  function descriptionFor(product: RemitoProductOption, breadcrumb: string): string {
+    if (!breadcrumb) return product.name;
+    const label = BREADCRUMB_LABELS[breadcrumb] ?? breadcrumb;
+    return `${product.name} — ${label}`;
+  }
+
   // Al elegir un producto del selector: copia su nombre a la descripción y su
   // precio actual al precio unitario (snapshot). "Producto personalizado" deja
   // la descripción/precio para escribir a mano. La descripción y el precio
   // siguen siendo editables después de elegir.
   function selectProduct(index: number, value: string) {
     if (value === CUSTOM_PRODUCT) {
-      setItem(index, { productId: "" });
+      setItem(index, { productId: "", breadcrumbType: "" });
       return;
     }
     const product = products.find((p) => p.id === value);
     if (!product) {
-      setItem(index, { productId: "" });
+      setItem(index, { productId: "", breadcrumbType: "" });
+      return;
+    }
+    const breadcrumb = product.breadcrumbs[0] ?? "";
+    setItem(index, {
+      productId: product.id,
+      breadcrumbType: breadcrumb,
+      description: descriptionFor(product, breadcrumb),
+      unitPrice: String(priceFor(product, breadcrumb)),
+    });
+  }
+
+  function selectBreadcrumb(index: number, breadcrumb: string) {
+    const item = items[index];
+    const product = products.find((p) => p.id === item.productId);
+    if (!product) {
+      setItem(index, { breadcrumbType: "" });
       return;
     }
     setItem(index, {
-      productId: product.id,
-      description: product.name,
-      unitPrice: String(product.price),
+      breadcrumbType: breadcrumb,
+      description: descriptionFor(product, breadcrumb),
+      unitPrice: String(priceFor(product, breadcrumb)),
     });
   }
 
@@ -155,6 +203,7 @@ export default function RemitoForm({
     setError(null);
     try {
       const payload = {
+        number: number.trim(),
         date,
         customerName,
         items: items.map((item) => ({
@@ -199,6 +248,20 @@ export default function RemitoForm({
           Datos del remito
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <Field label="Número de remito">
+              <input
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+                className={inputClass}
+                inputMode="numeric"
+                placeholder="Ej: 000241"
+              />
+            </Field>
+            <p className="mt-1 text-[11px] text-muted">
+              Podés modificarlo manualmente. No puede repetirse.
+            </p>
+          </div>
           <Field label="Fecha">
             <input
               type="date"
@@ -207,15 +270,29 @@ export default function RemitoForm({
               className={inputClass}
             />
           </Field>
-          <Field label="Nombre">
-            <input
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              className={inputClass}
-              placeholder="Cliente / razón social"
-            />
-          </Field>
         </div>
+        <Field label="Nombre">
+          <input
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            className={inputClass}
+            placeholder="Cliente / razón social"
+          />
+        </Field>
+
+        {editing && initial.publicUrl && (
+          <p className="mt-3 text-[11px] text-muted">
+            Link del QR:{" "}
+            <a
+              href={initial.publicUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-ink underline hover:text-black"
+            >
+              Ver remito
+            </a>
+          </p>
+        )}
       </section>
 
       <section className="rounded-lg border border-line bg-white p-4">
@@ -274,17 +351,55 @@ export default function RemitoForm({
                   </option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} — {pesos(p.price)}
+                      {p.name}
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="col-span-6 sm:col-span-2">
+                <Label>Empanado</Label>
+                {(() => {
+                  const product = products.find((p) => p.id === item.productId);
+                  if (!product) {
+                    return (
+                      <select value="" disabled className={inputClass}>
+                        <option>Producto personalizado</option>
+                      </select>
+                    );
+                  }
+                  if (product.breadcrumbs.length === 0) {
+                    return (
+                      <select value="" disabled className={inputClass}>
+                        <option>Sin empanado</option>
+                      </select>
+                    );
+                  }
+                  return (
+                    <select
+                      value={item.breadcrumbType}
+                      onChange={(e) => selectBreadcrumb(index, e.target.value)}
+                      className={inputClass}
+                      required
+                    >
+                      {product.breadcrumbs.map((breadcrumb) => (
+                        <option key={breadcrumb} value={breadcrumb}>
+                          {BREADCRUMB_LABELS[breadcrumb] ?? breadcrumb} —{" "}
+                          {pesos(priceFor(product, breadcrumb))}
+                        </option>
+                      ))}
+                    </select>
+                  );
+                })()}
+              </label>
+              <label className="col-span-12 sm:col-span-4">
+                <Label>Descripción</Label>
                 <input
                   value={item.description}
                   onChange={(e) =>
                     setItem(index, { description: e.target.value })
                   }
-                  className={`${inputClass} mt-1`}
-                  placeholder="Descripción"
+                  className={inputClass}
+                  placeholder="Descripción que se imprime"
                 />
               </label>
               <label className="col-span-6 sm:col-span-2">

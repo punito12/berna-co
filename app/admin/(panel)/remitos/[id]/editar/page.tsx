@@ -5,6 +5,8 @@ import {
   formatRemitoNumber,
   getRemito,
   listRemitoProductOptions,
+  padRemitoNumber,
+  remitoPublicUrl,
 } from "@/lib/remitos";
 
 function dateInput(date: Date | null): string {
@@ -37,6 +39,8 @@ export default async function EditarRemitoPage({
         products={products}
         initial={{
           id: remito.id,
+          number: padRemitoNumber(remito.number),
+          publicUrl: remitoPublicUrl(remito.id),
           date: dateInput(remito.date),
           customerName: remito.customerName,
           items: remito.items.map((item) => ({

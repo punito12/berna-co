@@ -1,13 +1,20 @@
 import Link from "next/link";
 import RemitoForm from "@/components/RemitoForm";
-import { listRemitoProductOptions } from "@/lib/remitos";
+import {
+  getNextRemitoNumber,
+  listRemitoProductOptions,
+  padRemitoNumber,
+} from "@/lib/remitos";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 export default async function NuevoRemitoPage() {
-  const products = await listRemitoProductOptions();
+  const [products, nextNumber] = await Promise.all([
+    listRemitoProductOptions(),
+    getNextRemitoNumber(),
+  ]);
   return (
     <div className="mx-auto max-w-5xl">
       <Link
@@ -22,6 +29,7 @@ export default async function NuevoRemitoPage() {
       <RemitoForm
         products={products}
         initial={{
+          number: padRemitoNumber(nextNumber),
           date: todayIso(),
           customerName: "",
           items: [],
