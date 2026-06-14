@@ -65,6 +65,11 @@ export default function CmsHomeSection({
   const subtitleStyle = subtitleDesignToStyle(config.design);
   const buttonStyle = (key: string) => buttonDesignToStyle(config.buttons?.[key]);
   const designCss = sectionDesignCss(section.key, config);
+  const heroCarouselImages =
+    config.carouselImages
+      ?.filter((image) => image.enabled && image.url)
+      .sort((a, b) => a.order - b.order)
+      .map((image) => ({ url: image.url, alt: image.alt })) ?? [];
 
   if (section.key === "home.hero" || type === "hero") {
     return (
@@ -85,6 +90,7 @@ export default function CmsHomeSection({
           backgroundUrl={
             config.imageUrl || image("home.hero.background", "/images/hero.jpg")
           }
+          carouselImages={heroCarouselImages}
           logoUrl={logoUrl}
           titleKey="home.hero.title"
           subtitleKey="home.hero.subtitle"

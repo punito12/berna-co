@@ -1,4 +1,7 @@
 import BernaLogo from "@/components/BernaLogo";
+import HeroBackgroundCarousel, {
+  type HeroBackgroundImage,
+} from "@/components/HeroBackgroundCarousel";
 import type { CSSProperties } from "react";
 
 // Dark hero. Texts + background image come from the CMS (with the original
@@ -8,6 +11,7 @@ export default function Hero({
   subtitle = "Elegí online, coordiná la entrega y pagá como prefieras.",
   cta = "Comprar ahora",
   backgroundUrl = "/images/hero.jpg",
+  carouselImages,
   logoUrl = "",
   titleKey = "home.hero.title",
   subtitleKey = "home.hero.subtitle",
@@ -21,6 +25,7 @@ export default function Hero({
   subtitle?: string;
   cta?: string;
   backgroundUrl?: string;
+  carouselImages?: HeroBackgroundImage[];
   logoUrl?: string;
   titleKey?: string;
   subtitleKey?: string;
@@ -39,10 +44,9 @@ export default function Hero({
       className="relative isolate flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-ink px-4 py-16 text-center sm:min-h-screen sm:py-24"
     >
       {/* Background photo with a slow drift + flat dark overlay for legibility */}
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-20 animate-slow-zoom bg-cover bg-center"
-        style={{ backgroundImage: `url('${backgroundUrl}')` }}
+      <HeroBackgroundCarousel
+        images={carouselImages}
+        fallbackUrl={backgroundUrl}
       />
       <div aria-hidden className="absolute inset-0 -z-10 bg-black/65" />
 

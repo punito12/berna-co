@@ -48,6 +48,15 @@ export type CmsBlockConfig = {
   // Se guardan en el config de la sección home.products (host del catálogo).
   cards?: CmsCardDesign;
   filters?: CmsFilterDesign;
+  carouselImages?: CmsHeroCarouselImage[];
+};
+
+export type CmsHeroCarouselImage = {
+  id: string;
+  url: string;
+  alt?: string;
+  enabled: boolean;
+  order: number;
 };
 
 export const CMS_BLOCK_LABELS: Record<CmsBlockType, string> = {
@@ -145,6 +154,32 @@ export function sanitizeBlockConfig(input: Record<string, unknown>): CmsBlockCon
         answer: typeof row.answer === "string" ? row.answer.slice(0, 1000) : "",
       };
     });
+  }
+  if (Array.isArray(input.carouselImages)) {
+    const rows = input.carouselImages
+      .slice(0, 8)
+      .map((item, index): CmsHeroCarouselImage | null => {
+        const row =
+          item && typeof item === "object"
+            ? (item as Record<string, unknown>)
+            : {};
+        const url = typeof row.url === "string" ? row.url.trim() : "";
+        if (!url || !isSafeImagePath(url)) return null;
+        return {
+          id:
+            typeof row.id === "string" && row.id.trim()
+              ? row.id.slice(0, 80)
+              : `hero-${index}`,
+          url: url.slice(0, 1000),
+          alt: typeof row.alt === "string" ? row.alt.slice(0, 180) : "",
+          enabled: row.enabled !== false,
+          order: Number.isFinite(Number(row.order)) ? Number(row.order) : index,
+        };
+      })
+      .filter((row): row is CmsHeroCarouselImage => Boolean(row))
+      .sort((a, b) => a.order - b.order)
+      .map((row, index) => ({ ...row, order: index }));
+    if (rows.length > 0) out.carouselImages = rows;
   }
   if (
     input.textStyles &&

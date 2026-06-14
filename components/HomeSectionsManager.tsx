@@ -11,6 +11,7 @@ import {
   sanitizeBlockConfig,
   type CmsBlockConfig,
   type CmsBlockType,
+  type CmsHeroCarouselImage,
 } from "@/lib/cms-blocks";
 import {
   sanitizeTextStyle,
@@ -605,6 +606,75 @@ export function BlockConfigEditor({
     }
   }
 
+  function normalizeCarouselRows(
+    rows: CmsHeroCarouselImage[] = []
+  ): CmsHeroCarouselImage[] {
+    return rows.map((row, index) => ({ ...row, order: index }));
+  }
+
+  function updateCarousel(rows: CmsHeroCarouselImage[]) {
+    const nextRows = normalizeCarouselRows(rows);
+    update({
+      ...draft,
+      carouselImages: nextRows.length > 0 ? nextRows : undefined,
+    });
+  }
+
+  function addCarouselImage(url = "") {
+    const rows = draft.carouselImages ?? [];
+    updateCarousel([
+      ...rows,
+      {
+        id: `hero-${Date.now().toString(36)}`,
+        url,
+        alt: "",
+        enabled: true,
+        order: rows.length,
+      },
+    ]);
+  }
+
+  function patchCarouselImage(
+    id: string,
+    patch: Partial<CmsHeroCarouselImage>
+  ) {
+    updateCarousel(
+      (draft.carouselImages ?? []).map((row) =>
+        row.id === id ? { ...row, ...patch } : row
+      )
+    );
+  }
+
+  function removeCarouselImage(id: string) {
+    updateCarousel((draft.carouselImages ?? []).filter((row) => row.id !== id));
+  }
+
+  function moveCarouselImage(id: string, direction: -1 | 1) {
+    const rows = [...(draft.carouselImages ?? [])];
+    const index = rows.findIndex((row) => row.id === id);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= rows.length) return;
+    [rows[index], rows[nextIndex]] = [rows[nextIndex], rows[index]];
+    updateCarousel(rows);
+  }
+
+  async function uploadCarouselImage(file: File) {
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/cms/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) return alert(data.error || "No se pudo subir.");
+      addCarouselImage(data.url);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="rounded-2xl border border-line bg-white p-4 shadow-sm">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -704,6 +774,115 @@ export function BlockConfigEditor({
                 }}
               />
             </label>
+          </div>
+        )}
+        {type === "hero" && (
+          <div className="rounded-xl border border-line bg-cream/35 p-3">
+            <div className="mb-3">
+              <p className="text-[11px] font-black uppercase tracking-widest text-muted">
+                Carrusel de imágenes
+              </p>
+              <p className="mt-1 text-xs leading-5 text-muted">
+                Si cargás más de una imagen, el fondo de la portada va
+                cambiando automáticamente. Si queda vacío, se usa la imagen de
+                portada.
+              </p>
+            </div>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => addCarouselImage()}
+                className="rounded border border-line bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-ink hover:border-black"
+              >
+                Agregar URL
+              </button>
+              <label className="cursor-pointer rounded bg-black px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white">
+                Subir imagen
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void uploadCarouselImage(file);
+                  }}
+                />
+              </label>
+            </div>
+            {(draft.carouselImages ?? []).length === 0 ? (
+              <p className="text-xs leading-5 text-muted">
+                Sin imágenes de carrusel.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {(draft.carouselImages ?? []).map((row, index, rows) => (
+                  <div key={row.id} className="rounded-lg bg-white p-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted">
+                        Imagen {index + 1}
+                      </p>
+                      <label className="flex items-center gap-2 text-[11px] font-bold text-muted">
+                        <input
+                          type="checkbox"
+                          checked={row.enabled}
+                          onChange={(e) =>
+                            patchCarouselImage(row.id, {
+                              enabled: e.target.checked,
+                            })
+                          }
+                        />
+                        Activa
+                      </label>
+                    </div>
+                    {row.url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={row.url}
+                        alt=""
+                        className="mb-2 h-20 w-full rounded border border-line object-cover"
+                      />
+                    )}
+                    <div className="grid gap-2">
+                      <TextInput
+                        label="URL"
+                        value={row.url}
+                        onChange={(url) => patchCarouselImage(row.id, { url })}
+                      />
+                      <TextInput
+                        label="Texto alternativo"
+                        value={row.alt ?? ""}
+                        onChange={(alt) => patchCarouselImage(row.id, { alt })}
+                      />
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => moveCarouselImage(row.id, -1)}
+                        disabled={index === 0}
+                        className="rounded border border-line bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted disabled:opacity-40"
+                      >
+                        Subir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveCarouselImage(row.id, 1)}
+                        disabled={index === rows.length - 1}
+                        className="rounded border border-line bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted disabled:opacity-40"
+                      >
+                        Bajar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeCarouselImage(row.id)}
+                        className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-red-700"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {type === "map" && (

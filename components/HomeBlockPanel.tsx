@@ -7,6 +7,7 @@ import {
   parseBlockConfig,
   sanitizeBlockConfig,
   type CmsBlockConfig,
+  type CmsHeroCarouselImage,
 } from "@/lib/cms-blocks";
 import { postCmsDraft, notifyCmsDraftChanged } from "@/lib/cms-client";
 import { CMS_FONT_OPTIONS } from "@/lib/cms-fonts";
@@ -245,6 +246,79 @@ export default function HomeBlockPanel({
     }
   }
 
+  function normalizeCarouselRows(
+    rows: CmsHeroCarouselImage[] = []
+  ): CmsHeroCarouselImage[] {
+    return rows.map((row, index) => ({ ...row, order: index }));
+  }
+
+  function updateCarousel(rows: CmsHeroCarouselImage[]) {
+    const nextRows = normalizeCarouselRows(rows);
+    setDraft((d) => ({
+      ...d,
+      carouselImages: nextRows.length > 0 ? nextRows : undefined,
+    }));
+  }
+
+  function addCarouselImage(url = "") {
+    const rows = draft.carouselImages ?? [];
+    updateCarousel([
+      ...rows,
+      {
+        id: `hero-${Date.now().toString(36)}`,
+        url,
+        alt: "",
+        enabled: true,
+        order: rows.length,
+      },
+    ]);
+  }
+
+  function patchCarouselImage(
+    id: string,
+    patch: Partial<CmsHeroCarouselImage>
+  ) {
+    updateCarousel(
+      (draft.carouselImages ?? []).map((row) =>
+        row.id === id ? { ...row, ...patch } : row
+      )
+    );
+  }
+
+  function removeCarouselImage(id: string) {
+    updateCarousel((draft.carouselImages ?? []).filter((row) => row.id !== id));
+  }
+
+  function moveCarouselImage(id: string, direction: -1 | 1) {
+    const rows = [...(draft.carouselImages ?? [])];
+    const index = rows.findIndex((row) => row.id === id);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= rows.length) return;
+    [rows[index], rows[nextIndex]] = [rows[nextIndex], rows[index]];
+    updateCarousel(rows);
+  }
+
+  async function uploadCarouselImage(file: File) {
+    setSaving(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/cms/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        setError(data.error || "No se pudo subir la imagen.");
+        return;
+      }
+      addCarouselImage(data.url);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // Guardado unificado de la sección. Los textos SiteText-backed se guardan en
   // /api/admin/cms/text; el config se guarda solo para campos no textuales.
   async function saveSection() {
@@ -372,6 +446,129 @@ export default function HomeBlockPanel({
                 </div>
               );
             })}
+        </div>
+      )}
+
+      {sectionKey === "home.hero" && (
+        <div className="space-y-3 rounded-lg border border-line bg-white p-3">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted">
+              Carrusel de imágenes
+            </p>
+            <p className="mt-1 text-xs leading-5 text-muted">
+              Si cargás más de una imagen, el fondo de la portada va cambiando
+              automáticamente. Todas mantienen el overlay oscuro actual.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => addCarouselImage()}
+              className="rounded border border-line bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-ink hover:border-black"
+            >
+              Agregar URL
+            </button>
+            <label className="cursor-pointer rounded bg-black px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white">
+              Subir imagen
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void uploadCarouselImage(file);
+                }}
+              />
+            </label>
+          </div>
+          {(draft.carouselImages ?? []).length === 0 ? (
+            <p className="rounded border border-line bg-cream/40 px-3 py-2 text-xs leading-5 text-muted">
+              Sin imágenes de carrusel. Se usa la imagen de portada actual como
+              fallback.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {(draft.carouselImages ?? []).map((row, index, rows) => (
+                <div
+                  key={row.id}
+                  className="rounded-lg border border-line bg-cream/25 p-3"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted">
+                      Imagen {index + 1}
+                    </p>
+                    <label className="flex items-center gap-2 text-[11px] font-bold text-muted">
+                      <input
+                        type="checkbox"
+                        checked={row.enabled}
+                        onChange={(e) =>
+                          patchCarouselImage(row.id, {
+                            enabled: e.target.checked,
+                          })
+                        }
+                      />
+                      Activa
+                    </label>
+                  </div>
+                  {row.url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={row.url}
+                      alt=""
+                      className="mb-2 h-20 w-full rounded border border-line object-cover"
+                    />
+                  )}
+                  <div className="space-y-2">
+                    <Labeled label="URL de imagen">
+                      <input
+                        value={row.url}
+                        onChange={(e) =>
+                          patchCarouselImage(row.id, { url: e.target.value })
+                        }
+                        className={inputClass}
+                        placeholder="/images/... o https://..."
+                      />
+                    </Labeled>
+                    <Labeled label="Texto alternativo">
+                      <input
+                        value={row.alt ?? ""}
+                        onChange={(e) =>
+                          patchCarouselImage(row.id, { alt: e.target.value })
+                        }
+                        className={inputClass}
+                        placeholder="Descripción breve de la imagen"
+                      />
+                    </Labeled>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => moveCarouselImage(row.id, -1)}
+                      disabled={index === 0}
+                      className="rounded border border-line bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted disabled:opacity-40"
+                    >
+                      Subir
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveCarouselImage(row.id, 1)}
+                      disabled={index === rows.length - 1}
+                      className="rounded border border-line bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted disabled:opacity-40"
+                    >
+                      Bajar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeCarouselImage(row.id)}
+                      className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-red-700"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
