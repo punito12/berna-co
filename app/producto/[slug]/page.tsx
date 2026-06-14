@@ -138,7 +138,7 @@ export default async function ProductPage({
     : "Carrito";
 
   return (
-    <main className="min-h-screen bg-cream">
+    <main className="min-h-screen bg-cream" data-cms-page="product-detail">
       {previewCssVars && (
         <style
           dangerouslySetInnerHTML={{ __html: `:root{${previewCssVars}}` }}
@@ -157,6 +157,7 @@ export default async function ProductPage({
       <div className="mx-auto max-w-6xl px-4 py-5 sm:py-12">
         <Link
           href="/#productos"
+          data-cms-section="product.back"
           className="mb-4 inline-flex items-center gap-2 font-bold uppercase tracking-widest text-xs text-muted transition-colors hover:text-ink sm:mb-6"
         >
           ‹ Volver a {productLabels.backToProducts.toLowerCase()}

@@ -21,7 +21,7 @@ export default function ProductGallery({
   const [active, setActive] = useState(0);
 
   return (
-    <div className="lg:sticky lg:top-24">
+    <div className="lg:sticky lg:top-24" data-cms-section="product.gallery">
       {/* Main image. Mobile uses a shorter frame so the buy controls sit higher. */}
       <div className="relative aspect-[4/5] w-full overflow-hidden rounded-lg border border-line bg-cream shadow-[0_18px_45px_rgba(10,10,10,0.08)] sm:aspect-[2/3]">
         {/* Placeholder name sits BEHIND the photo; only shows if a file is missing. */}

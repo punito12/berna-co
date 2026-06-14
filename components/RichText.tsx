@@ -9,11 +9,14 @@ export default function RichText({
   className = "",
   textKey,
   style,
+  dataCmsSection,
 }: {
   text: string;
   className?: string;
   textKey?: string;
   style?: React.CSSProperties;
+  // Marcador inerte opcional para el editor visual (data-cms-section).
+  dataCmsSection?: string;
 }) {
   const lines = text.split("\n");
   const blocks: React.ReactNode[] = [];
@@ -53,7 +56,12 @@ export default function RichText({
   flushBullets("ul-end");
 
   return (
-    <div className={className} data-cms-text={textKey} style={style}>
+    <div
+      className={className}
+      data-cms-text={textKey}
+      data-cms-section={dataCmsSection}
+      style={style}
+    >
       {blocks}
     </div>
   );

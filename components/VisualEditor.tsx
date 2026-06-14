@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CMS_VISUAL_PAGES,
+  CMS_VISUAL_PAGES_ORDERED,
   findVisualPage,
   type CmsVisualSection,
 } from "@/lib/cms-visual-editor";
 import VisualSectionEditor, {
   type VisualSectionData,
   type VisualTextRow,
+  type VisualSeoImage,
 } from "@/components/VisualSectionEditor";
 
 type Viewport = "desktop" | "mobile";
@@ -35,12 +37,14 @@ export default function VisualEditor({
   sections,
   texts,
   logoUrl,
+  seoImage,
 }: {
   previewToken: string | null;
   productSlug: string | null;
   sections: VisualSectionData[];
   texts: VisualTextRow[];
   logoUrl?: string;
+  seoImage?: VisualSeoImage;
 }) {
   const [pageId, setPageId] = useState("home");
   const [sectionId, setSectionId] = useState<string | null>(null);
@@ -212,13 +216,16 @@ export default function VisualEditor({
     if (doc) applySelectedHighlight(doc, sectionId);
   }, [sectionId]);
 
-  // URL pública a previsualizar. "producto" usa el slug real del primer producto.
+  // URL pública a previsualizar. Una sección puede tener su propia ruta (ej.
+  // cada página legal) → al seleccionarla, el iframe navega a esa página.
+  // "producto" usa el slug real del primer producto.
   const previewPath = useMemo(() => {
+    if (section?.previewPath) return section.previewPath;
     if (page.needsProductSlug) {
       return productSlug ? `/producto/${productSlug}` : undefined;
     }
     return page.previewPath;
-  }, [page, productSlug]);
+  }, [page, section, productSlug]);
 
   // Preset del dispositivo + escala para encajar en el área disponible. El ancho
   // interno del iframe queda fijo (1440 / 390); solo se escala visualmente.
@@ -364,7 +371,7 @@ export default function VisualEditor({
             onChange={(e) => setPageId(e.target.value)}
             className="rounded border border-line bg-white px-3 py-2 text-sm font-bold text-ink outline-none focus:border-black"
           >
-            {CMS_VISUAL_PAGES.map((p) => (
+            {CMS_VISUAL_PAGES_ORDERED.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}
                 {p.status === "planned" ? " · próximamente" : ""}
@@ -436,8 +443,13 @@ export default function VisualEditor({
             Modo avanzado
           </Link>
         </div>
-        {message && (
+        {message ? (
           <p className="w-full text-xs font-bold text-green-700">{message}</p>
+        ) : (
+          <p className="w-full text-[11px] text-muted">
+            Editás un borrador privado · “Publicar” lo hace público · “Descartar”
+            borra los cambios sin publicar. El público no cambia hasta publicar.
+          </p>
         )}
       </header>
 
@@ -468,12 +480,19 @@ export default function VisualEditor({
               <div className="p-4">
                 {pageId === "home" ||
                 pageId === "global" ||
-                pageId === "catalogo" ? (
+                pageId === "catalogo" ||
+                pageId === "producto" ||
+                pageId === "carrito" ||
+                pageId === "checkout" ||
+                pageId === "pedido" ||
+                pageId === "seo" ||
+                pageId === "legales" ? (
                   <VisualSectionEditor
                     sectionId={section.id}
                     sections={sections}
                     texts={texts}
                     logoUrl={logoUrl}
+                    seoImage={seoImage}
                   />
                 ) : (
                   <>

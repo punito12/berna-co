@@ -191,6 +191,7 @@ export default function Catalog({
                 {lines.map((line) => (
                   <li
                     key={line.key}
+                    data-cms-section="cart.item"
                     className="flex items-center justify-between gap-4 py-3"
                   >
                     <div className="min-w-0">
@@ -204,7 +205,10 @@ export default function Catalog({
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
+                      <div
+                        data-cms-section="cart.quantity"
+                        className="flex items-center gap-2"
+                      >
                         <button
                           type="button"
                           onClick={() => changeQuantity(line.key, -1)}
@@ -239,7 +243,10 @@ export default function Catalog({
 
               {/* pr-20 en mobile: deja libre la esquina del botón flotante de
                   WhatsApp para que no tape el botón "Continuar". */}
-              <div className="mx-auto max-w-6xl py-4 pl-4 pr-20 sm:px-4">
+              <div
+                data-cms-section="cart.actions"
+                className="mx-auto max-w-6xl py-4 pl-4 pr-20 sm:px-4"
+              >
                 <Link
                   href="/checkout"
                   data-cms-style="button"

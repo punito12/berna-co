@@ -49,7 +49,7 @@ export default function ProductDetail({
       />
 
       {/* Info + buy */}
-      <div className="lg:pt-4">
+      <div className="lg:pt-4" data-cms-section="product.info">
         <div className="flex flex-wrap items-center gap-2">
           <p className="rounded-full border border-line bg-white px-3 py-1 font-bold uppercase tracking-[0.22em] text-[11px] text-muted">
             {product.category}
@@ -70,6 +70,7 @@ export default function ProductDetail({
         <RichText
           text={product.longDescription?.trim() || product.description}
           style={descriptionStyle}
+          dataCmsSection="product.description"
           className="mt-5 border-y border-line py-5 text-base leading-relaxed text-ink/80 sm:mt-6 sm:py-6 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
         />
 

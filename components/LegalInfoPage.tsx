@@ -14,14 +14,21 @@ export default function LegalInfoPage({
   title,
   intro,
   sections,
+  dataCmsSection,
 }: {
   eyebrow: string;
   title: string;
   intro: string;
   sections: LegalSection[];
+  // Marcador inerte opcional para el editor visual (data-cms-section).
+  dataCmsSection?: string;
 }) {
   return (
-    <main className="min-h-screen bg-cream text-ink">
+    <main
+      className="min-h-screen bg-cream text-ink"
+      data-cms-page="legal"
+      data-cms-section={dataCmsSection}
+    >
       <header className="border-b border-ink/10 bg-cream/95">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-5">
           <Link href="/" aria-label="Volver al inicio">

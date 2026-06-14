@@ -31,6 +31,7 @@ export default async function PrivacyPage({
       title={title}
       intro={intro}
       sections={sections}
+      dataCmsSection="legal.privacy"
     />
   );
 }

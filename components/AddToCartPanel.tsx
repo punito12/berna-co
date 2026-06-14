@@ -71,7 +71,10 @@ export default function AddToCartPanel({
   }
 
   return (
-    <div className="mt-5 overflow-hidden rounded-lg border border-line bg-white shadow-[0_14px_34px_rgba(10,10,10,0.07)] sm:mt-6">
+    <div
+      data-cms-section="product.purchase"
+      className="mt-5 overflow-hidden rounded-lg border border-line bg-white shadow-[0_14px_34px_rgba(10,10,10,0.07)] sm:mt-6"
+    >
       <div className="border-b border-line bg-cream/55 px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -98,6 +101,7 @@ export default function AddToCartPanel({
             </div>
           </div>
           <span
+            data-cms-section="product.stock"
             className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${
               stock <= 0
                 ? "border-line bg-muted text-white"
@@ -127,7 +131,7 @@ export default function AddToCartPanel({
 
       <div className="p-4 sm:p-6">
       {/* Empanado selector */}
-      <div>
+      <div data-cms-section="product.breading">
         <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
           {labels.chooseBreadcrumb ?? "Empanado"}
         </p>
@@ -226,7 +230,10 @@ export default function AddToCartPanel({
         )}
       </div>
 
-      <div className="mt-5 grid gap-2 border-t border-line pt-5 text-sm text-ink sm:grid-cols-3">
+      <div
+        data-cms-section="product.trust"
+        className="mt-5 grid gap-2 border-t border-line pt-5 text-sm text-ink sm:grid-cols-3"
+      >
         <div className="rounded-md bg-cream/70 p-3">
           <p className="font-black uppercase tracking-wide text-[11px] text-muted">
             Envíos

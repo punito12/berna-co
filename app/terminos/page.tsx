@@ -31,6 +31,7 @@ export default async function TermsPage({
       title={title}
       intro={intro}
       sections={sections}
+      dataCmsSection="legal.terms"
     />
   );
 }

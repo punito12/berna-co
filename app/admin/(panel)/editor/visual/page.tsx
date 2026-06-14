@@ -3,6 +3,9 @@ import { getCmsPreviewToken } from "@/lib/cms-preview";
 import { getAvailableProducts } from "@/lib/products";
 import { listSectionsAdmin } from "@/lib/cms-admin";
 import { ensureCatalogCmsLabels } from "@/lib/cms-catalog-texts";
+import { ensureCheckoutCmsTexts } from "@/lib/cms-checkout-texts";
+import { ensureSeoCmsRows, SEO_OG_IMAGE_KEY } from "@/lib/cms-seo";
+import { ensureLegalCmsTexts } from "@/lib/cms-legal";
 import { prisma } from "@/lib/db";
 
 // Editor visual (Phase 0/1/2B). Server component: calcula el token de preview, el
@@ -14,15 +17,24 @@ export const dynamic = "force-dynamic";
 
 export default async function VisualEditorPage() {
   const token = getCmsPreviewToken();
-  // Garantiza (idempotente) que existan las filas de textos del catálogo, así el
-  // editor visual puede mostrar todos los labels de las tarjetas. No pisa valores.
-  await ensureCatalogCmsLabels().catch(() => {});
-  const [products, homeSections, texts, content] = await Promise.all([
+  // Garantiza (idempotente) que existan las filas de textos del catálogo y del
+  // checkout, así el editor visual puede mostrar todos sus labels. No pisa valores.
+  await Promise.all([
+    ensureCatalogCmsLabels().catch(() => {}),
+    ensureCheckoutCmsTexts().catch(() => {}),
+    ensureSeoCmsRows().catch(() => {}),
+    ensureLegalCmsTexts().catch(() => {}),
+  ]);
+  const [products, homeSections, texts, content, seoImage] = await Promise.all([
     getAvailableProducts().catch(() => []),
     listSectionsAdmin("home").catch(() => []),
     prisma.siteText
       .findMany({
-        where: { category: { in: ["home", "catalogo", "footer"] } },
+        where: {
+          category: {
+            in: ["home", "catalogo", "footer", "checkout", "seo", "legal"],
+          },
+        },
         select: {
           key: true,
           value: true,
@@ -35,6 +47,12 @@ export default async function VisualEditorPage() {
       .catch(() => []),
     prisma.siteContent
       .findFirst({ select: { logoUrl: true, logoUrlDraft: true } })
+      .catch(() => null),
+    prisma.siteImage
+      .findUnique({
+        where: { key: SEO_OG_IMAGE_KEY },
+        select: { key: true, url: true, urlDraft: true },
+      })
       .catch(() => null),
   ]);
   const productSlug = products[0]?.slug ?? null;
@@ -52,6 +70,11 @@ export default async function VisualEditorPage() {
       }))}
       texts={texts}
       logoUrl={logoUrl}
+      seoImage={{
+        key: seoImage?.key ?? SEO_OG_IMAGE_KEY,
+        published: seoImage?.url ?? "",
+        draft: seoImage?.urlDraft ?? "",
+      }}
     />
   );
 }

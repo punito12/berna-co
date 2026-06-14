@@ -425,7 +425,10 @@ export default function CheckoutPage() {
   // clearCart() the lines become empty for one render before navigation lands.
   if (!hydrated || submitting) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-cream px-4">
+      <main
+        className="flex min-h-screen items-center justify-center bg-cream px-4"
+        data-cms-page="checkout"
+      >
         {cmsTextCss && <style dangerouslySetInnerHTML={{ __html: cmsTextCss }} />}
         <p className="animate-pulse font-bold uppercase tracking-wide text-muted">
           Cargando…
@@ -436,7 +439,10 @@ export default function CheckoutPage() {
 
   if (lines.length === 0) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4 text-center">
+      <main
+        className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4 text-center"
+        data-cms-page="checkout"
+      >
         {cmsTextCss && <style dangerouslySetInnerHTML={{ __html: cmsTextCss }} />}
         <BernaLogo variant="dark" size="sm" />
         <p
@@ -459,7 +465,7 @@ export default function CheckoutPage() {
   const missingUnits = nextTier ? Math.ceil(nextTier.minKg - totalUnits) : 0;
 
   return (
-    <main className="min-h-screen bg-cream pb-28">
+    <main className="min-h-screen bg-cream pb-28" data-cms-page="checkout">
       {cmsTextCss && <style dangerouslySetInnerHTML={{ __html: cmsTextCss }} />}
       {/* Volume-discount strip */}
       {kgTiers.length > 0 && (
@@ -499,6 +505,7 @@ export default function CheckoutPage() {
         {/* 1. Datos */}
         <Section
           number="1"
+          dataCmsSection="checkout.customer"
           title={ct("checkout.step1.title", ct("checkout.step.contact", "Tus datos"))}
           textKey="checkout.step1.title"
         >
@@ -562,6 +569,7 @@ export default function CheckoutPage() {
         {/* 2. Entrega */}
         <Section
           number="2"
+          dataCmsSection="checkout.delivery"
           title={ct("checkout.step2.title", ct("checkout.step.delivery", "Entrega"))}
           textKey="checkout.step2.title"
         >
@@ -695,6 +703,7 @@ export default function CheckoutPage() {
         {/* 3. Cuándo */}
         <Section
           number="3"
+          dataCmsSection="checkout.schedule"
           title={ct("checkout.step3.title", ct("checkout.step.schedule", "¿Cuándo?"))}
           textKey="checkout.step3.title"
         >
@@ -773,6 +782,7 @@ export default function CheckoutPage() {
         {/* 4. Pago */}
         <Section
           number="4"
+          dataCmsSection="checkout.payment"
           title={ct("checkout.step4.title", ct("checkout.step.payment", "Pago"))}
           textKey="checkout.step4.title"
         >
@@ -836,6 +846,7 @@ export default function CheckoutPage() {
         {/* 5. Resumen */}
         <Section
           number="5"
+          dataCmsSection="checkout.summary"
           title={ct("checkout.step.summary", "Resumen")}
           textKey="checkout.step.summary"
         >
@@ -1037,14 +1048,20 @@ function Section({
   title,
   textKey,
   children,
+  dataCmsSection,
 }: {
   number: string;
   title: string;
   textKey?: string;
   children: React.ReactNode;
+  // Marcador inerte opcional para el editor visual (data-cms-section).
+  dataCmsSection?: string;
 }) {
   return (
-    <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-[0_1px_0_rgba(10,10,10,0.03)] sm:p-6">
+    <section
+      data-cms-section={dataCmsSection}
+      className="mb-6 rounded-lg border border-line bg-white p-5 shadow-[0_1px_0_rgba(10,10,10,0.03)] sm:p-6"
+    >
       <h2
         className="mb-5 flex items-center gap-3 font-black uppercase tracking-tight text-lg text-ink"
         data-cms-text={textKey}

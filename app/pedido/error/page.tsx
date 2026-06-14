@@ -60,7 +60,7 @@ export default async function ErrorPage({
 
   return (
     <>
-      <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4 py-12 text-center">
+      <main data-cms-page="order" className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4 py-12 text-center">
         <BernaLogo variant="dark" size="sm" src={logoUrl} />
 
         <div>

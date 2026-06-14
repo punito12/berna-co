@@ -31,6 +31,7 @@ export default async function ShippingPage({
       title={title}
       intro={intro}
       sections={sections}
+      dataCmsSection="legal.shipping"
     />
   );
 }

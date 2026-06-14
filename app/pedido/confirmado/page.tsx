@@ -47,7 +47,7 @@ export default async function ConfirmadoPage({
 
   if (!order) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4 text-center">
+      <main data-cms-page="order" className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4 text-center">
         <BernaLogo variant="dark" size="sm" />
         <p className="font-bold uppercase tracking-wide text-ink">
           No encontramos ese pedido.
@@ -73,7 +73,7 @@ export default async function ConfirmadoPage({
     <>
       {/* Clear cart now that payment succeeded (MP redirects here on success). */}
       <ClearCartOnMount />
-      <main className="min-h-screen bg-cream px-4 py-12 sm:py-16">
+      <main data-cms-page="order" className="min-h-screen bg-cream px-4 py-12 sm:py-16">
         <div className="mx-auto max-w-xl">
           <div className="text-center">
             <BernaLogo
