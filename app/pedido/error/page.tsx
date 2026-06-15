@@ -8,7 +8,7 @@ import {
   syncPaymentToOrder,
   isMpConfigured,
 } from "@/lib/mercadopago";
-import { getLogo, getSiteText, isPreview, loadCmsBundle } from "@/lib/cms";
+import { getSiteText, isPreview, loadCmsBundle } from "@/lib/cms";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 
@@ -47,7 +47,6 @@ export default async function ErrorPage({
   ]);
   const shortId = order ? order.id.slice(-6).toUpperCase() : null;
   const preview = (await isPreview()) || isCmsPreviewRequest(searchParams.preview);
-  const logoUrl = getLogo(cms, preview);
   const mpConfigured = isMpConfigured();
 
   // WhatsApp message to coordinate payment by another method.
@@ -61,7 +60,8 @@ export default async function ErrorPage({
   return (
     <>
       <main data-cms-page="order" className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4 py-12 text-center">
-        <BernaLogo variant="dark" size="sm" src={logoUrl} />
+        {/* Fondo beige: logo oscuro/original (no el del CMS, que es claro). */}
+        <BernaLogo variant="dark" size="sm" />
 
         <div>
           <p className="font-bold uppercase tracking-widest text-xs text-muted">

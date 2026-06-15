@@ -10,7 +10,7 @@ import {
 } from "@/lib/format";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { syncPaymentToOrder, isMpConfigured } from "@/lib/mercadopago";
-import { loadCmsBundle, getLogo, getSiteText, isPreview } from "@/lib/cms";
+import { loadCmsBundle, getSiteText, isPreview } from "@/lib/cms";
 import CmsFooter from "@/components/CmsFooter";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 
@@ -67,7 +67,6 @@ export default async function ConfirmadoPage({
   const preview = (await isPreview()) || isCmsPreviewRequest(searchParams.preview);
   const waTemplate = getSiteText(cms, "checkout.whatsapp.template", "", preview);
   const whatsappUrl = buildWhatsappUrl(order, waTemplate);
-  const logoUrl = getLogo(cms, preview);
 
   return (
     <>
@@ -76,12 +75,9 @@ export default async function ConfirmadoPage({
       <main data-cms-page="order" className="min-h-screen bg-cream px-4 py-12 sm:py-16">
         <div className="mx-auto max-w-xl">
           <div className="text-center">
-            <BernaLogo
-              variant="dark"
-              size="sm"
-              className="mx-auto"
-              src={logoUrl}
-            />
+            {/* Fondo beige: usamos el logo oscuro/original (no el del CMS, que
+                es la versión clara del hero y queda invisible acá). */}
+            <BernaLogo variant="dark" size="sm" className="mx-auto" />
             <p className="mt-8 font-bold uppercase tracking-widest text-xs text-muted">
               {getSiteText(cms, "checkout.success.title", "Pedido recibido", preview)}
             </p>

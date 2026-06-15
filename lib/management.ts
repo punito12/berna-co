@@ -257,6 +257,20 @@ export const SALE_CHANNEL_LABELS: Record<string, string> = {
   KIOSCO: "Kiosco",
 };
 
+// Medios de pago de la venta manual.
+export const SALE_PAYMENT_METHODS = [
+  "EFECTIVO",
+  "TRANSFERENCIA",
+  "MERCADO_PAGO",
+  "OTRO",
+] as const;
+export const SALE_PAYMENT_METHOD_LABELS: Record<string, string> = {
+  EFECTIVO: "Efectivo",
+  TRANSFERENCIA: "Transferencia",
+  MERCADO_PAGO: "Mercado Pago",
+  OTRO: "Otro",
+};
+
 export type SaleItemInput = {
   productId?: string; // optional: a free-text item has none
   productName: string; // already includes the empanado label when applicable
@@ -272,6 +286,10 @@ export type SaleInput = {
   customerName?: string; // free text when no customer chosen
   discountPct: number;
   notes?: string;
+  // Medio de pago (EFECTIVO | TRANSFERENCIA | MERCADO_PAGO | OTRO). Default efectivo.
+  paymentMethod?: string;
+  // true = pendiente de pago (no entra a caja hasta registrar el pago).
+  paymentPending?: boolean;
   items: SaleItemInput[];
 };
 
@@ -299,6 +317,11 @@ export async function createManualSale(input: SaleInput) {
   if (!SALE_CHANNELS.includes(input.channel as (typeof SALE_CHANNELS)[number])) {
     throw new Error("Canal de venta inválido.");
   }
+  const paymentMethod = SALE_PAYMENT_METHODS.includes(
+    input.paymentMethod as (typeof SALE_PAYMENT_METHODS)[number]
+  )
+    ? (input.paymentMethod as string)
+    : "EFECTIVO";
   const soldAt = new Date(input.soldAt);
   if (Number.isNaN(soldAt.getTime())) throw new Error("Fecha inválida.");
 
@@ -325,13 +348,15 @@ export async function createManualSale(input: SaleInput) {
   const customerName =
     customer?.name ?? input.customerName?.trim() ?? null;
 
-  // Cuenta corriente: wholesale customers default to credit (PENDING + due date
-  // in 30 days) and DON'T auto-collect into Caja — the income is recorded when
-  // a payment is registered. Everyone else is PAID and auto-collects as before.
-  const onCredit = customer?.type === "MAYORISTA";
-  const dueDate = onCredit
-    ? new Date(soldAt.getTime() + DEFAULT_DUE_DAYS * 86400000)
-    : null;
+  // Cuenta corriente / pendiente: la venta queda PENDING (sin ingreso a caja
+  // hasta registrar el pago) si el admin la marca pendiente O si el cliente es
+  // mayorista (cuenta corriente, vencimiento a 30 días). Si no, PAID y entra a
+  // caja como antes, reflejando el medio de pago elegido.
+  const onCredit = Boolean(input.paymentPending) || customer?.type === "MAYORISTA";
+  const dueDate =
+    customer?.type === "MAYORISTA"
+      ? new Date(soldAt.getTime() + DEFAULT_DUE_DAYS * 86400000)
+      : null;
 
   const sale = await prisma.manualSale.create({
     data: {
@@ -344,6 +369,7 @@ export async function createManualSale(input: SaleInput) {
       discountAmount,
       net,
       notes: input.notes?.trim() || null,
+      paymentMethod,
       paymentStatus: onCredit ? "PENDING" : "PAID",
       dueDate,
       items: {
@@ -381,6 +407,7 @@ export async function createManualSale(input: SaleInput) {
         net: sale.net,
         soldAt: sale.soldAt,
         label: customerName ?? SALE_CHANNEL_LABELS[input.channel] ?? "Venta",
+        method: paymentMethod,
       });
     } catch (e) {
       console.error("recordManualSaleIncome failed:", e);

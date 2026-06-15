@@ -5,7 +5,7 @@ import CmsFooter from "@/components/CmsFooter";
 import { BREADCRUMB_LABELS, formatPrice } from "@/lib/products";
 import { getPaymentConfig } from "@/lib/payment-config";
 import TransferInstructions from "@/components/TransferInstructions";
-import { getLogo, getSiteText, isPreview, loadCmsBundle } from "@/lib/cms";
+import { getSiteText, isPreview, loadCmsBundle } from "@/lib/cms";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 
 // Transfer instructions screen: total to transfer, alias/CBU to copy, and a big
@@ -47,19 +47,14 @@ export default async function TransferenciaPage({
 
   const shortId = order.id.slice(-6).toUpperCase();
   const preview = (await isPreview()) || isCmsPreviewRequest(searchParams.preview);
-  const logoUrl = getLogo(cms, preview);
 
   return (
     <>
       <main data-cms-page="order" className="min-h-screen bg-cream px-4 py-10 sm:py-14">
         <div className="mx-auto max-w-md">
           <div className="text-center">
-            <BernaLogo
-              variant="dark"
-              size="sm"
-              className="mx-auto"
-              src={logoUrl}
-            />
+            {/* Fondo beige: logo oscuro/original (no el del CMS, que es claro). */}
+            <BernaLogo variant="dark" size="sm" className="mx-auto" />
             <p className="mt-6 font-bold uppercase tracking-widest text-xs text-muted">
               Pedido #{shortId}
             </p>

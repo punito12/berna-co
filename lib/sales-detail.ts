@@ -6,6 +6,7 @@
 import { prisma } from "@/lib/db";
 import { INCOME_SOURCE_LABELS } from "@/lib/cash";
 import { BREADCRUMB_LABELS } from "@/lib/products";
+import { SALE_PAYMENT_METHOD_LABELS } from "@/lib/management";
 import {
   effectiveOrderPaymentStatus,
   orderPaymentBadgeTone,
@@ -224,16 +225,16 @@ export async function getSaleDetail(
     address: null,
     scheduledDate: null,
     scheduledSlot: null,
-    paymentMethod: null,
+    paymentMethod: s.paymentMethod,
     paymentMethodLabel:
-      s.paymentStatus === "PAID" ? "Cobrada" : "Cuenta corriente",
+      SALE_PAYMENT_METHOD_LABELS[s.paymentMethod] ?? s.paymentMethod ?? "Efectivo",
     paymentStatus: s.paymentStatus,
     paymentStatusLabel:
       s.paymentStatus === "PAID"
         ? "Pagado"
         : s.paymentStatus === "PARTIAL"
         ? "Parcial"
-        : "A cobrar",
+        : "Pendiente de pago",
     paymentTone: s.paymentStatus === "PAID" ? "success" : "warning",
     paymentNote: null,
     dueDate: s.dueDate,

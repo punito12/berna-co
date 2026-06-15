@@ -38,6 +38,14 @@ const CHANNELS = [
   { value: "WEB", label: "Web" },
 ];
 
+// Medios de pago de la venta manual (espeja SALE_PAYMENT_METHODS en lib/management).
+const PAYMENT_METHODS = [
+  { value: "EFECTIVO", label: "Efectivo" },
+  { value: "TRANSFERENCIA", label: "Transferencia" },
+  { value: "MERCADO_PAGO", label: "Mercado Pago" },
+  { value: "OTRO", label: "Otro" },
+];
+
 const inputClass =
   "w-full rounded border border-line bg-white px-3 py-2 text-ink outline-none focus:border-black";
 
@@ -80,6 +88,9 @@ export default function SaleForm({
   const [discount, setDiscount] = useState("0");
   const [discountTouched, setDiscountTouched] = useState(false);
   const [notes, setNotes] = useState("");
+  // Medio de pago + estado (pagado / pendiente de pago).
+  const [paymentMethod, setPaymentMethod] = useState("EFECTIVO");
+  const [paymentPending, setPaymentPending] = useState(false);
   const [lines, setLines] = useState<Line[]>([
     { productId: "", productName: "", breadcrumbType: "", quantity: "", unitPrice: "" },
   ]);
@@ -240,6 +251,8 @@ export default function SaleForm({
           customerName: customerId ? undefined : customerName || undefined,
           discountPct: Number(discount) || 0,
           notes: notes || undefined,
+          paymentMethod,
+          paymentPending,
           items,
         }),
       });
@@ -254,6 +267,8 @@ export default function SaleForm({
       setDiscount("0");
       setDiscountTouched(false);
       setNotes("");
+      setPaymentMethod("EFECTIVO");
+      setPaymentPending(false);
       setSavedMsg(true);
       router.refresh();
     } catch (e) {
@@ -586,6 +601,44 @@ export default function SaleForm({
             onChange={(e) => setNotes(e.target.value)}
             className={inputClass}
           />
+        </label>
+      </div>
+
+      {/* Medio de pago + estado */}
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+            Medio de pago
+          </span>
+          <select
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+            className={inputClass}
+          >
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+            Estado de pago
+          </span>
+          <select
+            value={paymentPending ? "PENDING" : "PAID"}
+            onChange={(e) => setPaymentPending(e.target.value === "PENDING")}
+            className={inputClass}
+          >
+            <option value="PAID">Pagado</option>
+            <option value="PENDING">Pendiente de pago</option>
+          </select>
+          {paymentPending && (
+            <span className="mt-1 block text-[11px] text-muted">
+              La venta queda pendiente y no entra a caja hasta registrar el pago.
+            </span>
+          )}
         </label>
       </div>
 

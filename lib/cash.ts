@@ -303,6 +303,9 @@ export async function recordManualSaleIncome(sale: {
   net: number;
   soldAt: Date;
   label: string;
+  // Medio de pago de la venta; define el `source` de la caja. OTRO (o ausente)
+  // cae a EFECTIVO porque la caja solo conoce EFECTIVO/MERCADO_PAGO/TRANSFERENCIA.
+  method?: string;
 }): Promise<void> {
   if (sale.net <= 0) return;
   const existing = await prisma.cashMovement.findFirst({
@@ -310,6 +313,11 @@ export async function recordManualSaleIncome(sale: {
     select: { id: true },
   });
   if (existing) return;
+  const source = INCOME_SOURCES.includes(
+    sale.method as (typeof INCOME_SOURCES)[number]
+  )
+    ? (sale.method as string)
+    : "EFECTIVO";
   await prisma.cashMovement.create({
     data: {
       date: sale.soldAt,
@@ -317,7 +325,7 @@ export async function recordManualSaleIncome(sale: {
       amount: sale.net,
       description: `Venta manual — ${sale.label}`,
       category: "Venta manual",
-      source: "EFECTIVO",
+      source,
       status: "AVAILABLE",
       saleId: sale.id,
     },

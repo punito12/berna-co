@@ -70,7 +70,8 @@ const STYLE_GROUPS: StyleGroup[] = [
   },
   {
     title: "Etiquetas de formas de pago",
-    applies: "Los chips de precio por efectivo / transferencia en cada producto.",
+    applies:
+      "El badge de precio (precio web) y los chips de precio por efectivo / transferencia en cada producto.",
     fields: [
       { key: "chipBg", label: "Fondo" },
       { key: "chipBorder", label: "Borde" },

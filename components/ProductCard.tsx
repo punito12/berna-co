@@ -197,9 +197,8 @@ export default function ProductCard({
     </p>
   );
 
-  // PRECIO EFECTIVO/TRANSFERENCIA por producto. Si está cargado (y difiere del
-  // precio web mostrado), mostramos el precio final efectivo/transferencia y NO
-  // el viejo recuadro de "% OFF" (para no descontar dos veces / no confundir).
+  // Precio principal = PRECIO WEB (lo que se muestra en el badge). El precio
+  // efectivo/transferencia (precio base) va como línea aparte debajo, sin badge.
   const webShown =
     selPromoPercent > 0
       ? promoPriceFor(product, selected)
@@ -350,22 +349,35 @@ export default function ProductCard({
 
           {/* Price + CTA */}
           <div className="mt-auto pt-3 sm:pt-5">
-            {showCashPrice && (
-              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-muted sm:text-[11px]">
-                Precio web
-              </p>
-            )}
-            {priceDisplay}
-
-            {showCashPrice && (
-              <p className="mt-1 flex min-w-0 flex-wrap items-baseline gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wide text-muted sm:text-[11px]">
-                  Efectivo o transferencia
-                </span>
-                <span className="font-black text-base text-price sm:text-lg">
-                  {formatPrice(cashShown)}
-                </span>
-              </p>
+            {showCashPrice ? (
+              <>
+                {/* Precio PRINCIPAL = precio web, solo el número, DENTRO de un
+                    badge editable. Usa los tokens de "Etiquetas de formas de
+                    pago" (chip-bg/chip-border/chip-text) de Marca y estilo. */}
+                <div>
+                  <span
+                    data-cms-style="chip"
+                    data-cms-element="card-web-price-badge"
+                    style={chipStyle}
+                    className="inline-flex max-w-full items-baseline border border-chip-border bg-chip-bg px-3 py-1.5 text-chip-text"
+                  >
+                    <span className="font-black text-xl sm:text-2xl">
+                      {formatPrice(webShown)}
+                    </span>
+                  </span>
+                </div>
+                {/* Precio efectivo/transferencia: abajo, sin badge (como antes). */}
+                <p className="mt-1.5 flex min-w-0 flex-wrap items-baseline gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-muted sm:text-[11px]">
+                    Efectivo o transferencia
+                  </span>
+                  <span className="font-black text-base text-price sm:text-lg">
+                    {formatPrice(cashShown)}
+                  </span>
+                </p>
+              </>
+            ) : (
+              priceDisplay
             )}
 
             {payDiscountPct > 0 && (

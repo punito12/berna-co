@@ -961,11 +961,6 @@ export default function CheckoutPage() {
               subtitle={ct("checkout.step4.cash_subtitle", "Pagás cuando te llega el pedido")}
               titleKey="checkout.step4.cash_label"
               subtitleKey="checkout.step4.cash_subtitle"
-              badge={
-                payCfg && payCfg.efectivoDiscountPercent > 0
-                  ? `${payCfg.efectivoDiscountPercent}% OFF`
-                  : undefined
-              }
             />
             <PaymentCard
               active={paymentMethod === "TRANSFERENCIA"}
@@ -977,11 +972,6 @@ export default function CheckoutPage() {
               )}
               titleKey="checkout.step4.transfer_label"
               subtitleKey="checkout.step4.transfer_subtitle"
-              badge={
-                payCfg && payCfg.transferenciaDiscountPercent > 0
-                  ? `${payCfg.transferenciaDiscountPercent}% OFF`
-                  : undefined
-              }
             />
             <PaymentCard
               active={paymentMethod === "MERCADOPAGO"}

@@ -271,6 +271,8 @@ model ManualSale {
 
   notes String?
 
+  // Medio de pago de la venta manual (lo elige el admin al cargarla).
+  paymentMethod String @default("EFECTIVO") // EFECTIVO | TRANSFERENCIA | MERCADO_PAGO | OTRO
   // Cuenta corriente: PAID por defecto; los mayoristas nacen PENDING a 30 días.
   paymentStatus String    @default("PAID") // PAID | PARTIAL | PENDING
   dueDate       DateTime? // vencimiento (cuenta corriente)

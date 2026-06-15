@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import BernaLogo from "@/components/BernaLogo";
 import CmsFooter from "@/components/CmsFooter";
 import { syncPaymentToOrder, isMpConfigured } from "@/lib/mercadopago";
-import { getLogo, getSiteText, isPreview, loadCmsBundle } from "@/lib/cms";
+import { getSiteText, isPreview, loadCmsBundle } from "@/lib/cms";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 
 // Mercado Pago "pending" return: the payment is being processed (e.g. cash at a
@@ -36,12 +36,12 @@ export default async function PendientePage({
   ]);
   const shortId = order ? order.id.slice(-6).toUpperCase() : null;
   const preview = (await isPreview()) || isCmsPreviewRequest(searchParams.preview);
-  const logoUrl = getLogo(cms, preview);
 
   return (
     <>
       <main data-cms-page="order" className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream px-4 py-12 text-center">
-        <BernaLogo variant="dark" size="sm" src={logoUrl} />
+        {/* Fondo beige: logo oscuro/original (no el del CMS, que es claro). */}
+        <BernaLogo variant="dark" size="sm" />
         <div>
           <p className="font-bold uppercase tracking-widest text-xs text-muted">
             {getSiteText(cms, "checkout.pending.eyebrow", "Pago en proceso", preview)}
