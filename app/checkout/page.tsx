@@ -12,6 +12,34 @@ import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 import type { DeliveryOptions } from "@/lib/delivery";
 
 type DeliveryType = "DELIVERY" | "PICKUP";
+type LocalityScheduleDay = {
+  dayOfWeek: number;
+  slots: { from: string; to: string }[];
+};
+type PublicManualLocality = {
+  name: string;
+  schedule: LocalityScheduleDay[];
+  scheduleOptions: DeliveryOptions;
+};
+
+function slotLabel(slot: { from: string; to: string }) {
+  return `${slot.from}–${slot.to}`;
+}
+
+function slotsForSelectedDate(
+  dateIso: string | null,
+  fallbackSlots: DeliveryOptions["slots"],
+  schedule: LocalityScheduleDay[]
+): DeliveryOptions["slots"] {
+  if (!dateIso || schedule.length === 0) return fallbackSlots;
+  const dayOfWeek = new Date(`${dateIso}T12:00:00`).getDay();
+  const day = schedule.find((d) => d.dayOfWeek === dayOfWeek);
+  if (!day) return [];
+  return day.slots.map((slot) => {
+    const label = slotLabel(slot);
+    return { id: label, label };
+  });
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -88,7 +116,9 @@ export default function CheckoutPage() {
   // --- delivery validation mode (manual localities vs map) ---
   // Default "map" preserves the current behavior until the config loads.
   const [deliveryMode, setDeliveryMode] = useState<"map" | "manual">("map");
-  const [manualLocalities, setManualLocalities] = useState<string[]>([]);
+  const [manualLocalities, setManualLocalities] = useState<
+    PublicManualLocality[]
+  >([]);
   const [pickupAddress, setPickupAddress] = useState(
     "Aristóbulo del Valle 5155, Benavídez"
   );
@@ -99,7 +129,22 @@ export default function CheckoutPage() {
         setDeliveryMode(d.mode === "manual" ? "manual" : "map");
         setManualLocalities(
           Array.isArray(d.localities)
-            ? d.localities.map((l: { name: string }) => l.name).filter(Boolean)
+            ? d.localities
+                .map((l: Partial<PublicManualLocality>) => ({
+                  name: typeof l.name === "string" ? l.name : "",
+                  schedule: Array.isArray(l.schedule) ? l.schedule : [],
+                  scheduleOptions: {
+                    enabledWeekdays: Array.isArray(
+                      l.scheduleOptions?.enabledWeekdays
+                    )
+                      ? l.scheduleOptions.enabledWeekdays
+                      : [],
+                    slots: Array.isArray(l.scheduleOptions?.slots)
+                      ? l.scheduleOptions.slots
+                      : [],
+                  },
+                }))
+                .filter((l: PublicManualLocality) => l.name)
             : []
         );
         if (typeof d.pickupAddress === "string" && d.pickupAddress.trim())
@@ -334,24 +379,23 @@ export default function CheckoutPage() {
     setSlot(null);
   }
 
+  const selectedManualLocality =
+    deliveryType === "DELIVERY" && deliveryMode === "manual"
+      ? manualLocalities.find(
+          (l) => l.name.toLowerCase() === locality.trim().toLowerCase()
+        ) ?? null
+      : null;
+
   useEffect(() => {
     resetZone();
     // Which schedule to load up-front:
     //  - PICKUP: always the PICKUP schedule.
-    //  - DELIVERY + manual mode: the DELIVERY schedule (no zone verification —
-    //    the locality dropdown replaces it).
     //  - DELIVERY + map mode: nothing here; loaded after verifying the address.
-    const scheduleType =
-      deliveryType === "PICKUP"
-        ? "PICKUP"
-        : deliveryMode === "manual"
-        ? "DELIVERY"
-        : null;
-    if (!scheduleType) return;
+    if (deliveryType !== "PICKUP") return;
 
     let cancelled = false;
     setLoadingPickupOptions(true);
-    fetch(`/api/delivery-options?type=${scheduleType}`)
+    fetch("/api/delivery-options?type=PICKUP")
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
@@ -373,6 +417,52 @@ export default function CheckoutPage() {
     // Resetting schedule when the delivery type / mode changes is intentional.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliveryType, deliveryMode]);
+
+  useEffect(() => {
+    if (deliveryType !== "DELIVERY" || deliveryMode !== "manual") return;
+    if (!locality.trim()) {
+      setOptions(null);
+      setDateIso(null);
+      setSlot(null);
+      return;
+    }
+    const nextOptions =
+      selectedManualLocality?.scheduleOptions ?? {
+        enabledWeekdays: [],
+        slots: [],
+      };
+    setOptions(nextOptions);
+    setDateIso((current) => {
+      if (!current) return current;
+      const day = new Date(`${current}T12:00:00`).getDay();
+      return nextOptions.enabledWeekdays.includes(day) ? current : null;
+    });
+    setSlot((current) => {
+      if (!current) return current;
+      return nextOptions.slots.some((s) => s.label === current) ? current : null;
+    });
+  }, [deliveryType, deliveryMode, locality, selectedManualLocality]);
+
+  useEffect(() => {
+    if (deliveryType !== "DELIVERY" || deliveryMode !== "manual" || !options) {
+      return;
+    }
+    const validSlots = slotsForSelectedDate(
+      dateIso,
+      options.slots,
+      selectedManualLocality?.schedule ?? []
+    );
+    if (slot && !validSlots.some((s) => s.label === slot)) {
+      setSlot(null);
+    }
+  }, [
+    dateIso,
+    deliveryType,
+    deliveryMode,
+    options,
+    selectedManualLocality,
+    slot,
+  ]);
 
   // Geocodes the structured address and checks which zone polygon it lands in.
   // If covered, loads that zone's days + slots; otherwise shows the right msg.
@@ -426,13 +516,16 @@ export default function CheckoutPage() {
       if (deliveryMode === "manual") {
         if (!locality.trim())
           return setError("Seleccioná una localidad para continuar con el envío.");
-        const enabled = manualLocalities.some(
-          (l) => l.toLowerCase() === locality.trim().toLowerCase()
-        );
+        const enabled = Boolean(selectedManualLocality);
         if (!enabled)
           return setError(
             `Por el momento no realizamos envíos a esa localidad. Podés elegir pasar a retirar por ${pickupAddress}.`
           );
+        if (options && options.enabledWeekdays.length === 0) {
+          return setError(
+            "No hay días de entrega configurados para esta localidad. Podés elegir pasar a retirar o consultarnos por WhatsApp."
+          );
+        }
         if (!street.trim())
           return setError(ct("checkout.validation.street", "Ingresá la calle y número."));
       } else {
@@ -712,8 +805,8 @@ export default function CheckoutPage() {
                 >
                   <option value="">Elegí tu localidad…</option>
                   {manualLocalities.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc}
+                    <option key={loc.name} value={loc.name}>
+                      {loc.name}
                     </option>
                   ))}
                 </select>
@@ -883,6 +976,8 @@ export default function CheckoutPage() {
                     "checkout.step3.pickup_select_first",
                     "Elegí un día y horario disponible para pasar a retirar."
                   )
+                : deliveryMode === "manual"
+                ? "Elegí una localidad para ver los días y horarios de entrega."
                 : ct(
                     "checkout.step3.verify_first",
                     "Primero verificá tu zona de entrega (paso 2) para ver los días disponibles."
@@ -896,6 +991,8 @@ export default function CheckoutPage() {
                     "checkout.step3.no_pickup_days",
                     "No hay días de retiro configurados por el momento."
                   )
+                : deliveryMode === "manual"
+                ? "No hay días de entrega configurados para esta localidad. Podés elegir pasar a retirar o consultarnos por WhatsApp."
                 : ct(
                     "checkout.step3.no_days",
                     "Tu zona no tiene días de entrega configurados por el momento."
@@ -917,13 +1014,21 @@ export default function CheckoutPage() {
                   <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
                     {ct("checkout.step3.slot_label", "Horario")}
                   </p>
-                  {options.slots.length === 0 ? (
+                  {slotsForSelectedDate(
+                    dateIso,
+                    options.slots,
+                    selectedManualLocality?.schedule ?? []
+                  ).length === 0 ? (
                     <p className="text-sm text-muted">
                       {ct("checkout.step3.no_slots", "No hay horarios disponibles por ahora.")}
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {options.slots.map((s) => (
+                      {slotsForSelectedDate(
+                        dateIso,
+                        options.slots,
+                        selectedManualLocality?.schedule ?? []
+                      ).map((s) => (
                         <button
                           key={s.id}
                           type="button"

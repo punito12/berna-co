@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { DeliveryConfig, LocalityConfig } from "@/lib/delivery-config";
+import type {
+  DeliveryConfig,
+  LocalityConfig,
+  LocalityScheduleDay,
+} from "@/lib/delivery-config";
 
 const inputClass =
   "w-full rounded border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-black";
+const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 export default function DeliveryConfigForm({
   initial,
@@ -29,11 +34,74 @@ export default function DeliveryConfigForm({
   function addLocality() {
     setLocalities((prev) => [
       ...prev,
-      { name: "", enabled: true, shippingCost: 0 },
+      { name: "", enabled: true, shippingCost: 0, schedule: [] },
     ]);
   }
   function removeLocality(i: number) {
     setLocalities((prev) => prev.filter((_, idx) => idx !== i));
+  }
+  function setLocalitySchedule(i: number, schedule: LocalityScheduleDay[]) {
+    setLocality(i, { schedule });
+  }
+  function toggleDay(i: number, dayOfWeek: number, active: boolean) {
+    const current = localities[i]?.schedule ?? [];
+    if (active) {
+      if (current.some((day) => day.dayOfWeek === dayOfWeek)) return;
+      setLocalitySchedule(i, [
+        ...current,
+        { dayOfWeek, slots: [{ from: "10:00", to: "14:00" }] },
+      ]);
+      return;
+    }
+    setLocalitySchedule(
+      i,
+      current.filter((day) => day.dayOfWeek !== dayOfWeek)
+    );
+  }
+  function addSlot(i: number, dayOfWeek: number) {
+    const current = localities[i]?.schedule ?? [];
+    setLocalitySchedule(
+      i,
+      current.map((day) =>
+        day.dayOfWeek === dayOfWeek
+          ? { ...day, slots: [...day.slots, { from: "10:00", to: "14:00" }] }
+          : day
+      )
+    );
+  }
+  function updateSlot(
+    i: number,
+    dayOfWeek: number,
+    slotIndex: number,
+    patch: { from?: string; to?: string }
+  ) {
+    const current = localities[i]?.schedule ?? [];
+    setLocalitySchedule(
+      i,
+      current.map((day) =>
+        day.dayOfWeek === dayOfWeek
+          ? {
+              ...day,
+              slots: day.slots.map((slot, idx) =>
+                idx === slotIndex ? { ...slot, ...patch } : slot
+              ),
+            }
+          : day
+      )
+    );
+  }
+  function removeSlot(i: number, dayOfWeek: number, slotIndex: number) {
+    const current = localities[i]?.schedule ?? [];
+    setLocalitySchedule(
+      i,
+      current
+        .map((day) =>
+          day.dayOfWeek === dayOfWeek
+            ? { ...day, slots: day.slots.filter((_, idx) => idx !== slotIndex) }
+            : day
+        )
+        .filter((day) => day.slots.length > 0)
+    );
   }
 
   async function save() {
@@ -51,6 +119,7 @@ export default function DeliveryConfigForm({
               name: l.name.trim(),
               enabled: l.enabled,
               shippingCost: Number(l.shippingCost) || 0,
+              schedule: l.schedule ?? [],
             }))
             .filter((l) => l.name),
         }),
@@ -168,6 +237,129 @@ export default function DeliveryConfigForm({
                   >
                     Quitar
                   </button>
+                </div>
+                <div className="col-span-12 rounded-lg border border-line bg-white p-3">
+                  <div className="mb-3">
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-muted">
+                      Días y horarios de entrega
+                    </span>
+                    <p className="mt-1 text-xs leading-5 text-muted">
+                      Si no configurás horarios propios, esta localidad usa el
+                      horario global de envío.
+                    </p>
+                  </div>
+                  <div className="mb-4">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted">
+                      Días de entrega
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {DAY_LABELS.map((label, dayOfWeek) => {
+                        const active = (l.schedule ?? []).some(
+                          (day) => day.dayOfWeek === dayOfWeek
+                        );
+                        return (
+                          <label
+                            key={dayOfWeek}
+                            className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold ${
+                              active
+                                ? "border-ink bg-ink text-white"
+                                : "border-line bg-cream/50 text-ink"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={active}
+                              onChange={(e) =>
+                                toggleDay(i, dayOfWeek, e.target.checked)
+                              }
+                              className="sr-only"
+                            />
+                            {label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {(l.schedule ?? []).length === 0 ? (
+                    <p className="rounded border border-dashed border-line px-3 py-3 text-sm text-muted">
+                      Sin horarios configurados.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {[...(l.schedule ?? [])]
+                        .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+                        .map((day) => (
+                          <div
+                            key={day.dayOfWeek}
+                            className="rounded border border-line bg-cream/30 p-3"
+                          >
+                            <div className="mb-2 flex items-center justify-between gap-3">
+                              <p className="text-xs font-black uppercase tracking-wide text-ink">
+                                {DAY_LABELS[day.dayOfWeek]}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => addSlot(i, day.dayOfWeek)}
+                                className="text-[10px] font-bold uppercase tracking-widest text-ink hover:text-muted"
+                              >
+                                Agregar horario
+                              </button>
+                            </div>
+                            <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted">
+                              Horarios disponibles
+                            </p>
+                            <div className="space-y-2">
+                              {day.slots.map((slot, slotIndex) => (
+                                <div
+                                  key={slotIndex}
+                                  className="grid grid-cols-[1fr_1fr_auto] items-end gap-2"
+                                >
+                                  <label>
+                                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">
+                                      Desde
+                                    </span>
+                                    <input
+                                      type="time"
+                                      value={slot.from}
+                                      onChange={(e) =>
+                                        updateSlot(i, day.dayOfWeek, slotIndex, {
+                                          from: e.target.value,
+                                        })
+                                      }
+                                      className={inputClass}
+                                    />
+                                  </label>
+                                  <label>
+                                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">
+                                      Hasta
+                                    </span>
+                                    <input
+                                      type="time"
+                                      value={slot.to}
+                                      onChange={(e) =>
+                                        updateSlot(i, day.dayOfWeek, slotIndex, {
+                                          to: e.target.value,
+                                        })
+                                      }
+                                      className={inputClass}
+                                    />
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeSlot(i, day.dayOfWeek, slotIndex)
+                                    }
+                                    className="pb-2 text-[10px] font-bold uppercase tracking-widest text-muted hover:text-red-600"
+                                  >
+                                    Quitar
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

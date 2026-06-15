@@ -24,7 +24,7 @@ import {
   discountPercentFor,
   normalizePaymentMethod,
 } from "@/lib/payment-config";
-import { getDeliveryConfig, findLocality } from "@/lib/delivery-config";
+import { getDeliveryConfig, findLocality, slotLabel } from "@/lib/delivery-config";
 
 // Thrown for invalid input; the API route turns this into a 400 with the message.
 export class OrderValidationError extends Error {}
@@ -141,16 +141,40 @@ export async function createOrder(
     throw new OrderValidationError("La fecha de entrega ya pasó.");
   }
 
-  // The chosen time slot must be an active one (same for all zones).
-  const activeSlot = await prisma.deliverySlot.findFirst({
-    where: {
-      label: input.scheduledSlot,
-      available: true,
-      scheduleType: input.deliveryType,
-    },
-  });
-  if (!activeSlot) {
-    throw new OrderValidationError("Ese horario no está disponible.");
+  const manualLocality =
+    input.deliveryType === "DELIVERY" && deliveryMode === "manual"
+      ? findLocality(deliveryConfig, locality ?? "")
+      : undefined;
+
+  // The chosen time slot must be active. Manual localities with their own
+  // schedule validate against that schedule; legacy localities without schedule
+  // keep using the global DELIVERY fallback.
+  if (manualLocality?.schedule.length) {
+    const scheduleDay = manualLocality.schedule.find(
+      (day) => day.dayOfWeek === scheduledDate.getDay()
+    );
+    if (!scheduleDay) {
+      throw new OrderValidationError(
+        "Ese día no hacemos entregas en esa localidad."
+      );
+    }
+    const validSlots = new Set(scheduleDay.slots.map((slot) => slotLabel(slot)));
+    if (!validSlots.has(input.scheduledSlot)) {
+      throw new OrderValidationError(
+        "Ese horario no está disponible para esa localidad."
+      );
+    }
+  } else {
+    const activeSlot = await prisma.deliverySlot.findFirst({
+      where: {
+        label: input.scheduledSlot,
+        available: true,
+        scheduleType: input.deliveryType,
+      },
+    });
+    if (!activeSlot) {
+      throw new OrderValidationError("Ese horario no está disponible.");
+    }
   }
 
   // The chosen weekday must be enabled for the delivery zone of this address.
@@ -168,18 +192,21 @@ export async function createOrder(
     // NOT geocode or test zone polygons here — that's exactly the gate we want
     // to bypass. The day is validated against the DELIVERY schedule (the same
     // one the checkout shows), and shipping comes from the locality config.
-    const enabledDay = await prisma.availableDeliveryDay.findFirst({
-      where: {
-        dayOfWeek: scheduledDate.getDay(),
-        available: true,
-        scheduleType: "DELIVERY",
-      },
-    });
-    if (!enabledDay) {
-      throw new OrderValidationError("Ese día no hacemos entregas.");
+    if (!manualLocality?.schedule.length) {
+      const enabledDay = await prisma.availableDeliveryDay.findFirst({
+        where: {
+          dayOfWeek: scheduledDate.getDay(),
+          available: true,
+          scheduleType: "DELIVERY",
+        },
+      });
+      if (!enabledDay) {
+        throw new OrderValidationError("Ese día no hacemos entregas.");
+      }
     }
-    const match = findLocality(deliveryConfig, locality ?? "");
-    manualShipping = match ? Math.max(0, Math.round(match.shippingCost)) : 0;
+    manualShipping = manualLocality
+      ? Math.max(0, Math.round(manualLocality.shippingCost))
+      : 0;
   } else if (input.deliveryType === "DELIVERY") {
     // Coverage is decided by geocoding the structured address and testing the
     // zone polygons. We re-geocode server-side (don't trust client coordinates).
