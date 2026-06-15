@@ -16,7 +16,13 @@ function pesos(n: number): string {
   }).format(n);
 }
 function shortDate(d: Date): string {
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+  // Hora de Argentina: evita que una fecha guardada al mediodía se muestre con
+  // el día corrido cuando el server está en UTC.
+  return d.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Argentina/Buenos_Aires",
+  });
 }
 
 const CUSTOMER_TYPES = [

@@ -243,6 +243,21 @@ const SEO_SHARE_LABELS: Record<string, string> = {
   "seo.share.description": "Descripción al compartir (opcional)",
 };
 
+// ---- Páginas de ingredientes (reusa keys SiteText existentes, categoría "home") ----
+function ingredientLabels(prefix: "huevos" | "pollo" | "peceto"): Record<string, string> {
+  const title =
+    prefix === "huevos"
+      ? "Huevos"
+      : prefix === "pollo"
+      ? "Pollo Pastoril"
+      : "Peceto de Pastura";
+  return {
+    [`ingredient.${prefix}.title`]: `${title} · título principal`,
+    [`ingredient.${prefix}.intro`]: `${title} · bajada`,
+    [`ingredient.${prefix}.body`]: `${title} · texto principal`,
+  };
+}
+
 // ---- Legales (reusa keys SiteText existentes, categoría "legal") ----
 // Cada página legal tiene 3 keys: título, intro y contenido (multilínea).
 function legalLabels(slug: string): Record<string, string> {
@@ -592,6 +607,29 @@ const SECTION_EDITORS: Record<string, SectionEditorKind> = {
     text: "El sitemap (/sitemap.xml), el robots (/robots.txt) y las URLs canónicas se generan automáticamente y no se editan acá. Que Google indexe los cambios puede tardar (Search Console).",
     href: "/admin/editor/seo",
     hrefLabel: "Modo avanzado",
+  },
+
+  // ---- Ingredientes ----
+  "ingredient.huevos": {
+    kind: "text",
+    intro:
+      "Textos de la página /ingredientes/huevos. Podés editar palabras y también fuente, negrita, itálica, color y tamaño desde “Opciones avanzadas de diseño”.",
+    keys: Object.keys(ingredientLabels("huevos")),
+    labels: ingredientLabels("huevos"),
+  },
+  "ingredient.pollo": {
+    kind: "text",
+    intro:
+      "Textos de la página /ingredientes/pollo-pastoril. Podés editar palabras y también fuente, negrita, itálica, color y tamaño desde “Opciones avanzadas de diseño”.",
+    keys: Object.keys(ingredientLabels("pollo")),
+    labels: ingredientLabels("pollo"),
+  },
+  "ingredient.peceto": {
+    kind: "text",
+    intro:
+      "Textos de la página /ingredientes/peceto-de-pastura. Podés editar palabras y también fuente, negrita, itálica, color y tamaño desde “Opciones avanzadas de diseño”.",
+    keys: Object.keys(ingredientLabels("peceto")),
+    labels: ingredientLabels("peceto"),
   },
 
   // ---- Legales ----
@@ -1137,6 +1175,7 @@ export default function VisualSectionEditor({
     const productsSection = catalogDesignWhich
       ? sections.find((s) => s.key === "home.products")
       : null;
+    const allowTextStyle = sectionId.startsWith("ingredient.");
     if (rows.length === 0 && !catalogDesignWhich) {
       return (
         <InfoPanel
@@ -1166,7 +1205,8 @@ export default function VisualSectionEditor({
             styleDraft={t.styleDraft}
             maxLength={t.maxLength}
             multiline={t.maxLength > 80}
-            allowStyle={false}
+            allowStyle={allowTextStyle}
+            richText={allowTextStyle}
           />
         ))}
         {editor.note && (

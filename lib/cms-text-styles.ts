@@ -8,14 +8,18 @@ export type CmsTextStyle = {
   italic?: boolean;
   underline?: boolean;
   uppercase?: boolean;
+  color?: string;
+  textAlign?: string;
   lineHeight?: string;
   letterSpacing?: string;
 };
 
 const ALLOWED_WEIGHTS = new Set(["300", "400", "500", "600", "700", "800", "900"]);
+const ALLOWED_ALIGN = new Set(["left", "center", "right"]);
 const SIZE_RE = /^\d{1,3}(\.\d{1,2})?(px|rem|em)$/;
 const LINE_HEIGHT_RE = /^(\d{1,2}(\.\d{1,2})?|\d{1,3}(\.\d{1,2})?px)$/;
 const LETTER_SPACING_RE = /^-?\d{1,2}(\.\d{1,2})?(px|em|rem)$/;
+const COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 function parseObject(raw: string): Record<string, unknown> {
   try {
@@ -52,6 +56,12 @@ export function sanitizeTextStyle(input: Record<string, unknown>): CmsTextStyle 
   if (input.italic === true) out.italic = true;
   if (input.underline === true) out.underline = true;
   if (input.uppercase === true) out.uppercase = true;
+  if (typeof input.color === "string" && COLOR_RE.test(input.color)) {
+    out.color = input.color;
+  }
+  if (typeof input.textAlign === "string" && ALLOWED_ALIGN.has(input.textAlign)) {
+    out.textAlign = input.textAlign;
+  }
   if (typeof input.lineHeight === "string" && LINE_HEIGHT_RE.test(input.lineHeight)) {
     out.lineHeight = input.lineHeight;
   }
@@ -77,6 +87,8 @@ function declarations(style: CmsTextStyle, mobile = false): string {
     style.italic ? "font-style:italic" : "",
     style.underline ? "text-decoration:underline" : "",
     style.uppercase ? "text-transform:uppercase" : "",
+    style.color ? `color:${style.color}` : "",
+    style.textAlign ? `text-align:${style.textAlign}` : "",
     style.lineHeight ? `line-height:${style.lineHeight}` : "",
     style.letterSpacing ? `letter-spacing:${style.letterSpacing}` : "",
   ]
@@ -97,6 +109,8 @@ export function cmsTextStyleToInlineCss(
   if (style.italic) css.fontStyle = "italic";
   if (style.underline) css.textDecoration = "underline";
   if (style.uppercase) css.textTransform = "uppercase";
+  if (style.color) css.color = style.color;
+  if (style.textAlign) css.textAlign = style.textAlign;
   if (style.lineHeight) css.lineHeight = style.lineHeight;
   if (style.letterSpacing) css.letterSpacing = style.letterSpacing;
   return css;

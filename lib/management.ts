@@ -530,7 +530,8 @@ export type UnifiedSale = {
   id: string;
   kind: "ORDER" | "MANUAL"; // which table it came from
   origin: string; // WEB | WHATSAPP | MAYORISTA | KIOSCO
-  date: Date;
+  date: Date; // fecha efectiva: soldAt (manual) / createdAt (web)
+  createdAt: Date; // alta del registro; desempata el orden cuando date empata
   customerName: string;
   customerType: string | null; // MINORISTA | MAYORISTA | KIOSCO
   total: number;
@@ -616,6 +617,7 @@ export async function listSalesUnified(
       kind: "ORDER",
       origin: "WEB",
       date: o.createdAt,
+      createdAt: o.createdAt,
       customerName: o.customerName,
       customerType: o.customer?.type ?? null,
       total: o.total,
@@ -632,6 +634,7 @@ export async function listSalesUnified(
       kind: "MANUAL",
       origin: s.channel,
       date: s.soldAt,
+      createdAt: s.createdAt,
       customerName: s.customerName ?? "Sin nombre",
       customerType: s.customer?.type ?? null,
       total: s.net,
@@ -646,7 +649,14 @@ export async function listSalesUnified(
   // Status filter applies AFTER normalization.
   if (filters.status) rows = rows.filter((r) => r.status === filters.status);
 
-  rows.sort((a, b) => b.date.getTime() - a.date.getTime());
+  // Más nuevo primero por fecha efectiva (soldAt / createdAt). Si dos filas
+  // tienen la misma fecha efectiva (p. ej. varias ventas manuales del mismo
+  // día), desempata por createdAt (el alta real) descendente.
+  rows.sort((a, b) => {
+    const byDate = b.date.getTime() - a.date.getTime();
+    if (byDate !== 0) return byDate;
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
   return rows.slice(0, limit);
 }
 

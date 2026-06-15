@@ -68,7 +68,12 @@ export default function SaleForm({
   barrios: BarrioOption[];
 }) {
   const router = useRouter();
-  const today = new Date().toISOString().slice(0, 10);
+  // "Hoy" en hora de Argentina (no UTC). Usar toISOString() daba el día UTC, que
+  // de noche (UTC−3) ya es mañana → la venta cargaba con la fecha del día
+  // siguiente. "en-CA" formatea como yyyy-mm-dd.
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  });
 
   const [soldAt, setSoldAt] = useState(today);
   const [channel, setChannel] = useState("WHATSAPP");

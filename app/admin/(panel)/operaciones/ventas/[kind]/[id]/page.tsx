@@ -18,6 +18,9 @@ function longDate(d: Date): string {
     day: "numeric",
     month: "long",
     year: "numeric",
+    // Hora de Argentina, para que coincida con la lista de ventas y no corra el
+    // día cuando el server está en UTC.
+    timeZone: "America/Argentina/Buenos_Aires",
   });
 }
 

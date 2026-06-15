@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import BernaLogo from "@/components/BernaLogo";
 import CmsFooter from "@/components/CmsFooter";
+import RichText from "@/components/RichText";
 import WhatsappFloat from "@/components/WhatsappFloat";
 import {
-  cmsTextAttrs,
   getSiteText,
   isPreview,
   loadCmsBundle,
@@ -15,6 +15,7 @@ import {
   INGREDIENT_PAGES,
 } from "@/lib/ingredients";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
+import { cmsUsedGoogleFontsUrl } from "@/lib/cms-fonts";
 import { absoluteUrl } from "@/lib/seo";
 import Link from "next/link";
 
@@ -58,6 +59,14 @@ export default async function IngredientDetailPage({
   const cms = await loadCmsBundle();
   const preview = (await isPreview()) || isCmsPreviewRequest(searchParams?.preview);
   const previewTextCss = preview ? textStylesToCss(cms, true) : "";
+  const previewFontsUrl = preview
+    ? cmsUsedGoogleFontsUrl([
+        cms.content?.typographyDraft,
+        ...Array.from(cms.texts.values()).map((text) => text.styleDraft),
+        ...cms.sections.map((section) => section.configDraft),
+      ])
+    : "";
+  const sectionKey = ingredient.titleKey.replace(".title", "");
   const title = getSiteText(
     cms,
     ingredient.titleKey,
@@ -78,7 +87,18 @@ export default async function IngredientDetailPage({
   );
 
   return (
-    <main className="min-h-screen bg-cream text-ink">
+    <main className="min-h-screen bg-cream text-ink" data-cms-page="ingredientes">
+      {previewFontsUrl && (
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin=""
+          />
+          <link href={previewFontsUrl} rel="stylesheet" />
+        </>
+      )}
       {previewTextCss && (
         <style dangerouslySetInnerHTML={{ __html: previewTextCss }} />
       )}
@@ -100,33 +120,33 @@ export default async function IngredientDetailPage({
         </div>
       </header>
 
-      <section className="mx-auto max-w-5xl px-4 py-12 sm:py-16">
+      <section
+        className="mx-auto max-w-5xl px-4 py-12 sm:py-16"
+        data-cms-section={sectionKey}
+      >
         <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
           <div>
-            <h1
+            <RichText
+              text={title}
+              textKey={ingredient.titleKey}
               className="max-w-3xl font-display text-4xl font-black leading-none sm:text-6xl"
-              {...cmsTextAttrs(ingredient.titleKey)}
-            >
-              {title}
-            </h1>
-            <p
+            />
+            <RichText
+              text={intro}
+              textKey={ingredient.introKey}
               className="mt-6 max-w-2xl text-base leading-7 text-ink/70 sm:text-lg"
-              {...cmsTextAttrs(ingredient.introKey)}
-            >
-              {intro}
-            </p>
+            />
           </div>
 
           <aside className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm sm:p-6">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-muted">
               En nuestras preparaciones
             </p>
-            <p
-              className="mt-4 whitespace-pre-line text-sm leading-7 text-ink/75 sm:text-base"
-              {...cmsTextAttrs(ingredient.bodyKey)}
-            >
-              {body}
-            </p>
+            <RichText
+              text={body}
+              textKey={ingredient.bodyKey}
+              className="mt-4 space-y-2 text-sm leading-7 text-ink/75 sm:text-base"
+            />
           </aside>
         </div>
 

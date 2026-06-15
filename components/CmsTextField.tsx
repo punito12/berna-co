@@ -9,10 +9,12 @@ import {
 import CmsStylePreview from "@/components/CmsStylePreview";
 import { CMS_FONT_OPTIONS } from "@/lib/cms-fonts";
 import { postCmsDraft, notifyCmsDraftChanged } from "@/lib/cms-client";
+import RichTextEditor from "@/components/RichTextEditor";
 
 const FONT_OPTIONS = ["", ...CMS_FONT_OPTIONS];
 
 const WEIGHT_OPTIONS = ["", "300", "400", "500", "600", "700", "800", "900"];
+const ALIGN_OPTIONS = ["", "left", "center", "right"];
 
 // One editable site text: label, textarea/input, character counter, an explicit
 // "Guardar cambios" button (saves the DRAFT — not published), and "restaurar al
@@ -28,6 +30,7 @@ export default function CmsTextField({
   maxLength,
   multiline = false,
   allowStyle = true,
+  richText = false,
 }: {
   textKey: string;
   label: string;
@@ -38,6 +41,7 @@ export default function CmsTextField({
   maxLength: number;
   multiline?: boolean;
   allowStyle?: boolean;
+  richText?: boolean;
 }) {
   // `value`/`textStyle` = what's in the inputs. `savedValue`/`savedStyle` = what
   // the DB draft currently holds (updated only after a successful save).
@@ -199,7 +203,14 @@ export default function CmsTextField({
           {value.length}/{maxLength}
         </span>
       </div>
-      {multiline ? (
+      {richText ? (
+        <RichTextEditor
+          value={value}
+          onChange={(next) => setValue(next.slice(0, maxLength))}
+          rows={multiline ? 6 : 2}
+          className={inputClass + " min-h-24 resize-y border-0"}
+        />
+      ) : multiline ? (
         <textarea
           value={value}
           maxLength={maxLength}
@@ -308,6 +319,22 @@ export default function CmsTextField({
                 })
               }
             />
+            <StyleColor
+              label="Color"
+              value={textStyle.color ?? ""}
+              onChange={(color) =>
+                setTextStyle({ ...textStyle, color: color || undefined })
+              }
+            />
+            <StyleSelect
+              label="Alineación"
+              value={textStyle.textAlign ?? ""}
+              options={ALIGN_OPTIONS}
+              emptyLabel="Actual"
+              onChange={(textAlign) =>
+                setTextStyle({ ...textStyle, textAlign: textAlign || undefined })
+              }
+            />
             <StyleToggle
               label="Itálica"
               checked={textStyle.italic === true}
@@ -363,6 +390,38 @@ function StyleSelect({
           </option>
         ))}
       </select>
+    </label>
+  );
+}
+
+function StyleColor({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+        {label}
+      </span>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={value || "#0a0a0a"}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-9 w-11 rounded border border-line bg-white p-1"
+        />
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#0A0A0A"
+          className="w-full rounded border border-line bg-white px-2 py-1.5 text-sm text-ink"
+        />
+      </div>
     </label>
   );
 }

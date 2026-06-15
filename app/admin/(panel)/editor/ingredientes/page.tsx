@@ -114,6 +114,7 @@ export default async function EditorIngredientesPage() {
                     style={title.style}
                     styleDraft={title.styleDraft}
                     maxLength={title.maxLength}
+                    richText
                   />
                 )}
                 {intro && (
@@ -129,6 +130,7 @@ export default async function EditorIngredientesPage() {
                     styleDraft={intro.styleDraft}
                     maxLength={intro.maxLength}
                     multiline
+                    richText
                   />
                 )}
                 {body && (
@@ -144,6 +146,7 @@ export default async function EditorIngredientesPage() {
                     styleDraft={body.styleDraft}
                     maxLength={body.maxLength}
                     multiline
+                    richText
                   />
                 )}
               </div>

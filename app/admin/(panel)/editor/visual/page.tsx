@@ -10,6 +10,7 @@ import {
   SEO_SITE_ICON_KEY,
 } from "@/lib/cms-seo";
 import { ensureLegalCmsTexts } from "@/lib/cms-legal";
+import { INGREDIENT_CMS_TEXTS } from "@/lib/ingredients";
 import { prisma } from "@/lib/db";
 
 // Editor visual (Phase 0/1/2B). Server component: calcula el token de preview, el
@@ -18,6 +19,24 @@ import { prisma } from "@/lib/db";
 // REALES reutilizando los componentes/APIs existentes. CmsEditorShell le da lienzo
 // completo (sin el menú del CMS clásico).
 export const dynamic = "force-dynamic";
+
+async function ensureIngredientCmsTexts() {
+  await prisma.$transaction(
+    INGREDIENT_CMS_TEXTS.map((text) =>
+      prisma.siteText.upsert({
+        where: { key: text.key },
+        update: { maxLength: text.maxLength, category: text.category },
+        create: {
+          key: text.key,
+          value: text.value,
+          valueDraft: text.value,
+          maxLength: text.maxLength,
+          category: text.category,
+        },
+      })
+    )
+  );
+}
 
 export default async function VisualEditorPage() {
   const token = getCmsPreviewToken();
@@ -28,6 +47,7 @@ export default async function VisualEditorPage() {
     ensureCheckoutCmsTexts().catch(() => {}),
     ensureSeoCmsRows().catch(() => {}),
     ensureLegalCmsTexts().catch(() => {}),
+    ensureIngredientCmsTexts().catch(() => {}),
   ]);
   const [products, homeSections, texts, content, seoImages] = await Promise.all([
     getAvailableProducts().catch(() => []),
