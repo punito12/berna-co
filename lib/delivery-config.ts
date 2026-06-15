@@ -47,6 +47,15 @@ export function slotLabel(slot: LocalitySlot): string {
 
 const DELIVERY_CONFIG_KEY = "config.delivery";
 
+export function normalizeLocalityName(name: string): string {
+  return name
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
 // Default: modo "map" (mantiene el comportamiento actual mientras el admin no
 // cambie nada) + la dirección de retiro centralizada + sin localidades.
 export function defaultDeliveryConfig(): DeliveryConfig {
@@ -101,7 +110,7 @@ function sanitizeLocalities(input: unknown): LocalityConfig[] {
     const r = raw as Record<string, unknown>;
     const name = typeof r.name === "string" ? r.name.trim() : "";
     if (!name) continue;
-    const lower = name.toLowerCase();
+    const lower = normalizeLocalityName(name);
     if (seen.has(lower)) continue; // sin duplicados (case-insensitive)
     seen.add(lower);
     const cost = Math.max(0, Math.round(Number(r.shippingCost) || 0));
@@ -198,8 +207,8 @@ export function findLocality(
   cfg: DeliveryConfig,
   name: string
 ): LocalityConfig | undefined {
-  const lower = name.trim().toLowerCase();
-  return cfg.localities.find((l) => l.name.toLowerCase() === lower);
+  const lower = normalizeLocalityName(name);
+  return cfg.localities.find((l) => normalizeLocalityName(l.name) === lower);
 }
 
 // Guarda la config. Escribe value + valueDraft con el mismo JSON, así esta fila

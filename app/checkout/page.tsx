@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/CartProvider";
 import CheckoutCalendar from "@/components/CheckoutCalendar";
@@ -24,6 +24,15 @@ type PublicManualLocality = {
 
 function slotLabel(slot: { from: string; to: string }) {
   return `${slot.from}–${slot.to}`;
+}
+
+function normalizeLocalityName(name: string): string {
+  return name
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
 }
 
 function slotsForSelectedDate(
@@ -379,12 +388,15 @@ export default function CheckoutPage() {
     setSlot(null);
   }
 
-  const selectedManualLocality =
-    deliveryType === "DELIVERY" && deliveryMode === "manual"
-      ? manualLocalities.find(
-          (l) => l.name.toLowerCase() === locality.trim().toLowerCase()
-        ) ?? null
-      : null;
+  const selectedManualLocality = useMemo(() => {
+    if (deliveryType !== "DELIVERY" || deliveryMode !== "manual") return null;
+    const normalized = normalizeLocalityName(locality);
+    if (!normalized) return null;
+    return (
+      manualLocalities.find((l) => normalizeLocalityName(l.name) === normalized) ??
+      null
+    );
+  }, [deliveryType, deliveryMode, locality, manualLocalities]);
 
   useEffect(() => {
     resetZone();

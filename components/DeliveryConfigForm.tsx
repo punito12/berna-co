@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
   DeliveryConfig,
@@ -25,6 +25,12 @@ export default function DeliveryConfigForm({
   );
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMode(initial.mode);
+    setPickupAddress(initial.pickupAddress);
+    setLocalities(initial.localities);
+  }, [initial]);
 
   function setLocality(i: number, patch: Partial<LocalityConfig>) {
     setLocalities((prev) =>
@@ -128,6 +134,11 @@ export default function DeliveryConfigForm({
       if (!res.ok) {
         setMsg(data.error || "No se pudo guardar.");
         return;
+      }
+      if (data.config) {
+        setMode(data.config.mode);
+        setPickupAddress(data.config.pickupAddress);
+        setLocalities(data.config.localities ?? []);
       }
       setMsg("✓ Guardado.");
       router.refresh();
