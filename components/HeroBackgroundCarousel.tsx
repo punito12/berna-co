@@ -64,6 +64,9 @@ export default function HeroBackgroundCarousel({
                 priority
                 fetchPriority="high"
                 sizes="100vw"
+                // Va detrás de un overlay negro al 65%, así que una calidad un
+                // poco más baja no se nota y baja bytes del LCP.
+                quality={68}
                 className="object-cover object-center"
               />
             </div>

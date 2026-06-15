@@ -156,7 +156,27 @@ export default async function RootLayout({
               href="https://fonts.gstatic.com"
               crossOrigin=""
             />
-            <link href={cmsFontsUrl} rel="stylesheet" />
+            {/* Google Fonts NO bloqueante: se carga con media="print" (no entra
+                al camino crítico de render) y un script chico la pasa a "all"
+                apenas baja. Las fuentes ya traen display=swap y el texto se ve
+                con la familia self-hosted (Archivo/Fraunces) mientras tanto.
+                <noscript> mantiene el fallback sin JS. */}
+            <link
+              href={cmsFontsUrl}
+              rel="stylesheet"
+              media="print"
+              data-cms-fonts=""
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html:
+                  "(function(){var l=document.querySelector('link[data-cms-fonts]');if(l){l.media='all';}})();",
+              }}
+            />
+            <noscript>
+              {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+              <link href={cmsFontsUrl} rel="stylesheet" />
+            </noscript>
           </>
         )}
         {cssVars && (

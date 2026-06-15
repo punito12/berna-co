@@ -83,10 +83,13 @@ function ChickenIcon() {
 
 function PecetoPasturaIcon() {
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src="/icons/peceto-pastura.svg"
       alt=""
       aria-hidden="true"
+      width={64}
+      height={64}
       className="h-12 w-12 scale-150 object-contain sm:h-16 sm:w-16"
     />
   );
