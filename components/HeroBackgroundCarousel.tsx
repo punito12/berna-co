@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 export type HeroBackgroundImage = {
@@ -42,15 +43,40 @@ export default function HeroBackgroundCarousel({
 
   return (
     <div aria-hidden className="absolute inset-0 -z-20 overflow-hidden bg-ink">
-      {slides.map((slide, index) => (
-        <div
-          key={`${slide.url}-${index}`}
-          className={`absolute inset-0 animate-slow-zoom bg-cover bg-center transition-opacity duration-1000 ease-out ${
-            index === active ? "opacity-100" : "opacity-0"
-          }`}
-          style={{ backgroundImage: `url('${slide.url}')` }}
-        />
-      ))}
+      {slides.map((slide, index) => {
+        const isActive = index === active;
+        const opacityClass = isActive ? "opacity-100" : "opacity-0";
+        // Solo la PRIMERA imagen es el candidato a LCP: se renderiza con
+        // next/image (descubrible en el HTML + priority/fetchpriority=high para
+        // que el navegador la baje primero). El resto del carrusel queda como
+        // background-image y carga después de la primera pintura, así no se
+        // bajan todas las imágenes grandes de golpe en mobile.
+        if (index === 0) {
+          return (
+            <div
+              key={`${slide.url}-${index}`}
+              className={`absolute inset-0 animate-slow-zoom transition-opacity duration-1000 ease-out ${opacityClass}`}
+            >
+              <Image
+                src={slide.url}
+                alt={slide.alt}
+                fill
+                priority
+                fetchPriority="high"
+                sizes="100vw"
+                className="object-cover object-center"
+              />
+            </div>
+          );
+        }
+        return (
+          <div
+            key={`${slide.url}-${index}`}
+            className={`absolute inset-0 animate-slow-zoom bg-cover bg-center transition-opacity duration-1000 ease-out ${opacityClass}`}
+            style={{ backgroundImage: `url('${slide.url}')` }}
+          />
+        );
+      })}
     </div>
   );
 }

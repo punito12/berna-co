@@ -1,6 +1,18 @@
 import { withSentryConfig } from '@sentry/nextjs';
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  images: {
+    // Permite que next/image optimice (redimensione + sirva AVIF/WebP) las
+    // imágenes del CMS subidas a Vercel Blob. Sin esto, las URLs remotas del
+    // blob no se pueden optimizar y se sirven a tamaño completo.
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.public.blob.vercel-storage.com',
+      },
+    ],
+  },
+};
 
 export default withSentryConfig(nextConfig, {
   // For all available options, see:

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CSSProperties } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/components/CartProvider";
 import {
@@ -217,16 +218,24 @@ export default function ProductCard({
           <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line">
             {product.name}
           </span>
-          <div
-            key={cover}
-            // Mobile: bg-cover llena la card (recorta solo el margen blanco de
-            // la foto, no la bolsa) para que el producto se vea más grande.
-            // Desktop: bg-contain (el contenedor 2:3 ya coincide con la foto).
-            className={`absolute inset-0 bg-cover bg-center bg-no-repeat sm:bg-contain transition-transform duration-700 ease-out ${
-              allOutOfStock ? "opacity-40 grayscale" : "group-hover:scale-105"
-            }`}
-            style={{ backgroundImage: `url('${cover}')` }}
-          />
+          {cover && (
+            <Image
+              key={cover}
+              src={cover}
+              alt={product.name}
+              fill
+              // Lazy (default): las cards están debajo del hero. next/image pide
+              // un tamaño acorde al ancho real de la card (mobile: 2 columnas;
+              // desktop: ~1/4 del layout), no la imagen original full-size.
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              // Mobile: object-cover llena la card (recorta solo el margen blanco
+              // de la foto). Desktop: object-contain (el contenedor 2:3 coincide
+              // con la foto).
+              className={`object-cover object-center sm:object-contain transition-transform duration-700 ease-out ${
+                allOutOfStock ? "opacity-40 grayscale" : "group-hover:scale-105"
+              }`}
+            />
+          )}
 
           <div className="absolute left-2 top-2 flex flex-col items-start gap-1 sm:left-3 sm:top-3 sm:gap-1.5">
             {!allOutOfStock && selPromoType && (

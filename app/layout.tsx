@@ -15,7 +15,7 @@ import {
   getStyleSettings,
   styleSettingsToCssVars,
 } from "@/lib/cms-style-settings";
-import { cmsGoogleFontsUrl } from "@/lib/cms-fonts";
+import { cmsUsedGoogleFontsUrl } from "@/lib/cms-fonts";
 import { getGlobalSeo } from "@/lib/cms-seo";
 import {
   DEFAULT_OG_IMAGE,
@@ -46,8 +46,6 @@ const fraunces = Fraunces({
   variable: "--font-fraunces",
   display: "swap",
 });
-
-const cmsFontsUrl = cmsGoogleFontsUrl();
 
 // Metadata is generated from the CMS SEO settings (Editor → SEO y compartir),
 // falling back to the hardcoded SITE_TITLE / SITE_DESCRIPTION / OG image — so
@@ -128,12 +126,21 @@ export default async function RootLayout({
   // the admin edits a color.
   let cssVars = "";
   let textStyleCss = "";
+  // Solo las fuentes de Google realmente usadas en la config publicada del CMS.
+  // Por defecto (sin fuentes extra) queda "" y no se emite ningún <link>
+  // bloqueante a Google Fonts (Archivo/Fraunces ya van self-hosted).
+  let cmsFontsUrl = "";
   try {
     const bundle = await loadCmsBundle();
     const themeVars = themeToCssVars(getThemeColors(bundle));
     const styleVars = styleSettingsToCssVars(getStyleSettings(bundle));
     cssVars = [themeVars, styleVars].filter(Boolean).join(";");
     textStyleCss = textStylesToCss(bundle);
+    cmsFontsUrl = cmsUsedGoogleFontsUrl([
+      bundle.content?.typography,
+      ...Array.from(bundle.texts.values()).map((t) => t.style),
+      ...bundle.sections.map((s) => s.config),
+    ]);
   } catch {
     // DB unavailable at render — fall back to the hex defaults in tailwind.
   }
@@ -141,9 +148,17 @@ export default async function RootLayout({
   return (
     <html lang="es-AR" className={`${archivo.variable} ${fraunces.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href={cmsFontsUrl} rel="stylesheet" />
+        {cmsFontsUrl && (
+          <>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link
+              rel="preconnect"
+              href="https://fonts.gstatic.com"
+              crossOrigin=""
+            />
+            <link href={cmsFontsUrl} rel="stylesheet" />
+          </>
+        )}
         {cssVars && (
           <style
             // CMS theme → CSS variables on :root. Tailwind tokens consume them.

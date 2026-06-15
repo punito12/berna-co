@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Hero from "@/components/Hero";
 import Ingredients from "@/components/Ingredients";
 import Catalog from "@/components/Catalog";
@@ -201,12 +202,17 @@ export default function CmsHomeSection({
       <section className="bg-white">
         {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 md:grid-cols-2 md:items-center sm:py-24">
-          <div className="overflow-hidden rounded-lg border border-line bg-cream">
+          <div className="relative min-h-64 overflow-hidden rounded-lg border border-line bg-cream sm:min-h-80">
             {aboutImage ? (
-              <img
+              <Image
                 src={aboutImage}
                 alt={config.imageAlt || t("home.about.title", "Berna & Co")}
-                className="h-full min-h-64 w-full object-cover sm:min-h-80"
+                fill
+                // Debajo del hero → lazy (default). Pide ~media columna en
+                // desktop, ancho completo en mobile, en vez de la imagen original
+                // (que llegaba a ~2.3 MB servida a un tamaño chico).
+                sizes="(max-width: 768px) 100vw, 600px"
+                className="object-cover"
               />
             ) : (
               <div className="flex min-h-64 items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line sm:min-h-80">
@@ -663,12 +669,15 @@ function BlockImage({
   return (
     <div className={`overflow-hidden rounded-lg border border-line bg-white ${className}`}>
       {config.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={config.imageUrl}
-          alt={config.imageAlt || ""}
-          className="aspect-[4/3] w-full object-cover"
-        />
+        <div className="relative aspect-[4/3] w-full">
+          <Image
+            src={config.imageUrl}
+            alt={config.imageAlt || ""}
+            fill
+            sizes="(max-width: 768px) 100vw, 600px"
+            className="object-cover"
+          />
+        </div>
       ) : (
         <div className="flex aspect-[4/3] items-center justify-center bg-white text-sm text-muted">
           Sin imagen

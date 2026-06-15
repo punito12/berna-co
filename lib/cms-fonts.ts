@@ -60,3 +60,43 @@ export function cmsGoogleFontsUrl() {
   ).join("&");
   return `https://fonts.googleapis.com/css2?${families}&display=swap`;
 }
+
+// Archivo y Fraunces ya vienen self-hosted vía next/font (no se piden a Google).
+// El resto de las opciones de fuente del CMS solo se cargan si están realmente
+// en uso en la config publicada.
+const SELF_HOSTED_FONTS = new Set<string>(["Archivo", "Fraunces"]);
+
+// Devuelve las familias de fuente (del set del CMS) que aparecen mencionadas en
+// los strings JSON publicados que se le pasen (typography, estilos por-texto,
+// configs de secciones). Es un escaneo por nombre: si una fuente del allowlist
+// aparece en el JSON, se considera en uso. Excluye las self-hosted.
+type CmsFont = (typeof CMS_FONT_OPTIONS)[number];
+
+export function usedCmsFonts(
+  jsonStrings: Array<string | null | undefined>
+): CmsFont[] {
+  const haystack = jsonStrings.filter(Boolean).join("\n");
+  if (!haystack) return [];
+  const used: CmsFont[] = [];
+  for (const font of CMS_FONT_OPTIONS) {
+    if (SELF_HOSTED_FONTS.has(font)) continue;
+    // Coincidencia exacta del nombre entre comillas (así "Lora" no matchea
+    // dentro de otra palabra y "DM Sans" matchea con su espacio).
+    if (haystack.includes(`"${font}"`)) used.push(font);
+  }
+  return used;
+}
+
+// URL de Google Fonts SOLO con las familias en uso. Devuelve "" si no hay
+// ninguna (caso por defecto: el diseño usa Archivo/Fraunces self-hosted, así que
+// NO se emite ningún <link> bloqueante a Google Fonts).
+export function cmsUsedGoogleFontsUrl(
+  jsonStrings: Array<string | null | undefined>
+): string {
+  const used = usedCmsFonts(jsonStrings);
+  if (used.length === 0) return "";
+  const families = used
+    .map((font) => `family=${encodeGoogleFontFamily(GOOGLE_FONT_FAMILIES[font])}`)
+    .join("&");
+  return `https://fonts.googleapis.com/css2?${families}&display=swap`;
+}
