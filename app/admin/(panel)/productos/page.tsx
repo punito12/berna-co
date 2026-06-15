@@ -85,6 +85,9 @@ export default async function AdminProductsPage() {
             breadcrumbs: safeArray(p.availableBreadcrumbs),
             disabledBreadcrumbs: safeArray(p.disabledBreadcrumbs),
             prices: safeNumberMap(p.prices),
+            cashPrices: safeNumberMap(
+              (p as { pricesCashTransfer?: string }).pricesCashTransfer ?? "{}"
+            ),
             stocks: safeNumberMap(p.stocks),
             images: safeImagesMap(p.images),
             empanadoDescriptions: safeStringMap(

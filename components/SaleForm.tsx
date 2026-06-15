@@ -8,9 +8,11 @@ import { BREADCRUMB_LABELS } from "@/lib/products";
 type ProductOption = {
   id: string;
   name: string;
-  price: number;
+  price: number; // precio web (fallback)
+  priceCashTransfer?: number; // precio efectivo/transferencia (base)
   breadcrumbs: string[];
-  prices: Record<string, number>;
+  prices: Record<string, number>; // precio web por empanado
+  cashPrices?: Record<string, number>; // precio efectivo por empanado
 };
 // A customer search result (from /api/admin/customers/search).
 type SearchResult = {
@@ -72,6 +74,7 @@ export default function SaleForm({
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   // The chosen customer's label (name + barrio/lote) to show once picked.
   const [chosenLabel, setChosenLabel] = useState<string | null>(null);
   const [discount, setDiscount] = useState("0");
@@ -91,15 +94,30 @@ export default function SaleForm({
     const q = search.trim();
     if (!q) {
       setResults([]);
+      setSearchError(null);
       return;
     }
     setSearching(true);
+    setSearchError(null);
     const t = setTimeout(async () => {
       try {
         const res = await fetch(
           `/api/admin/customers/search?q=${encodeURIComponent(q)}`
         );
-        if (res.ok) setResults(await res.json());
+        const data = await res.json().catch(() => null);
+        if (res.ok && Array.isArray(data)) {
+          setResults(data);
+        } else {
+          // Nunca dejar el buscador "cargando para siempre": ante error,
+          // vaciamos resultados y mostramos un mensaje claro.
+          setResults([]);
+          setSearchError(
+            (data && data.error) || "No se pudo buscar clientes. Probá de nuevo."
+          );
+        }
+      } catch {
+        setResults([]);
+        setSearchError("No se pudo buscar clientes. Probá de nuevo.");
       } finally {
         setSearching(false);
       }
@@ -131,8 +149,12 @@ export default function SaleForm({
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   }
 
-  // Price for a product's chosen empanado (specific price > 0, else default).
+  // Precio sugerido para el empanado: PRECIO EFECTIVO/TRANSFERENCIA (precio base
+  // de la venta manual) si está cargado; si no, cae al precio web. Es editable.
   function priceFor(p: ProductOption, breadcrumb: string): number {
+    const cashSpecific = p.cashPrices?.[breadcrumb];
+    if (typeof cashSpecific === "number" && cashSpecific > 0) return cashSpecific;
+    if (p.priceCashTransfer && p.priceCashTransfer > 0) return p.priceCashTransfer;
     const specific = p.prices?.[breadcrumb];
     if (typeof specific === "number" && specific > 0) return specific;
     return p.price;
@@ -337,12 +359,16 @@ export default function SaleForm({
               {/* Results */}
               {search.trim() && (
                 <div className="mt-2 overflow-hidden rounded-lg border border-line">
-                  {searching && results.length === 0 ? (
+                  {searchError ? (
+                    <p className="px-4 py-3 text-sm font-bold text-red-700">
+                      {searchError}
+                    </p>
+                  ) : searching && results.length === 0 ? (
                     <p className="px-4 py-3 text-sm text-muted">Buscando…</p>
                   ) : results.length === 0 ? (
                     <p className="px-4 py-3 text-sm text-muted">
-                      Sin resultados. Probá con otro nombre o creá un cliente
-                      nuevo.
+                      No se encontraron clientes. Probá con otro nombre o creá un
+                      cliente nuevo.
                     </p>
                   ) : (
                     <ul className="divide-y divide-line">

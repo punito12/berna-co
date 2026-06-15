@@ -28,9 +28,11 @@ export type RemitoInput = {
 export type RemitoProductOption = {
   id: string;
   name: string;
-  price: number;
+  price: number; // precio web (fallback)
+  priceCashTransfer: number; // precio efectivo/transferencia (base del remito)
   breadcrumbs: string[];
-  prices: Record<string, number>;
+  prices: Record<string, number>; // precio web por empanado
+  cashPrices: Record<string, number>; // precio efectivo por empanado
 };
 
 // Productos para el selector del formulario de remitos. Trae TODOS (incluso no
@@ -44,16 +46,20 @@ export async function listRemitoProductOptions(): Promise<RemitoProductOption[]>
       id: true,
       name: true,
       price: true,
+      priceCashTransfer: true,
       availableBreadcrumbs: true,
       prices: true,
+      pricesCashTransfer: true,
     },
   });
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
     price: r.price,
+    priceCashTransfer: r.priceCashTransfer ?? 0,
     breadcrumbs: parseStringArray(r.availableBreadcrumbs),
     prices: parseNumberMap(r.prices),
+    cashPrices: parseNumberMap(r.pricesCashTransfer ?? "{}"),
   }));
 }
 

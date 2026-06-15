@@ -167,7 +167,10 @@ export type ProductInput = {
   // Promos per empanado: { breadcrumb: percent } and { breadcrumb: "2x1"|"3x2" }.
   promoPercents?: Record<string, number>;
   promoTypes?: Record<string, string>;
-  prices: Record<string, number>; // pesos, by empanado
+  prices: Record<string, number>; // PRECIO WEB, pesos por empanado
+  // PRECIO EFECTIVO/TRANSFERENCIA (base), pesos por empanado. Opcional: si no
+  // viene o queda en 0, se usa el precio web como fallback.
+  cashPrices?: Record<string, number>;
   stocks: Record<string, number>; // units, by empanado
   images: Record<string, string[]>; // up to 2 photo paths, by empanado
   empanadoDescriptions?: Record<string, string>; // per-empanado description
@@ -227,12 +230,20 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
 
   // Prices/stocks/images: keep only entries for the chosen breadcrumbs.
   const prices: Record<string, number> = {};
+  const cashPrices: Record<string, number> = {};
   const stocks: Record<string, number> = {};
   const images: Record<string, string[]> = {};
   for (const b of breadcrumbs) {
     const price = Math.round(Number(input.prices?.[b] ?? 0));
     if (!Number.isFinite(price) || price < 0) throw new Error("Precio inválido.");
     prices[b] = price;
+
+    // Precio efectivo/transferencia (opcional). 0/ausente = no cargado.
+    const cash = Math.round(Number(input.cashPrices?.[b] ?? 0));
+    if (!Number.isFinite(cash) || cash < 0) {
+      throw new Error("Precio efectivo/transferencia inválido.");
+    }
+    if (cash > 0) cashPrices[b] = cash;
 
     const stock = Math.round(Number(input.stocks?.[b] ?? 0));
     if (!Number.isFinite(stock) || stock < 0) throw new Error("Stock inválido.");
@@ -251,6 +262,10 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
     breadcrumbs.map((b) => prices[b]).find((v) => v > 0) ??
     prices[breadcrumbs[0]] ??
     0;
+  // Precio efectivo base = primer empanado con precio efectivo > 0; si ninguno
+  // tiene, 0 (= no cargado → la lógica cae al precio web).
+  const defaultCashPrice =
+    breadcrumbs.map((b) => cashPrices[b]).find((v) => v > 0) ?? 0;
   const totalStock = Object.values(stocks).reduce((a, b) => a + b, 0);
   // Cover = first breadcrumb's image, if any.
   const imageUrl = images[breadcrumbs[0]]?.[0] ?? "";
@@ -298,10 +313,12 @@ function buildProductData(input: ProductInput, normalizedSlug?: string) {
     availableBreadcrumbs: JSON.stringify(breadcrumbs),
     disabledBreadcrumbs: JSON.stringify(disabledBreadcrumbs),
     prices: JSON.stringify(prices),
+    pricesCashTransfer: JSON.stringify(cashPrices),
     stocks: JSON.stringify(stocks),
     images: JSON.stringify(images),
     empanadoDescriptions: JSON.stringify(empanadoDescriptions),
     price: defaultPrice,
+    priceCashTransfer: defaultCashPrice,
     stock: totalStock,
     imageUrl,
     ...(normalizedSlug ? { slug: normalizedSlug } : {}),

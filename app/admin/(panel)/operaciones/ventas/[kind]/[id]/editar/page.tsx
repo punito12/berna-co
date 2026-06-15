@@ -70,6 +70,8 @@ export default async function SaleEditPage({
           name: p.name,
           breadcrumbs: p.breadcrumbs,
           prices: p.prices,
+          cashPrices: p.cashPrices,
+          priceCashTransfer: p.priceCashTransfer,
         }))}
       />
     </div>

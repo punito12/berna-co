@@ -65,12 +65,18 @@ function cleanCustomer(input: CustomerInput) {
 // recent ones. Includes barrio + a count of linked web orders.
 export async function searchCustomers(query: string) {
   const q = query.trim();
+  // `mode: "insensitive"` para que la búsqueda no distinga mayúsculas/minúsculas
+  // (Postgres `contains` es case-sensitive por defecto: sin esto, escribir el
+  // nombre en minúscula no encontraba al cliente). Busca por nombre, barrio,
+  // teléfono y email.
   return prisma.customer.findMany({
     where: q
       ? {
           OR: [
-            { name: { contains: q } },
-            { barrio: { name: { contains: q } } },
+            { name: { contains: q, mode: "insensitive" } },
+            { barrio: { name: { contains: q, mode: "insensitive" } } },
+            { phone: { contains: q, mode: "insensitive" } },
+            { email: { contains: q, mode: "insensitive" } },
           ],
         }
       : undefined,
@@ -653,12 +659,22 @@ export async function listProductsForSale() {
     } catch {
       priceMap = {};
     }
+    // PRECIO EFECTIVO/TRANSFERENCIA por empanado (precio base de la venta manual).
+    let cashPriceMap: Record<string, number> = {};
+    try {
+      const pr = JSON.parse(p.pricesCashTransfer ?? "{}");
+      if (pr && typeof pr === "object") cashPriceMap = pr;
+    } catch {
+      cashPriceMap = {};
+    }
     return {
       id: p.id,
       name: p.name,
       price: p.price,
+      priceCashTransfer: p.priceCashTransfer ?? 0,
       breadcrumbs,
       prices: priceMap,
+      cashPrices: cashPriceMap,
     };
   });
 }

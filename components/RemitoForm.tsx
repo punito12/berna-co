@@ -22,9 +22,11 @@ type Item = {
 export type RemitoProductOption = {
   id: string;
   name: string;
-  price: number;
+  price: number; // precio web (fallback)
+  priceCashTransfer?: number; // precio efectivo/transferencia (base del remito)
   breadcrumbs: string[];
-  prices: Record<string, number>;
+  prices: Record<string, number>; // precio web por empanado
+  cashPrices?: Record<string, number>; // precio efectivo por empanado
 };
 
 const CUSTOM_PRODUCT = "__custom__";
@@ -141,7 +143,14 @@ export default function RemitoForm({
     );
   }
 
+  // Precio sugerido del ítem = PRECIO EFECTIVO/TRANSFERENCIA (precio base) si
+  // está cargado, si no el precio web. Editable y se COPIA al remito al elegir.
   function priceFor(product: RemitoProductOption, breadcrumb: string): number {
+    const cashSpecific = product.cashPrices?.[breadcrumb];
+    if (typeof cashSpecific === "number" && cashSpecific > 0) return cashSpecific;
+    if (product.priceCashTransfer && product.priceCashTransfer > 0) {
+      return product.priceCashTransfer;
+    }
     const specific = product.prices?.[breadcrumb];
     if (typeof specific === "number" && specific > 0) return specific;
     return product.price;

@@ -9,6 +9,8 @@ import {
   promoPercentFor,
   promoPriceFor,
   promoTypeFor,
+  cashPriceFor,
+  hasCashPrice,
   stockFor,
   type ProductForUI,
 } from "@/lib/products";
@@ -50,6 +52,13 @@ export default function AddToCartPanel({
   const promoPercent = promoPercentFor(product, selected);
   const promoType = promoTypeFor(product, selected);
   const displayPrice = promoPriceFor(product, selected);
+  // Precio efectivo/transferencia (precio base). Solo se muestra como línea
+  // aparte cuando está cargado y difiere del precio web mostrado.
+  const cashPrice = cashPriceFor(product, selected);
+  const showCashPrice =
+    hasCashPrice(product, selected) &&
+    cashPrice > 0 &&
+    cashPrice !== displayPrice;
   const stockLabel =
     stock <= 0
       ? labels.outOfStock ?? "Sin stock"
@@ -79,7 +88,7 @@ export default function AddToCartPanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="font-bold uppercase tracking-wide text-[11px] text-muted">
-              Precio por unidad
+              {showCashPrice ? "Precio web por unidad" : "Precio por unidad"}
             </p>
             <div className="mt-1 flex flex-wrap items-baseline gap-2">
               <p
@@ -99,6 +108,16 @@ export default function AddToCartPanel({
                 </span>
               )}
             </div>
+            {showCashPrice && (
+              <p className="mt-1.5 flex flex-wrap items-baseline gap-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+                  Efectivo o transferencia
+                </span>
+                <span className="font-black text-xl leading-none text-price sm:text-2xl">
+                  {formatPrice(cashPrice)}
+                </span>
+              </p>
+            )}
           </div>
           <span
             data-cms-section="product.stock"

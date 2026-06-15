@@ -7,6 +7,7 @@ import { useCart } from "@/components/CartProvider";
 import CheckoutCalendar from "@/components/CheckoutCalendar";
 import BernaLogo from "@/components/BernaLogo";
 import { BREADCRUMB_LABELS, formatPrice } from "@/lib/products";
+import { quantityPromoDiscount } from "@/lib/discounts";
 import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 import type { DeliveryOptions } from "@/lib/delivery";
 
@@ -159,6 +160,35 @@ export default function CheckoutPage() {
 
   const covered = Boolean(options);
 
+  // Precio según método de pago. Si el cliente elige efectivo/transferencia y la
+  // línea tiene precio efectivo cargado, se usa ESE precio (base) y esa línea NO
+  // recibe además el % global de efectivo/transferencia (evita doble descuento).
+  const isCashOrTransfer =
+    paymentMethod === "EFECTIVO" || paymentMethod === "TRANSFERENCIA";
+  const unitPriceForLine = (line: (typeof lines)[number]) =>
+    isCashOrTransfer && line.hasCashPrice && line.cashPrice
+      ? line.cashPrice
+      : line.price;
+  // Subtotal con el precio del método elegido + promos por cantidad recalculadas.
+  const payBase = lines.reduce(
+    (acc, line) => {
+      const unit = unitPriceForLine(line);
+      acc.subtotal += unit * line.quantity;
+      acc.promo += quantityPromoDiscount(
+        line.quantity,
+        unit,
+        line.promoType ?? ""
+      );
+      // Líneas elegibles para el % global (no usan precio efectivo del producto).
+      if (!(isCashOrTransfer && line.hasCashPrice && line.cashPrice)) {
+        acc.eligible += unit * line.quantity;
+      }
+      return acc;
+    },
+    { subtotal: 0, promo: 0, eligible: 0 }
+  );
+  const baseTotalPrice = Math.max(0, payBase.subtotal - payBase.promo);
+
   // Volume discount: highest active tier the cart's unit total reaches (each
   // unit counts as 1).
   const kgPercent = kgTiers.reduce(
@@ -168,8 +198,8 @@ export default function CheckoutPage() {
         : best,
     0
   );
-  const kgDiscount = kgPercent > 0 ? Math.round((totalPrice * kgPercent) / 100) : 0;
-  const afterKg = Math.max(0, totalPrice - kgDiscount);
+  const kgDiscount = kgPercent > 0 ? Math.round((baseTotalPrice * kgPercent) / 100) : 0;
+  const afterKg = Math.max(0, baseTotalPrice - kgDiscount);
   // Next tier to aim for (motivational message).
   const nextTier = [...kgTiers]
     .sort((a, b) => a.minKg - b.minKg)
@@ -187,8 +217,16 @@ export default function CheckoutPage() {
       : payCfg && paymentMethod === "TRANSFERENCIA"
       ? payCfg.transferenciaDiscountPercent
       : 0;
+  // El % global solo se aplica sobre la porción elegible (líneas sin precio
+  // efectivo del producto), así no hay doble descuento con el precio efectivo.
+  const eligibleShare =
+    payBase.subtotal > 0
+      ? Math.min(1, payBase.eligible / payBase.subtotal)
+      : 0;
   const methodDiscount =
-    methodPercent > 0 ? Math.round((afterCode * methodPercent) / 100) : 0;
+    methodPercent > 0
+      ? Math.round((afterCode * eligibleShare * methodPercent) / 100)
+      : 0;
   const afterDiscounts = Math.max(0, afterCode - methodDiscount);
 
   // Delivery fee: free when the zone has a threshold and the (discounted) total
@@ -996,7 +1034,7 @@ export default function CheckoutPage() {
                   </span>
                 </span>
                 <span className="font-bold text-ink">
-                  {formatPrice(line.price * line.quantity)}
+                  {formatPrice(unitPriceForLine(line) * line.quantity)}
                 </span>
               </li>
             ))}
@@ -1080,12 +1118,12 @@ export default function CheckoutPage() {
           <div className="mt-4 space-y-1 border-t border-line pt-4 text-sm">
             <div className="flex items-center justify-between text-muted">
               <span>{ct("checkout.summary.subtotal", "Subtotal")}</span>
-              <span>{formatPrice(subtotal)}</span>
+              <span>{formatPrice(payBase.subtotal)}</span>
             </div>
-            {promoDiscount > 0 && (
+            {payBase.promo > 0 && (
               <div className="flex items-center justify-between text-muted">
                 <span>{ct("checkout.summary.promos", "Promos (2x1 / 3x2)")}</span>
-                <span>− {formatPrice(promoDiscount)}</span>
+                <span>− {formatPrice(payBase.promo)}</span>
               </div>
             )}
             {kgDiscount > 0 && (

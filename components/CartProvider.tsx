@@ -15,6 +15,8 @@ import {
 import {
   promoPriceFor,
   promoTypeFor,
+  cashPriceFor,
+  hasCashPrice,
   stockFor,
   type ProductForUI,
 } from "@/lib/products";
@@ -26,7 +28,11 @@ export type CartLine = {
   productId: string;
   name: string;
   breadcrumbType: string;
-  price: number; // unit price already with the product's % promo applied
+  price: number; // PRECIO WEB unitario, ya con el % promo aplicado
+  // PRECIO EFECTIVO/TRANSFERENCIA unitario (precio base). Igual al web si el
+  // producto no tiene precio efectivo cargado. hasCashPrice marca si difiere.
+  cashPrice?: number;
+  hasCashPrice?: boolean;
   promoType: string; // "" | "2x1" | "3x2" for the quantity promo
   quantity: number;
   maxStock?: number;
@@ -112,6 +118,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             name: product.name,
             breadcrumbType,
             price: promoPriceFor(product, breadcrumbType),
+            cashPrice: cashPriceFor(product, breadcrumbType),
+            hasCashPrice: hasCashPrice(product, breadcrumbType),
             promoType: promoTypeFor(product, breadcrumbType),
             quantity: 1,
             maxStock,
@@ -163,6 +171,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           string,
           {
             unitPrice: number;
+            cashUnitPrice?: number;
+            hasCashPrice?: boolean;
             promoType: string;
             available: boolean;
             maxStock: number;
@@ -178,6 +188,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             return {
               ...l,
               price: info.unitPrice,
+              cashPrice: info.cashUnitPrice ?? info.unitPrice,
+              hasCashPrice: info.hasCashPrice ?? false,
               promoType: info.promoType,
               maxStock: info.maxStock,
               quantity: Math.min(l.quantity, Math.max(0, info.maxStock)),

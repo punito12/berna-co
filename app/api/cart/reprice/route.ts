@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import {
   promoPriceFor,
   promoTypeFor,
+  cashPriceFor,
+  hasCashPrice,
   stockFor,
   type ProductForUI,
 } from "@/lib/products";
@@ -30,6 +32,10 @@ export async function POST(request: Request) {
     string,
     {
       unitPrice: number;
+      // Precio efectivo/transferencia por unidad (precio base). Si el producto
+      // no tiene precio efectivo cargado, es igual a unitPrice (web).
+      cashUnitPrice: number;
+      hasCashPrice: boolean;
       promoType: string;
       available: boolean;
       maxStock: number;
@@ -43,6 +49,8 @@ export async function POST(request: Request) {
     if (!p || !p.available) {
       prices[key] = {
         unitPrice: 0,
+        cashUnitPrice: 0,
+        hasCashPrice: false,
         promoType: "",
         available: false,
         maxStock: 0,
@@ -55,6 +63,8 @@ export async function POST(request: Request) {
     const ui = {
       price: p.price,
       pricesByBreadcrumb: safeMap(p.prices),
+      priceCashTransfer: p.priceCashTransfer,
+      cashPricesByBreadcrumb: safeMap(p.pricesCashTransfer),
       promoPercent: p.promoPercent,
       promoType: p.promoType,
       promoPercentByBreadcrumb: safeMap(p.promoPercents),
@@ -65,6 +75,9 @@ export async function POST(request: Request) {
     const maxStock = stockFor(ui, line.breadcrumbType);
     prices[key] = {
       unitPrice: promoPriceFor(ui, line.breadcrumbType),
+      // Precio efectivo/transferencia (precio base, sin % promo web).
+      cashUnitPrice: cashPriceFor(ui, line.breadcrumbType),
+      hasCashPrice: hasCashPrice(ui, line.breadcrumbType),
       promoType: promoTypeFor(ui, line.breadcrumbType),
       available: maxStock > 0,
       maxStock,

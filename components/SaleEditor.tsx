@@ -8,7 +8,9 @@ type ProductOption = {
   id: string;
   name: string;
   breadcrumbs: string[];
-  prices: Record<string, number>;
+  prices: Record<string, number>; // precio web por empanado
+  cashPrices?: Record<string, number>; // precio efectivo/transferencia por empanado
+  priceCashTransfer?: number; // precio efectivo a nivel producto
 };
 
 type ItemRow = {
@@ -85,6 +87,10 @@ export default function SaleEditor({
   }
 
   function priceFor(p: ProductOption, bc: string): number {
+    // Sugerido = precio efectivo/transferencia (base) si está cargado, si no web.
+    const cashSpecific = p.cashPrices?.[bc];
+    if (typeof cashSpecific === "number" && cashSpecific > 0) return cashSpecific;
+    if (p.priceCashTransfer && p.priceCashTransfer > 0) return p.priceCashTransfer;
     const specific = p.prices?.[bc];
     if (typeof specific === "number" && specific > 0) return specific;
     return 0;

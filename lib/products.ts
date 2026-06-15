@@ -19,8 +19,11 @@ export type ProductForUI = {
   slug: string;
   weightGrams: number;
   category: string;
-  price: number; // default/fallback price
-  pricesByBreadcrumb: Record<string, number>; // price per empanado
+  price: number; // PRECIO WEB: default/fallback price (online/MP/tarjeta)
+  pricesByBreadcrumb: Record<string, number>; // WEB price per empanado
+  // PRECIO EFECTIVO/TRANSFERENCIA (base). 0/"{}" = no cargado → fallback al web.
+  priceCashTransfer: number;
+  cashPricesByBreadcrumb: Record<string, number>; // cash price per empanado
   imageUrl: string; // default cover (the traditional first photo)
   imagesByBreadcrumb: Record<string, string[]>; // gallery per empanado
   available: boolean;
@@ -46,6 +49,8 @@ type ProductRow = {
   category: string;
   price: number;
   prices: string;
+  priceCashTransfer?: number;
+  pricesCashTransfer?: string;
   imageUrl: string;
   images: string;
   available: boolean;
@@ -77,6 +82,8 @@ function toProductForUI(p: ProductRow): ProductForUI {
     category: p.category,
     price: p.price,
     pricesByBreadcrumb: safeParsePrices(p.prices),
+    priceCashTransfer: p.priceCashTransfer ?? 0,
+    cashPricesByBreadcrumb: safeParsePrices(p.pricesCashTransfer ?? "{}"),
     imageUrl: p.imageUrl,
     imagesByBreadcrumb: safeParseImages(p.images),
     available: p.available,
@@ -147,6 +154,28 @@ export function priceFor(product: ProductForUI, breadcrumb: string): number {
   const specific = product.pricesByBreadcrumb[breadcrumb];
   if (typeof specific === "number" && specific > 0) return specific;
   return product.price ?? 0;
+}
+
+// PRECIO EFECTIVO/TRANSFERENCIA para un empanado (precio base). Usa el precio
+// efectivo por empanado si está cargado (>0), si no el precio efectivo del
+// producto (>0), y si tampoco está cargado, cae al PRECIO WEB (`priceFor`). Así,
+// hasta que el admin cargue un precio efectivo, efectivo = web (sin sorpresas).
+export function cashPriceFor(product: ProductForUI, breadcrumb: string): number {
+  const specific = product.cashPricesByBreadcrumb?.[breadcrumb];
+  if (typeof specific === "number" && specific > 0) return specific;
+  if (product.priceCashTransfer && product.priceCashTransfer > 0) {
+    return product.priceCashTransfer;
+  }
+  return priceFor(product, breadcrumb);
+}
+
+// True si el producto tiene algún precio efectivo/transferencia cargado (a nivel
+// producto o por empanado). Cuando es true, el checkout usa ese precio y NO
+// aplica además el % global de efectivo/transferencia (evita doble descuento).
+export function hasCashPrice(product: ProductForUI, breadcrumb: string): boolean {
+  const specific = product.cashPricesByBreadcrumb?.[breadcrumb];
+  if (typeof specific === "number" && specific > 0) return true;
+  return Boolean(product.priceCashTransfer && product.priceCashTransfer > 0);
 }
 
 // The stock for a given empanado. If a per-empanado map exists, use it (0 when

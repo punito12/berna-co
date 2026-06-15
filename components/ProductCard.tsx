@@ -13,6 +13,8 @@ import {
   promoPriceFor,
   promoPercentFor,
   promoTypeFor,
+  cashPriceFor,
+  hasCashPrice,
   stockFor,
   isProductOutOfStock,
   type ProductForUI,
@@ -195,10 +197,21 @@ export default function ProductCard({
     </p>
   );
 
-  // Efectivo y transferencia comparten el mismo descuento (unificado en el
-  // admin). Mostramos UN solo recuadro con el descuento (no el precio). Si por
-  // datos viejos difirieran, tomamos el que esté cargado.
-  const payDiscountPct = efectivoPct || transferenciaPct;
+  // PRECIO EFECTIVO/TRANSFERENCIA por producto. Si está cargado (y difiere del
+  // precio web mostrado), mostramos el precio final efectivo/transferencia y NO
+  // el viejo recuadro de "% OFF" (para no descontar dos veces / no confundir).
+  const webShown =
+    selPromoPercent > 0
+      ? promoPriceFor(product, selected)
+      : priceFor(product, selected);
+  const cashShown = cashPriceFor(product, selected);
+  const showCashPrice =
+    hasCashPrice(product, selected) && cashShown > 0 && cashShown !== webShown;
+
+  // Efectivo y transferencia comparten el mismo descuento global (config admin).
+  // Ese % sigue como FALLBACK solo cuando el producto NO tiene precio
+  // efectivo/transferencia cargado (así no hay doble descuento).
+  const payDiscountPct = showCashPrice ? 0 : efectivoPct || transferenciaPct;
 
   return (
     <>
@@ -337,7 +350,23 @@ export default function ProductCard({
 
           {/* Price + CTA */}
           <div className="mt-auto pt-3 sm:pt-5">
+            {showCashPrice && (
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-muted sm:text-[11px]">
+                Precio web
+              </p>
+            )}
             {priceDisplay}
+
+            {showCashPrice && (
+              <p className="mt-1 flex min-w-0 flex-wrap items-baseline gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted sm:text-[11px]">
+                  Efectivo o transferencia
+                </span>
+                <span className="font-black text-base text-price sm:text-lg">
+                  {formatPrice(cashShown)}
+                </span>
+              </p>
+            )}
 
             {payDiscountPct > 0 && (
               <div className="mt-2">

@@ -8,17 +8,25 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
   const q = new URL(request.url).searchParams.get("q") ?? "";
-  const customers = await searchCustomers(q);
-  return NextResponse.json(
-    customers.map((c) => ({
-      id: c.id,
-      name: c.name,
-      type: c.type,
-      barrio: c.barrio?.name ?? null,
-      lot: c.lot ?? null,
-      defaultDiscount: c.defaultDiscount,
-      phone: c.phone,
-      orders: c._count.orders + c._count.sales,
-    }))
-  );
+  try {
+    const customers = await searchCustomers(q);
+    return NextResponse.json(
+      customers.map((c) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        barrio: c.barrio?.name ?? null,
+        lot: c.lot ?? null,
+        defaultDiscount: c.defaultDiscount,
+        phone: c.phone,
+        orders: c._count.orders + c._count.sales,
+      }))
+    );
+  } catch (error) {
+    console.error("searchCustomers failed:", error);
+    return NextResponse.json(
+      { error: "No se pudo buscar clientes." },
+      { status: 500 }
+    );
+  }
 }

@@ -27,7 +27,8 @@ export type ProductFormValues = {
   available: boolean;
   breadcrumbs: string[];
   disabledBreadcrumbs?: string[];
-  prices: Record<string, number>;
+  prices: Record<string, number>; // precio web por empanado
+  cashPrices?: Record<string, number>; // precio efectivo/transferencia por empanado
   stocks: Record<string, number>;
   images: Record<string, string[]>; // up to 2 photo paths per empanado
   empanadoDescriptions?: Record<string, string>; // per-empanado description
@@ -76,6 +77,11 @@ export default function ProductForm({
   const [prices, setPrices] = useState<Record<string, string>>(
     Object.fromEntries(
       BREADCRUMBS.map((b) => [b, String(initial.prices[b] ?? 0)])
+    )
+  );
+  const [cashPrices, setCashPrices] = useState<Record<string, string>>(
+    Object.fromEntries(
+      BREADCRUMBS.map((b) => [b, String(initial.cashPrices?.[b] ?? 0)])
     )
   );
   const [stocks, setStocks] = useState<Record<string, string>>(
@@ -166,6 +172,9 @@ export default function ProductForm({
         breadcrumbs,
         disabledBreadcrumbs: disabled.filter((b) => breadcrumbs.includes(b)),
         prices: Object.fromEntries(breadcrumbs.map((b) => [b, Number(prices[b])])),
+        cashPrices: Object.fromEntries(
+          breadcrumbs.map((b) => [b, Number(cashPrices[b]) || 0])
+        ),
         stocks: Object.fromEntries(breadcrumbs.map((b) => [b, Number(stocks[b])])),
         images: Object.fromEntries(
           breadcrumbs.map((b) => {
@@ -368,6 +377,11 @@ export default function ProductForm({
       {/* Per-empanado: price, stock, image */}
       {breadcrumbs.length > 0 && (
         <div className="space-y-3">
+          <p className="rounded border border-line bg-cream/40 px-3 py-2 text-[11px] leading-5 text-muted">
+            El precio efectivo/transferencia se usa como precio base para ventas
+            manuales y remitos. El precio web se usa en la tienda online. Si dejás
+            el efectivo/transferencia en 0, se usa el precio web.
+          </p>
           {BREADCRUMBS.filter((b) => breadcrumbs.includes(b)).map((b) => (
             <div
               key={b}
@@ -402,7 +416,7 @@ export default function ProductForm({
               </div>
               <label className="block">
                 <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
-                  Precio $
+                  Precio web $
                 </span>
                 <input
                   type="number"
@@ -412,6 +426,21 @@ export default function ProductForm({
                     setPrices((p) => ({ ...p, [b]: e.target.value }))
                   }
                   className="w-24 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
+                  Precio efec/transf $
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  value={cashPrices[b] ?? "0"}
+                  onChange={(e) =>
+                    setCashPrices((p) => ({ ...p, [b]: e.target.value }))
+                  }
+                  className="w-24 rounded border border-line bg-white px-2 py-1.5 text-ink outline-none focus:border-black"
+                  placeholder="0"
                 />
               </label>
               <label className="block">

@@ -226,9 +226,17 @@ export async function createOrder(
   });
   const byId = new Map(products.map((p) => [p.id, p]));
 
+  // ¿El pago es efectivo/transferencia? En ese caso usamos el PRECIO
+  // EFECTIVO/TRANSFERENCIA del producto (precio base) en vez del web.
+  const method = normalizePaymentMethod(input.paymentMethod);
+  const isCashOrTransfer = method === "EFECTIVO" || method === "TRANSFERENCIA";
+
   // Products subtotal (with per-product % promos) and quantity-promo savings.
   let productsSubtotal = 0;
   let quantityPromo = 0;
+  // Subtotal de líneas que SÍ pueden recibir el % global de efectivo/transfer
+  // (las que NO usaron precio efectivo por-producto), para no descontar dos veces.
+  let methodEligibleSubtotal = 0;
   // Volume-discount unit count: each unit counts as 1 (regardless of weight).
   let totalUnits = 0;
   const itemsToCreate = input.items.map((item) => {
@@ -251,14 +259,23 @@ export async function createOrder(
         `El empanado elegido no está disponible para ${product.name}.`
       );
     }
-    // Unit price = empanado price with its % promo applied (per-empanado,
-    // falling back to the product-wide promo).
+    // Precio base de la línea: efectivo/transferencia usa el precio efectivo del
+    // producto; web/MP usa el precio web. Si el pago es efectivo/transferencia y
+    // este producto tiene precio efectivo cargado, NO se le aplica además el %
+    // global (evita doble descuento).
     const bc = item.breadcrumbType;
+    const usesProductCashPrice =
+      isCashOrTransfer && productHasCashPrice(product, bc);
+    const basePrice = usesProductCashPrice
+      ? cashPriceForBreadcrumb(product, bc)
+      : priceForBreadcrumb(product, bc);
+    // % promo del empanado (por-empanado, si no el del producto).
     const pct = promoPercentForOrder(product, bc);
     const qpromo = promoTypeForOrder(product, bc);
-    let unitPrice = priceForBreadcrumb(product, bc);
+    let unitPrice = basePrice;
     if (pct > 0) unitPrice = Math.round((unitPrice * (100 - pct)) / 100);
     productsSubtotal += unitPrice * qty;
+    if (!usesProductCashPrice) methodEligibleSubtotal += unitPrice * qty;
     // 2x1 / 3x2 savings for this line.
     quantityPromo += quantityPromoDiscount(qty, unitPrice, qpromo);
     return {
@@ -293,17 +310,22 @@ export async function createOrder(
     total -= codeDiscount;
   }
 
-  // Payment-method discount (efectivo / transferencia), on the products subtotal
-  // after the other discounts. MP carries no discount.
+  // Descuento por método de pago (efectivo / transferencia). MP no lleva.
+  // IMPORTANTE (sin doble descuento): solo se aplica sobre la porción del total
+  // correspondiente a líneas que NO usaron el precio efectivo del producto. Si
+  // todos los productos tienen precio efectivo cargado, methodEligibleSubtotal
+  // es 0 y no se aplica el % (el precio efectivo ya ES el precio final).
   const payCfg = await getPaymentConfig();
   const methodPercent = discountPercentFor(payCfg, input.paymentMethod);
   let methodDiscount = 0;
-  if (methodPercent > 0) {
-    methodDiscount = Math.round((total * methodPercent) / 100);
+  if (methodPercent > 0 && methodEligibleSubtotal > 0 && productsSubtotal > 0) {
+    // Fracción del total (ya con promos/kg/código) que es elegible.
+    const eligibleShare = Math.min(1, methodEligibleSubtotal / productsSubtotal);
+    methodDiscount = Math.round((total * eligibleShare * methodPercent) / 100);
     total -= methodDiscount;
   }
   // Normalize the stored payment method (CASH -> EFECTIVO).
-  const storedMethod = normalizePaymentMethod(input.paymentMethod);
+  const storedMethod = method;
 
   // Add the delivery fee. Map mode: zone fee (free above threshold). Manual mode:
   // flat per-locality cost. Pickup / no zone: 0.
@@ -484,8 +506,8 @@ function safeParse(raw: string): string[] {
   }
 }
 
-// Server-side price for an empanado: the specific price (> 0) from the product's
-// `prices` JSON, otherwise the product's default `price`.
+// Server-side WEB price for an empanado: the specific price (> 0) from the
+// product's `prices` JSON, otherwise the product's default `price`.
 function priceForBreadcrumb(
   product: { price: number; prices: string },
   breadcrumb: string
@@ -498,6 +520,46 @@ function priceForBreadcrumb(
     // fall through to default
   }
   return product.price ?? 0;
+}
+
+// True si el producto tiene precio efectivo/transferencia cargado para ese
+// empanado (por-empanado o a nivel producto).
+function productHasCashPrice(
+  product: { priceCashTransfer?: number; pricesCashTransfer?: string },
+  breadcrumb: string
+): boolean {
+  try {
+    const map = JSON.parse(product.pricesCashTransfer ?? "{}");
+    const specific = map?.[breadcrumb];
+    if (typeof specific === "number" && specific > 0) return true;
+  } catch {
+    // ignore
+  }
+  return Boolean(product.priceCashTransfer && product.priceCashTransfer > 0);
+}
+
+// Server-side PRECIO EFECTIVO/TRANSFERENCIA para un empanado: específico (>0),
+// luego el del producto (>0), y si no hay, cae al precio web.
+function cashPriceForBreadcrumb(
+  product: {
+    price: number;
+    prices: string;
+    priceCashTransfer?: number;
+    pricesCashTransfer?: string;
+  },
+  breadcrumb: string
+): number {
+  try {
+    const map = JSON.parse(product.pricesCashTransfer ?? "{}");
+    const specific = map?.[breadcrumb];
+    if (typeof specific === "number" && specific > 0) return specific;
+  } catch {
+    // fall through
+  }
+  if (product.priceCashTransfer && product.priceCashTransfer > 0) {
+    return product.priceCashTransfer;
+  }
+  return priceForBreadcrumb(product, breadcrumb);
 }
 
 // % off for an empanado (per-empanado map, else product-wide promoPercent).
