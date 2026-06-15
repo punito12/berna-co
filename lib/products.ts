@@ -194,6 +194,41 @@ export function isProductOutOfStock(product: ProductForUI): boolean {
   return product.breadcrumbs.every((b) => stockFor(product, b) <= 0);
 }
 
+// ---- Disponibilidad pública por stock (helper único, fuente de verdad) ----
+// Estas funciones deciden qué ve el PÚBLICO según stock. La validación final de
+// stock al cobrar sigue en el server (createOrder / reprice), que leen la DB
+// directo; esto solo controla qué se MUESTRA/SELECCIONA en el storefront.
+
+// Empanados con stock (> 0) entre los visibles (admin-enabled) del producto.
+export function inStockBreadcrumbs(product: ProductForUI): string[] {
+  return product.breadcrumbs.filter((b) => stockFor(product, b) > 0);
+}
+
+// True si el producto tiene stock para mostrarse en la home/catálogo: al menos
+// un empanado con stock, o (sin empanados) stock total > 0.
+export function productHasPublicStock(product: ProductForUI): boolean {
+  if (product.breadcrumbs.length === 0) return (product.stock ?? 0) > 0;
+  return inStockBreadcrumbs(product).length > 0;
+}
+
+// Versión "pública" de un producto: `breadcrumbs` recortado a SOLO los empanados
+// con stock. Así el selector del catálogo/detalle nunca ofrece una variante sin
+// stock. El resto del producto queda igual.
+export function toPublicProduct(product: ProductForUI): ProductForUI {
+  if (product.breadcrumbs.length === 0) return product;
+  return { ...product, breadcrumbs: inStockBreadcrumbs(product) };
+}
+
+// Filtra una lista de productos para el público: oculta los que no tienen stock
+// y recorta los empanados sin stock de los que sí aparecen.
+export function filterPublicProductsByStock(
+  products: ProductForUI[]
+): ProductForUI[] {
+  return products
+    .filter(productHasPublicStock)
+    .map(toPublicProduct);
+}
+
 // Parses the prices column into a { breadcrumb: price } map.
 function safeParsePrices(raw: string): Record<string, number> {
   return safeParseNumberMap(raw);
@@ -234,22 +269,28 @@ function safeParseImages(raw: string): Record<string, string[]> {
   }
 }
 
-// Loads all available products, ordered so NEW items show first.
+// Loads all available products for the PUBLIC home/catalog, ordered so NEW items
+// show first. Oculta los productos sin stock y recorta los empanados sin stock
+// (los productos `available:false` del admin ya quedan afuera por el where).
 export async function getAvailableProducts(): Promise<ProductForUI[]> {
   const rows = await prisma.product.findMany({
     where: { available: true },
     orderBy: [{ isNew: "desc" }, { createdAt: "asc" }],
   });
-  return rows.map(toProductForUI);
+  return filterPublicProductsByStock(rows.map(toProductForUI));
 }
 
-// Loads one product by its slug, or null if not found / unavailable.
+// Loads one product by its slug, or null if not found / unavailable. Devuelve el
+// producto con `breadcrumbs` recortado a los empanados CON stock (así el detalle
+// nunca ofrece una variante agotada). Si no queda ninguno con stock, igual se
+// devuelve el producto (sin empanados disponibles) para que el detalle muestre
+// un estado "sin stock" en vez de romper el link directo.
 export async function getProductBySlug(
   slug: string
 ): Promise<ProductForUI | null> {
   const row = await prisma.product.findUnique({ where: { slug } });
   if (!row || !row.available) return null;
-  return toProductForUI(row);
+  return toPublicProduct(toProductForUI(row));
 }
 
 function safeParseArray(raw: string): string[] {

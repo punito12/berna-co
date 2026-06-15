@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import ProductGallery from "@/components/ProductGallery";
 import AddToCartPanel from "@/components/AddToCartPanel";
 import RichText from "@/components/RichText";
@@ -97,12 +98,36 @@ export default function ProductDetail({
           </div>
         )}
 
-        <AddToCartPanel
-          product={product}
-          selected={selected}
-          onSelect={setSelected}
-          labels={labels}
-        />
+        {/* Si no quedó ningún empanado con stock (link directo a un producto
+            agotado), mostramos un estado limpio "sin stock" en vez del panel de
+            compra. Nunca se permite agregar al carrito una variante agotada. */}
+        {product.breadcrumbs.length === 0 ? (
+          <div
+            data-cms-section="product.purchase"
+            className="mt-5 rounded-lg border border-line bg-white p-5 text-center shadow-[0_14px_34px_rgba(10,10,10,0.07)] sm:mt-6"
+          >
+            <p className="font-black uppercase tracking-wide text-sm text-ink">
+              {labels?.outOfStock ?? "Sin stock"}
+            </p>
+            <p className="mt-2 text-sm text-muted">
+              Por el momento no tenemos stock de este producto. Volvé pronto o
+              mirá el resto del catálogo.
+            </p>
+            <Link
+              href="/#productos"
+              className="mt-4 inline-block bg-black px-6 py-3 font-bold uppercase tracking-widest text-xs text-white"
+            >
+              Ver productos
+            </Link>
+          </div>
+        ) : (
+          <AddToCartPanel
+            product={product}
+            selected={selected}
+            onSelect={setSelected}
+            labels={labels}
+          />
+        )}
       </div>
     </div>
   );
