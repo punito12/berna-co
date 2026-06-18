@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { createProduct, type ProductInput } from "@/lib/admin";
+import { revalidateHomeData } from "@/lib/home-data";
 
 // Creates a new product. Admin-only.
 export async function POST(request: Request) {
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
 
   try {
     await createProduct(body);
+    revalidateHomeData();
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

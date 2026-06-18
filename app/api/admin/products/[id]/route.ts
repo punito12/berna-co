@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { updateProduct, deleteProduct, type ProductInput } from "@/lib/admin";
+import { revalidateHomeData } from "@/lib/home-data";
 
 // Updates all fields of a product. Admin-only.
 export async function PATCH(
@@ -20,6 +21,7 @@ export async function PATCH(
 
   try {
     await updateProduct(params.id, body);
+    revalidateHomeData();
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(
@@ -39,6 +41,7 @@ export async function DELETE(
   }
   try {
     await deleteProduct(params.id);
+    revalidateHomeData();
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { setPublicPrice } from "@/lib/pricing";
+import { revalidateHomeData } from "@/lib/home-data";
 
 // Set the public price for one (product, empanado). Admin-only.
 // POST { productId, breadcrumbType, price }
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Datos incompletos." }, { status: 400 });
   try {
     await setPublicPrice(body.productId, body.breadcrumbType, Number(body.price));
+    revalidateHomeData();
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

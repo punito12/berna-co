@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { createAdjustment } from "@/lib/stock-ops";
+import { revalidateHomeData } from "@/lib/home-data";
 
 // Record a manual stock adjustment (signed, with a required reason). Admin-only.
 export async function POST(request: Request) {
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
   }
   try {
     await createAdjustment(body);
+    revalidateHomeData();
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

@@ -18,6 +18,7 @@ import {
 import { getGlobalSeo, getPageSeo } from "@/lib/cms-seo";
 import type { Metadata } from "next";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
+import { loadHomeData } from "@/lib/home-data";
 
 // Home metadata from the CMS (seo.home.*), falling back to the global SEO.
 export async function generateMetadata(): Promise<Metadata> {
@@ -41,13 +42,19 @@ export default async function HomePage({
 }: {
   searchParams?: { preview?: string };
 }) {
-  const [products, payCfg, cms] = await Promise.all([
-    getAvailableProducts(),
-    getPaymentConfig(),
-    loadCmsBundle(),
-  ]);
+  const preview =
+    (await isPreview()) || isCmsPreviewRequest(searchParams?.preview);
 
-  const preview = (await isPreview()) || isCmsPreviewRequest(searchParams?.preview);
+  // Sin preview: datos PUBLICADOS desde la cache (sin esperar a la DB en cada
+  // request → LCP más rápido). En preview: datos frescos para ver los borradores.
+  const { products, payCfg, cms } = preview
+    ? {
+        products: await getAvailableProducts(),
+        payCfg: await getPaymentConfig(),
+        cms: await loadCmsBundle(),
+      }
+    : await loadHomeData();
+
   const sections = getSections(cms, "home", preview);
   const previewCssVars = preview
     ? [
