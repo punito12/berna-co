@@ -1,16 +1,27 @@
 import { getStockOverview } from "@/lib/admin";
-import { BREADCRUMB_LABELS } from "@/lib/products";
 import { STOCK_TABS } from "@/lib/stock-ops";
 import SubTabs from "@/components/SubTabs";
-import AdjustStockButton from "@/components/AdjustStockButton";
+import StockTable, { type StockRow } from "@/components/StockTable";
 
-const LOW_STOCK = 3; // highlight stock at or below this
-
-// Stock → Inventario: stock per product and empanado. Numbers aren't edited
-// directly — changes go through Ajustes (here, with a reason) and Producción.
-// Low stock is highlighted in red.
+// Stock → Inventario (V2): una tabla por producto + empanado/variedad, con
+// filtros (buscar, empanado, estado, categoría) y ajuste por fila. El stock real
+// se muta SIEMPRE vía /api/admin/stock/adjustment (registra el movimiento con
+// motivo); acá solo se muestra y se dispara ese ajuste. No se cambió la lógica
+// de mutación de stock.
 export default async function InventarioPage() {
-  const stock = await getStockOverview();
+  const overview = await getStockOverview();
+
+  // Aplanar a filas producto + empanado (cada variante es su propia unidad).
+  const rows: StockRow[] = overview.flatMap((p) =>
+    p.breadcrumbs.map((b) => ({
+      productId: p.id,
+      productName: p.name,
+      category: p.category,
+      available: p.available,
+      breadcrumb: b.code,
+      stock: b.stock,
+    }))
+  );
 
   return (
     <div>
@@ -22,62 +33,12 @@ export default async function InventarioPage() {
         Inventario actual
       </h2>
       <p className="mb-6 text-sm text-muted">
-        Stock por empanado. Para sumar usá{" "}
-        <span className="font-bold text-ink">Producción</span>; para corregir,{" "}
-        <span className="font-bold text-ink">Ajustar</span> (queda registrado el
-        motivo en Movimientos).
+        Stock por producto y empanado. Para corregir el stock, usá{" "}
+        <span className="font-bold text-ink">Ajustar</span> en cada fila (queda
+        registrado el motivo en Movimientos).
       </p>
 
-      <div className="space-y-3">
-        {stock.map((p) => (
-          <div
-            key={p.id}
-            className="rounded-lg border border-line bg-white px-4 py-3"
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <h3 className="font-black uppercase tracking-tight text-ink">
-                {p.name}
-              </h3>
-              {!p.available && (
-                <span className="rounded bg-cream px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
-                  Pausado
-                </span>
-              )}
-            </div>
-            {p.breadcrumbs.length === 0 ? (
-              <span className="text-sm text-muted">Sin empanados.</span>
-            ) : (
-              <div className="space-y-2">
-                {p.breadcrumbs.map((b) => {
-                  const low = b.stock <= LOW_STOCK;
-                  return (
-                    <div
-                      key={b.code}
-                      className="flex flex-wrap items-center gap-3"
-                    >
-                      <span
-                        className={`rounded-md border px-3 py-1.5 text-sm font-bold ${
-                          low
-                            ? "border-red-300 bg-red-50 text-red-700"
-                            : "border-line bg-cream/40 text-ink"
-                        }`}
-                      >
-                        {BREADCRUMB_LABELS[b.code] ?? b.code}:{" "}
-                        <span className="tabular-nums">{b.stock}</span>
-                      </span>
-                      <AdjustStockButton
-                        productId={p.id}
-                        breadcrumbType={b.code}
-                        currentStock={b.stock}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      <StockTable rows={rows} />
     </div>
   );
 }

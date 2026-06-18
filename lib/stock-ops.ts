@@ -20,7 +20,6 @@ export {
 export const STOCK_TABS = [
   { href: "/admin/stock", label: "Inventario" },
   { href: "/admin/stock/movimientos", label: "Movimientos" },
-  { href: "/admin/stock/produccion", label: "Producción" },
 ];
 
 // ---- Producción --------------------------------------------------------------

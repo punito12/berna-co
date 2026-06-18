@@ -16,17 +16,10 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
     title: "Operaciones",
     links: [
       { href: "/admin/operaciones/ventas", label: "Pedidos y ventas" },
+      { href: "/admin/operaciones/resumen-ventas", label: "Resumen de ventas" },
       { href: "/admin/entregas", label: "Entregas" },
       { href: "/admin/ventas", label: "Cargar venta manual" },
       { href: "/admin/remitos", label: "Remitos" },
-    ],
-  },
-  {
-    title: "Finanzas",
-    links: [
-      { href: "/admin/caja", label: "Caja" },
-      { href: "/admin/finanzas/cobrar", label: "Cuentas por cobrar" },
-      { href: "/admin/finanzas/pagar", label: "Cuentas por pagar" },
     ],
   },
   {
@@ -34,14 +27,6 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
     links: [
       { href: "/admin/stock", label: "Inventario actual" },
       { href: "/admin/stock/movimientos", label: "Movimientos" },
-      { href: "/admin/stock/produccion", label: "Producción" },
-    ],
-  },
-  {
-    title: "Compras",
-    links: [
-      { href: "/admin/compras", label: "Órdenes de compra" },
-      { href: "/admin/compras/proveedores", label: "Proveedores" },
     ],
   },
   {

@@ -98,6 +98,7 @@ export async function getStockOverview() {
     return {
       id: p.id,
       name: p.name,
+      category: p.category,
       available: p.available,
       breadcrumbs: breadcrumbs.map((b) => ({ code: b, stock: stocks[b] ?? 0 })),
     };
