@@ -686,20 +686,36 @@ export async function listSalesUnified(
   return rows.slice(0, limit);
 }
 
-// Counts per status for the current filters (ignoring the status filter itself),
-// so the filter buttons can show "(N)". Returns all 3 + total non-cancelled.
-export async function countSalesByStatus(
-  filters: Omit<UnifiedFilters, "status" | "limit">
-): Promise<{ CONFIRMED: number; DELIVERED: number; CANCELLED: number; activos: number }> {
-  const all = await listSalesUnified({ ...filters, limit: 5000 });
-  const out = { CONFIRMED: 0, DELIVERED: 0, CANCELLED: 0, activos: 0 };
-  for (const r of all) {
+export type StatusCounts = {
+  CONFIRMED: number;
+  DELIVERED: number;
+  CANCELLED: number;
+  activos: number;
+};
+
+// Cuenta filas por estado a partir de un set YA cargado (sin tocar la DB). La
+// página de Pedidos y ventas trae las filas una sola vez y deriva los contadores
+// con esto, en vez de pegarle de nuevo a la base.
+export function tallyStatusCounts(rows: UnifiedSale[]): StatusCounts {
+  const out: StatusCounts = { CONFIRMED: 0, DELIVERED: 0, CANCELLED: 0, activos: 0 };
+  for (const r of rows) {
     if (r.status === "CONFIRMED") out.CONFIRMED += 1;
     else if (r.status === "DELIVERED") out.DELIVERED += 1;
     else if (r.status === "CANCELLED") out.CANCELLED += 1;
   }
   out.activos = out.CONFIRMED + out.DELIVERED;
   return out;
+}
+
+// Counts per status for the current filters (ignoring the status filter itself),
+// so the filter buttons can show "(N)". Returns all 3 + total non-cancelled.
+// (Se mantiene por compatibilidad; la página unificada ahora usa
+// tallyStatusCounts sobre las filas ya traídas para evitar una segunda query.)
+export async function countSalesByStatus(
+  filters: Omit<UnifiedFilters, "status" | "limit">
+): Promise<StatusCounts> {
+  const all = await listSalesUnified({ ...filters, limit: 5000 });
+  return tallyStatusCounts(all);
 }
 
 // Products for the sale form: name + current price (the tradicional/default).

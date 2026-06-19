@@ -5,7 +5,7 @@ import {
 } from "@/lib/pricing-history";
 import SubTabs from "@/components/SubTabs";
 import HistorySelector from "@/components/HistorySelector";
-import PriceHistoryChart from "@/components/PriceHistoryChart";
+import PriceHistoryChart from "@/components/PriceHistoryChartLazy";
 
 function pesos(n: number): string {
   return new Intl.NumberFormat("es-AR", {

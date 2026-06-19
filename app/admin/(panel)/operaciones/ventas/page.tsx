@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   listSalesUnified,
-  countSalesByStatus,
+  tallyStatusCounts,
   SALE_CHANNELS,
   SALE_CHANNEL_LABELS,
   type UnifiedFilters,
@@ -81,15 +81,19 @@ export default async function PedidosYVentasPage({
 
   const baseFilters: UnifiedFilters = { origin, customerType, from, to };
 
-  const [allRows, counts] = await Promise.all([
-    listSalesUnified({ ...baseFilters, status: statusFilter }),
-    countSalesByStatus(baseFilters),
-  ]);
+  // Una sola consulta: traemos todas las filas que matchean los filtros base
+  // (sin el filtro de estado) y de ahí derivamos tanto los contadores como las
+  // filas a mostrar. Antes se pegaban DOS queries a la DB (las filas + un
+  // re-fetch de 5000 para contar), duplicando el dataset por carga.
+  const allRows = await listSalesUnified({ ...baseFilters, limit: 5000 });
+  const counts = tallyStatusCounts(allRows);
 
-  // Default (no status filter): show only non-cancelled (activos).
-  const rows = statusFilter
-    ? allRows
+  // Filtro de estado aplicado en memoria. Default (sin filtro): solo activos
+  // (no cancelados). Se acota a 500 filas mostradas (igual que antes).
+  const filtered = statusFilter
+    ? allRows.filter((r) => r.status === statusFilter)
     : allRows.filter((r) => r.status !== "CANCELLED");
+  const rows = filtered.slice(0, 500);
 
   // Helper to build a URL preserving the other filters.
   function hrefWith(patch: Partial<typeof searchParams>): string {
