@@ -337,14 +337,13 @@ function AdjustForm({ row, onDone }: { row: StockRow; onDone: () => void }) {
         </label>
         <label className="block flex-1 min-w-[180px]">
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">
-            Motivo (obligatorio)
+            Nota / motivo (opcional)
           </span>
           <input
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="w-full rounded border border-line bg-white px-2 py-1.5 text-sm text-ink outline-none focus:border-black"
             placeholder="Ej: conteo físico, rotura, producción"
-            required
           />
         </label>
       </div>

@@ -50,13 +50,13 @@ export async function createProduction(input: ProductionInput) {
   });
 }
 
-// ---- Ajuste manual (motivo obligatorio) -------------------------------------
+// ---- Ajuste manual (motivo OPCIONAL) ----------------------------------------
 
 export type AdjustmentInput = {
   productId: string;
   breadcrumbType: string;
   delta: number; // signed: + adds, − removes
-  reason: string; // required
+  reason?: string; // opcional: nota/motivo libre (puede ir vacío)
   type?: string; // ADJUSTMENT (default) or WASTE
   date?: string;
 };
@@ -67,8 +67,8 @@ export async function createAdjustment(input: AdjustmentInput) {
     throw new Error("Elegí un producto y un empanado.");
   if (!Number.isFinite(delta) || delta === 0)
     throw new Error("El ajuste no puede ser 0 (usá + para sumar, − para restar).");
-  const reason = input.reason?.trim();
-  if (!reason) throw new Error("El ajuste necesita un motivo.");
+  // El motivo es opcional: si viene vacío se guarda como null (no bloquea).
+  const reason = input.reason?.trim() || null;
   const type = input.type === "WASTE" ? "WASTE" : "ADJUSTMENT";
   const date = parseDate(input.date);
   await adjustStockSingle({

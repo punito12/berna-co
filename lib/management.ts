@@ -290,6 +290,10 @@ export type SaleInput = {
   paymentMethod?: string;
   // true = pendiente de pago (no entra a caja hasta registrar el pago).
   paymentPending?: boolean;
+  // ¿Descontar stock al cargar la venta? Default true (comportamiento histórico).
+  // false = no toca inventario (p. ej. mercadería ya descontada antes): la venta
+  // se factura/registra igual pero no mueve stock.
+  discountStock?: boolean;
   items: SaleItemInput[];
 };
 
@@ -358,6 +362,11 @@ export async function createManualSale(input: SaleInput) {
       ? new Date(soldAt.getTime() + DEFAULT_DUE_DAYS * 86400000)
       : null;
 
+  // Por defecto descuenta stock (como siempre). Solo NO descuenta si el admin lo
+  // pide explícitamente. Se persiste para que cancelar/editar respeten la decisión
+  // (una venta que no descontó stock tampoco lo reintegra al cancelar).
+  const discountStock = input.discountStock !== false;
+
   const sale = await prisma.manualSale.create({
     data: {
       soldAt,
@@ -372,6 +381,7 @@ export async function createManualSale(input: SaleInput) {
       paymentMethod,
       paymentStatus: onCredit ? "PENDING" : "PAID",
       dueDate,
+      stockDiscounted: discountStock,
       items: {
         create: lines.map((l) => ({
           productId: l.productId || null,
@@ -388,14 +398,18 @@ export async function createManualSale(input: SaleInput) {
 
   // Discount stock for the lines that track a product + empanado (free-text
   // lines are skipped). Cancelling the sale later restocks the same amount.
-  try {
-    await adjustStockForLines(lines, -1, {
-      type: "SALE",
-      referenceType: "MANUAL_SALE",
-      referenceId: sale.id,
-    });
-  } catch (e) {
-    console.error("adjustStockForLines (sale create) failed:", e);
+  // Solo si la venta descuenta stock; si no, no se toca inventario ni el cache
+  // del home (que depende del stock).
+  if (discountStock) {
+    try {
+      await adjustStockForLines(lines, -1, {
+        type: "SALE",
+        referenceType: "MANUAL_SALE",
+        referenceId: sale.id,
+      });
+    } catch (e) {
+      console.error("adjustStockForLines (sale create) failed:", e);
+    }
   }
 
   // Contado: mirror the sale into Caja as income (deduped by saleId). Credit
@@ -413,6 +427,11 @@ export async function createManualSale(input: SaleInput) {
       console.error("recordManualSaleIncome failed:", e);
     }
   }
+
+  // El caller (ruta API) revalida el cache del home si cambió stock. La
+  // revalidación vive en la ruta (server-only) para no arrastrar next/headers
+  // al bundle cliente que importa labels de este módulo.
+  return { stockChanged: discountStock };
 }
 
 export async function listManualSales(limit = 100) {
@@ -432,16 +451,20 @@ async function reverseSaleEffects(saleId: string) {
     include: { items: true },
   });
   if (!sale) return;
-  // Restock (only lines that tracked product + empanado).
-  try {
-    await adjustStockForLines(sale.items, 1, {
-      type: "ADJUSTMENT",
-      referenceType: "MANUAL_SALE",
-      referenceId: saleId,
-      notes: "Reintegro por cancelación/eliminación de venta",
-    });
-  } catch (e) {
-    console.error("restock on reverse failed:", e);
+  // Restock (only lines that tracked product + empanado). Solo si la venta había
+  // descontado stock al cargarse: una venta cargada con "no descontar stock" no
+  // tiene nada que reintegrar (de lo contrario sumaría stock fantasma).
+  if (sale.stockDiscounted) {
+    try {
+      await adjustStockForLines(sale.items, 1, {
+        type: "ADJUSTMENT",
+        referenceType: "MANUAL_SALE",
+        referenceId: saleId,
+        notes: "Reintegro por cancelación/eliminación de venta",
+      });
+    } catch (e) {
+      console.error("restock on reverse failed:", e);
+    }
   }
   // Remove the Caja income(s) tied to this sale (auto-income and any payment
   // incomes share the saleId on the CashMovement).
@@ -488,16 +511,19 @@ export async function setSaleDeliveryStatus(id: string, status: string) {
     await reverseSaleEffects(id);
   } else if (wasCancelled && !willCancel) {
     // Re-activating a cancelled sale: discount stock again. (Caja income is not
-    // auto-recreated — re-register the payment/cobro if it applied.)
-    try {
-      await adjustStockForLines(sale.items, -1, {
-        type: "SALE",
-        referenceType: "MANUAL_SALE",
-        referenceId: id,
-        notes: "Reactivación de venta",
-      });
-    } catch (e) {
-      console.error("re-discount on un-cancel failed:", e);
+    // auto-recreated — re-register the payment/cobro if it applied.) Solo si la
+    // venta descuenta stock; si se cargó sin descontar, reactivarla tampoco lo mueve.
+    if (sale.stockDiscounted) {
+      try {
+        await adjustStockForLines(sale.items, -1, {
+          type: "SALE",
+          referenceType: "MANUAL_SALE",
+          referenceId: id,
+          notes: "Reactivación de venta",
+        });
+      } catch (e) {
+        console.error("re-discount on un-cancel failed:", e);
+      }
     }
   }
 

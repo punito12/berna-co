@@ -179,6 +179,12 @@ export default async function SaleDetailPage({
           {sale.dueDate && (
             <Row label="Vence" value={longDate(sale.dueDate)} />
           )}
+          {sale.stockDiscounted !== null && (
+            <Row
+              label="Stock"
+              value={sale.stockDiscounted ? "Descontó stock" : "No descontó stock"}
+            />
+          )}
         </Card>
 
         {sale.notes && (

@@ -68,6 +68,10 @@ export type SaleDetail = {
   paymentNote: string | null;
   dueDate: Date | null;
 
+  // ¿Descontó stock al cargarse? Solo aplica a ventas manuales (null en pedidos
+  // web, que siempre reservan/descuentan stock).
+  stockDiscounted: boolean | null;
+
   // Money
   gross: number;
   discountAmount: number;
@@ -177,6 +181,7 @@ export async function getSaleDetail(
           ? "Parcial"
           : "A cobrar"),
       paymentTone: orderPaymentBadgeTone(o),
+      stockDiscounted: null,
       paymentNote:
         o.paymentMethod === "MERCADOPAGO" && !o.mpPaymentId && o.status !== "CANCELLED"
           ? "Stock reservado hasta que el pago se apruebe o se cancele."
@@ -236,6 +241,7 @@ export async function getSaleDetail(
         ? "Parcial"
         : "Pendiente de pago",
     paymentTone: s.paymentStatus === "PAID" ? "success" : "warning",
+    stockDiscounted: s.stockDiscounted,
     paymentNote: null,
     dueDate: s.dueDate,
     gross: s.gross,

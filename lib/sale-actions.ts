@@ -299,7 +299,10 @@ export async function editSale(
     const net = gross - discountAmount;
 
     await prisma.$transaction(async (tx) => {
-      await applyStockDiff(tx, oldUnits, newUnits, "MANUAL_SALE", id, shortId);
+      // Solo reconciliar stock si la venta había descontado stock al cargarse.
+      // Si se cargó con "no descontar stock", editar sus ítems no mueve inventario.
+      if (sale.stockDiscounted)
+        await applyStockDiff(tx, oldUnits, newUnits, "MANUAL_SALE", id, shortId);
       await tx.saleItem.deleteMany({ where: { saleId: id } });
       await tx.manualSale.update({
         where: { id },

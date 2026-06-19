@@ -96,6 +96,9 @@ export default function SaleForm({
   // Medio de pago + estado (pagado / pendiente de pago).
   const [paymentMethod, setPaymentMethod] = useState("EFECTIVO");
   const [paymentPending, setPaymentPending] = useState(false);
+  // ¿Descontar stock al guardar? Default true (comportamiento histórico). Si el
+  // operador ya descontó la mercadería antes, elige "No" para solo facturar.
+  const [discountStock, setDiscountStock] = useState(true);
   const [lines, setLines] = useState<Line[]>([
     { productId: "", productName: "", breadcrumbType: "", quantity: "", unitPrice: "" },
   ]);
@@ -258,6 +261,7 @@ export default function SaleForm({
           notes: notes || undefined,
           paymentMethod,
           paymentPending,
+          discountStock,
           items,
         }),
       });
@@ -274,6 +278,7 @@ export default function SaleForm({
       setNotes("");
       setPaymentMethod("EFECTIVO");
       setPaymentPending(false);
+      setDiscountStock(true);
       setSavedMsg(true);
       router.refresh();
     } catch (e) {
@@ -642,6 +647,25 @@ export default function SaleForm({
           {paymentPending && (
             <span className="mt-1 block text-[11px] text-muted">
               La venta queda pendiente y no entra a caja hasta registrar el pago.
+            </span>
+          )}
+        </label>
+        <label className="block">
+          <span className="mb-1 block font-bold uppercase tracking-wide text-[11px] text-muted">
+            Descontar stock
+          </span>
+          <select
+            value={discountStock ? "SI" : "NO"}
+            onChange={(e) => setDiscountStock(e.target.value === "SI")}
+            className={inputClass}
+          >
+            <option value="SI">Sí</option>
+            <option value="NO">No</option>
+          </select>
+          {!discountStock && (
+            <span className="mt-1 block text-[11px] text-muted">
+              La venta se factura y cuenta en los reportes, pero no descuenta
+              inventario (ej: mercadería ya descontada antes).
             </span>
           )}
         </label>

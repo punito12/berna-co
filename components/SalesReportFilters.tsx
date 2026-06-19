@@ -101,6 +101,7 @@ export default function SalesReportFilters({
             <option value="MAYORISTA">Mayorista (canal)</option>
             <option value="KIOSCO">Kiosco</option>
             <option value="MANUAL">Manual (todas)</option>
+            <option value="REMITO">Remito</option>
           </select>
         </label>
         <label className="block">

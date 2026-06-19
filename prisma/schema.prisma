@@ -281,6 +281,12 @@ model ManualSale {
   // el stock descontado al cargarla.
   deliveryStatus String @default("PENDING") // PENDING | DELIVERED | CANCELLED
 
+  // ¿Esta venta descontó stock al cargarse? true = sí (comportamiento histórico:
+  // descuenta al crear y reintegra al cancelar/editar). false = NO mueve stock
+  // (p. ej. mercadería ya descontada antes; solo se factura/registra la venta).
+  // Cancelar/editar respetan esta bandera: si no descontó, tampoco reintegra.
+  stockDiscounted Boolean @default(true)
+
   items    SaleItem[]
   payments Payment[]
 

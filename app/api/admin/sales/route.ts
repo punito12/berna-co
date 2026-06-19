@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { createManualSale, type SaleInput } from "@/lib/management";
+import { revalidateHomeData } from "@/lib/home-data";
 
 // Creates a manual sale. Admin-only.
 export async function POST(request: Request) {
@@ -14,7 +15,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
   try {
-    await createManualSale(body);
+    const { stockChanged } = await createManualSale(body);
+    // Si la venta descontó stock, el home (que depende de stock) puede cambiar.
+    if (stockChanged) revalidateHomeData();
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

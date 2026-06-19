@@ -80,7 +80,7 @@ export type ReportFilters = {
   from: Date; // inclusive
   to: Date; // exclusive (ya viene como "día siguiente 00:00")
   customerType?: string; // MINORISTA | MAYORISTA | KIOSCO | "" (todos)
-  origin?: string; // WEB | WHATSAPP | MAYORISTA | KIOSCO | MANUAL | "" (todos)
+  origin?: string; // WEB | WHATSAPP | MAYORISTA | KIOSCO | MANUAL | REMITO | "" (todos)
   paymentStatus?: string; // PAID | PENDING | PARTIAL | "" (todos)
   productId?: string; // "" (todos)
 };
@@ -230,7 +230,7 @@ type NormalizedItem = {
 
 type NormalizedSale = {
   id: string;
-  kind: "ORDER" | "MANUAL";
+  kind: "ORDER" | "MANUAL" | "REMITO";
   date: Date;
   customerId: string | null;
   customerName: string;
@@ -250,13 +250,27 @@ async function loadNormalizedSales(
 ): Promise<NormalizedSale[]> {
   const dateRange = { gte: filters.from, lt: filters.to };
   const includeOrders = !filters.origin || filters.origin === "WEB";
-  const includeManual = !filters.origin || filters.origin !== "WEB";
+  // Las ventas manuales entran cuando no hay filtro de origen o el origen es uno
+  // de sus canales (WHATSAPP/MAYORISTA/KIOSCO) o "MANUAL" (todas). NO cuando el
+  // origen pedido es WEB ni REMITO.
+  const includeManual =
+    !filters.origin ||
+    (filters.origin !== "WEB" && filters.origin !== "REMITO");
+  // Los remitos entran cuando no hay filtro de origen o el origen es "REMITO".
+  // Se excluyen cuando: hay otro origen específico (para no mezclarlos); hay un
+  // filtro por tipo de cliente (los remitos no guardan cliente vinculado); o hay
+  // un filtro de estado de pago distinto de PAID (los remitos no tienen cuenta
+  // corriente → se consideran cobrados).
+  const includeRemitos =
+    (!filters.origin || filters.origin === "REMITO") &&
+    !filters.customerType &&
+    (!filters.paymentStatus || filters.paymentStatus === "PAID");
 
   const customerTypeWhere = filters.customerType
     ? { customer: { type: filters.customerType } }
     : {};
 
-  const [orders, sales] = await Promise.all([
+  const [orders, sales, remitos] = await Promise.all([
     includeOrders
       ? prisma.order.findMany({
           where: {
@@ -306,6 +320,16 @@ async function loadNormalizedSales(
             },
             customer: { select: { type: true, name: true } },
           },
+        })
+      : Promise.resolve([]),
+    includeRemitos
+      ? prisma.remito.findMany({
+          where: {
+            date: dateRange,
+            // Los remitos archivados NO cuentan como venta (se sacaron de circulación).
+            archived: false,
+          },
+          include: { items: { orderBy: { order: "asc" } } },
         })
       : Promise.resolve([]),
   ]);
@@ -384,6 +408,50 @@ async function loadNormalizedSales(
       gross: s.gross ?? itemsGross,
       discount: s.discountAmount ?? 0,
       net: s.net ?? 0,
+      items,
+    });
+  }
+
+  // --- Remitos ---
+  // Cada remito cuenta como una venta de origen "Remito". Los ítems del remito
+  // son de texto libre (no vinculan producto), pero llevan su propio nombre,
+  // empanado embebido en el nombre ("Producto (Empanado)"), cantidad y unidad
+  // (kg | paq.) → se agrupan por producto + empanado igual que el resto, usando
+  // SIEMPRE el dato copiado en el remito (histórico estable). El remito NO toca
+  // stock/caja/MP: acá solo se LEE para sumarlo al reporte.
+  for (const r of remitos) {
+    const itemsGross = r.items.reduce((a, it) => a + it.total, 0);
+    const net = r.total ?? 0;
+    const discount = r.discountAmount ?? 0;
+    const items: NormalizedItem[] = r.items.map((it) => {
+      const share = itemsGross > 0 ? it.total / itemsGross : 0;
+      // La unidad del ítem decide kg vs paquete: "kg" → producto de 1 kg
+      // (weightGrams 1000), "paq." → paquete (peso ≠ 1000). Así reusa la misma
+      // clasificación kg/paq del resto del reporte sin tratarlos como texto libre.
+      const weightGrams = it.unit === "paq." ? 500 : 1000;
+      return {
+        productId: null,
+        productName: it.description || "Ítem",
+        breadcrumbType: null, // se deduce del sufijo "(Empanado)" del nombre
+        weightGrams,
+        units: it.quantity,
+        gross: it.total,
+        discount: Math.round(discount * share),
+        net: Math.round(net * share),
+      };
+    });
+    out.push({
+      id: r.id,
+      kind: "REMITO",
+      date: r.date,
+      customerId: null, // los remitos no vinculan un Customer
+      customerName: r.customerName?.trim() || "Cliente sin registrar",
+      customerClass: classifyCustomer(null), // SIN_CLASIFICAR
+      paymentMethod: normalizePaymentMethod(r.paymentMethod),
+      paymentStatus: "PAID",
+      gross: r.subtotal ?? itemsGross,
+      discount,
+      net,
       items,
     });
   }
