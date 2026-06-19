@@ -110,9 +110,9 @@ export default async function ResumenVentasPage({
               <Card label="Facturación neta" value={pesos(g.net)} strong />
               <Card label="Kg vendidos" value={kg(g.kg)} />
               <Card label="Paquetes vendidos" value={units(g.packs)} hint="productos de 750 g / 500 g" />
-              <Card label="Precio promedio por kg" value={g.kg > 0 ? pesos(g.avgPricePerKg) : "No disponible"} />
+              <Card label="Precio promedio/kg" value={g.kgEq > 0 ? pesos(g.avgPricePerKg) : "No disponible"} hint="sobre kg equivalentes" />
               <Card label="Cantidad de ventas" value={units(g.salesCount)} />
-              <Card label="Ticket promedio" value={pesos(g.avgTicket)} />
+              <Card label="Ticket promedio minorista" value={g.minoristaSalesCount > 0 ? pesos(g.avgTicketMinorista) : "—"} hint="solo ventas minoristas" />
             </div>
             {g.freeTextItems > 0 && (
               <p className="mt-2 text-[11px] text-muted">
@@ -123,10 +123,41 @@ export default async function ResumenVentasPage({
             )}
           </section>
 
+          {/* Kg vendidos por corte (en kg equivalentes; orden fijo) */}
+          <section>
+            <SectionTitle>Kg vendidos por corte</SectionTitle>
+            <Table head={["Corte", "Kg vendidos", "% sobre total"]}>
+              {(() => {
+                const totalCorte = report.corteKg.reduce((a, c) => a + c.kgEq, 0);
+                return (
+                  <>
+                    {report.corteKg.map((c) => (
+                      <Row key={c.corte}
+                        cells={[c.corte, kg(c.kgEq), pct(c.kgEq, totalCorte)]}
+                        align={["left", "right", "right"]}
+                      />
+                    ))}
+                    <Row strong
+                      cells={["Total", kg(totalCorte), "100,0%"]}
+                      align={["left", "right", "right"]}
+                    />
+                  </>
+                );
+              })()}
+            </Table>
+            {report.productsNotConvertible.length > 0 && (
+              <p className="mt-2 text-[11px] text-muted">
+                Sin corte asignado / sin kg-equivalente:{" "}
+                {report.productsNotConvertible.join(", ")}. No se contabilizan en
+                kg por corte ni en precio/kg (su facturación sí cuenta).
+              </p>
+            )}
+          </section>
+
           {/* 2. Kg vendidos por producto */}
           <section>
             <SectionTitle>Kg vendidos por producto</SectionTitle>
-            <Table head={["Producto — Empanado", "Kg", "Paq.", "% sobre unidades"]}>
+            <Table head={["Producto — Empanado", "Kg", "Paq.", "% sobre total"]}>
               {report.byProduct.map((p) => (
                 <Row key={p.productId}
                   cells={[p.name, kg(p.kg), units(p.packs), pct(p.kg + p.packs, totalUnits)]}
@@ -145,14 +176,14 @@ export default async function ResumenVentasPage({
           <section>
             <SectionTitle>Mayorista vs minorista</SectionTitle>
             <Table
-              head={["Tipo de cliente", "Kg", "% unidades", "Paq.", "Bruta", "Descuento", "Neta", "Precio/kg"]}
+              head={["Tipo de cliente", "Kg", "% sobre total", "Paq.", "Bruta", "Descuento", "Neta", "Precio/kg"]}
             >
               {report.byCustomerClass.map((c) => (
                 <Row key={c.class}
                   cells={[
                     c.label, kg(c.row.kg), pct(c.row.kg + c.row.packs, totalUnits), units(c.row.packs),
                     pesos(c.row.gross), pesos(c.row.discount), pesos(c.row.net),
-                    c.row.kg > 0 ? pesos(pricePerKg(c.row)) : "—",
+                    c.row.kgEq > 0 ? pesos(pricePerKg(c.row)) : "—",
                   ]}
                   align={["left", "right", "right", "right", "right", "right", "right", "right"]}
                 />
@@ -161,21 +192,21 @@ export default async function ResumenVentasPage({
                 cells={[
                   "Total", kg(totalKg), "100,0%", units(g.packs),
                   pesos(g.gross), pesos(g.discount), pesos(g.net),
-                  g.kg > 0 ? pesos(g.avgPricePerKg) : "—",
+                  g.kgEq > 0 ? pesos(g.avgPricePerKg) : "—",
                 ]}
                 align={["left", "right", "right", "right", "right", "right", "right", "right"]}
               />
             </Table>
           </section>
 
-          {/* 4. Producto por tipo de cliente */}
+          {/* 4. Producto por tipo de cliente (en kg equivalentes) */}
           <section>
             <SectionTitle>Producto por tipo de cliente</SectionTitle>
-            <Table head={["Producto — Empanado", "Kg mayorista", "Kg minorista", "Kg sin clasif.", "Kg total"]}>
+            <Table head={["Producto — Empanado", "Kg mayorista", "Kg minorista", "Kg total"]}>
               {report.productByCustomer.map((p) => (
                 <Row key={p.productId}
-                  cells={[p.name, kg(p.kgMayorista), kg(p.kgMinorista), kg(p.kgSinClasificar), kg(p.kgTotal)]}
-                  align={["left", "right", "right", "right", "right"]}
+                  cells={[p.name, kg(p.kgEqMayorista), kg(p.kgEqMinorista), kg(p.kgEqTotal)]}
+                  align={["left", "right", "right", "right"]}
                 />
               ))}
             </Table>
@@ -192,12 +223,12 @@ export default async function ResumenVentasPage({
                   <Card label="Bruta" value={pesos(block.summary.gross)} small />
                   <Card label="Descuento" value={pesos(block.summary.discount)} small />
                   <Card label="Neta" value={pesos(block.summary.net)} small strong />
-                  <Card label="Precio promedio/kg" value={block.summary.kg > 0 ? pesos(pricePerKg(block.summary)) : "—"} small />
+                  <Card label="Precio promedio/kg" value={block.summary.kgEq > 0 ? pesos(pricePerKg(block.summary)) : "—"} small />
                 </div>
                 <Table head={["Producto — Empanado", "Bruta", "Descuento", "Neta", "Kg", "Paq.", "Precio/kg"]}>
                   {block.products.map((p) => (
                     <Row key={p.productId}
-                      cells={[p.name, pesos(p.gross), pesos(p.discount), pesos(p.net), kg(p.kg), units(p.packs), p.kg > 0 ? pesos(pricePerKg(p)) : "—"]}
+                      cells={[p.name, pesos(p.gross), pesos(p.discount), pesos(p.net), kg(p.kg), units(p.packs), p.kgEq > 0 ? pesos(pricePerKg(p)) : "—"]}
                       align={["left", "right", "right", "right", "right", "right", "right"]}
                     />
                   ))}
@@ -212,7 +243,7 @@ export default async function ResumenVentasPage({
             <Table head={["Producto — Empanado", "Bruta total", "Descuento total", "Neta total", "Kg", "Paq.", "Precio/kg"]}>
               {report.byProduct.map((p) => (
                 <Row key={p.productId}
-                  cells={[p.name, pesos(p.gross), pesos(p.discount), pesos(p.net), kg(p.kg), units(p.packs), p.kg > 0 ? pesos(pricePerKg(p)) : "—"]}
+                  cells={[p.name, pesos(p.gross), pesos(p.discount), pesos(p.net), kg(p.kg), units(p.packs), p.kgEq > 0 ? pesos(pricePerKg(p)) : "—"]}
                   align={["left", "right", "right", "right", "right", "right", "right"]}
                 />
               ))}
@@ -225,7 +256,7 @@ export default async function ResumenVentasPage({
             <div className="grid gap-3 sm:grid-cols-2">
               <RankCard
                 title="Más vendidos por kg"
-                rows={[...report.byProduct].filter((p) => p.kg > 0).sort((a, b) => b.kg - a.kg).slice(0, 5).map((p) => ({ name: p.name, value: kg(p.kg) }))}
+                rows={[...report.byProduct].filter((p) => p.kgEq > 0).sort((a, b) => b.kgEq - a.kgEq).slice(0, 5).map((p) => ({ name: p.name, value: kg(p.kgEq) }))}
               />
               <RankCard
                 title="Los que más facturaron"
@@ -237,7 +268,7 @@ export default async function ResumenVentasPage({
               />
               <RankCard
                 title="Mejor precio promedio por kg"
-                rows={[...report.byProduct].filter((p) => p.kg > 0).sort((a, b) => pricePerKg(b) - pricePerKg(a)).slice(0, 5).map((p) => ({ name: p.name, value: pesos(pricePerKg(p)) }))}
+                rows={[...report.byProduct].filter((p) => p.kgEq > 0).sort((a, b) => pricePerKg(b) - pricePerKg(a)).slice(0, 5).map((p) => ({ name: p.name, value: pesos(pricePerKg(p)) }))}
               />
             </div>
           </section>

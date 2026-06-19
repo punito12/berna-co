@@ -44,9 +44,15 @@ function reportToCsv(report: Awaited<ReturnType<typeof buildSalesReport>>): stri
   push("Facturación neta", report.general.net);
   push("Kg vendidos", report.general.kg);
   push("Paquetes vendidos", report.general.packs);
+  push("Kg equivalentes (incluye paquetes)", report.general.kgEq);
   push("Precio promedio por kg", report.general.avgPricePerKg);
   push("Cantidad de ventas", report.general.salesCount);
-  push("Ticket promedio", report.general.avgTicket);
+  push("Ticket promedio minorista", report.general.avgTicketMinorista);
+  push("");
+
+  push("KG VENDIDOS POR CORTE");
+  push("Corte", "Kg vendidos");
+  for (const c of report.corteKg) push(c.corte, c.kgEq);
   push("");
 
   push("FACTURACIÓN POR PRODUCTO");
