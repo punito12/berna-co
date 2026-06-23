@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { listActiveQuantityTiers } from "@/lib/quantity-discounts";
 
+export const dynamic = "force-dynamic";
+
 // Public: the active volume-discount tiers, so the cart/checkout can show the
 // motivational message and the applied discount. (The server recomputes the
 // real discount at order creation.)

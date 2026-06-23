@@ -27,6 +27,10 @@ import {
   absoluteUrl,
 } from "@/lib/seo";
 
+// El producto, stock y contenido CMS deben resolverse en runtime, no durante el
+// prerender del build (que puede saturar el pool de Neon).
+export const dynamic = "force-dynamic";
+
 // Per-product page title for nicer browser tabs / sharing.
 export async function generateMetadata({
   params,

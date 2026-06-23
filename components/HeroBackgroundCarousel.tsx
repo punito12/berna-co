@@ -27,23 +27,29 @@ export default function HeroBackgroundCarousel({
     return clean.length > 0 ? clean : [{ url: fallbackUrl, alt: "" }];
   }, [fallbackUrl, images]);
   const [active, setActive] = useState(0);
+  const [firstImageLoaded, setFirstImageLoaded] = useState(false);
 
   useEffect(() => {
     setActive(0);
-  }, [slides.length]);
+    setFirstImageLoaded(false);
+  }, [slides]);
 
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (!firstImageLoaded || slides.length <= 1) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = window.setInterval(() => {
       setActive((current) => (current + 1) % slides.length);
     }, intervalMs);
     return () => window.clearInterval(timer);
-  }, [intervalMs, slides.length]);
+  }, [firstImageLoaded, intervalMs, slides.length]);
 
   return (
     <div aria-hidden className="absolute inset-0 -z-20 overflow-hidden bg-ink">
       {slides.map((slide, index) => {
+        // El HTML inicial contiene solamente el primer slide. Los demás se
+        // montan después de que el LCP terminó de cargar, evitando que varios
+        // JPG remotos compitan por ancho de banda en mobile.
+        if (index > 0 && !firstImageLoaded) return null;
         const isActive = index === active;
         const opacityClass = isActive ? "opacity-100" : "opacity-0";
         // Solo la PRIMERA imagen es el candidato a LCP: se renderiza con
@@ -63,10 +69,12 @@ export default function HeroBackgroundCarousel({
                 fill
                 priority
                 fetchPriority="high"
-                sizes="100vw"
+                sizes="(max-width: 640px) 80vw, 100vw"
                 // Va detrás de un overlay negro al 65%, así que una calidad un
                 // poco más baja no se nota y baja bytes del LCP.
-                quality={68}
+                quality={60}
+                onLoad={() => setFirstImageLoaded(true)}
+                onError={() => setFirstImageLoaded(true)}
                 className="object-cover object-center"
               />
             </div>
@@ -75,9 +83,18 @@ export default function HeroBackgroundCarousel({
         return (
           <div
             key={`${slide.url}-${index}`}
-            className={`absolute inset-0 animate-slow-zoom bg-cover bg-center transition-opacity duration-1000 ease-out ${opacityClass}`}
-            style={{ backgroundImage: `url('${slide.url}')` }}
-          />
+            className={`absolute inset-0 animate-slow-zoom transition-opacity duration-1000 ease-out ${opacityClass}`}
+          >
+            <Image
+              src={slide.url}
+              alt={slide.alt}
+              fill
+              loading="lazy"
+              sizes="(max-width: 640px) 80vw, 100vw"
+              quality={60}
+              className="object-cover object-center"
+            />
+          </div>
         );
       })}
     </div>

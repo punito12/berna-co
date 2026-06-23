@@ -18,6 +18,8 @@ const FALLBACK_TITLE = "Cómo comprar";
 const FALLBACK_DESCRIPTION =
   "Cómo comprar en Berna&co: pasos del pedido, envíos y zonas, conservación de congelados, medios de pago y preguntas frecuentes.";
 
+export const dynamic = "force-dynamic";
+
 // Metadata from the CMS (seo.confianza.*), falling back to the values above.
 export async function generateMetadata(): Promise<Metadata> {
   let title = FALLBACK_TITLE;

@@ -7,6 +7,8 @@ import { LEGAL_PAGES, resolveLegalContent } from "@/lib/cms-legal";
 
 const PAGE = LEGAL_PAGES.find((p) => p.slug === "cambios")!;
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Cambios, devoluciones y cancelaciones",
   description:

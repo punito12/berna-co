@@ -56,14 +56,14 @@ export default function Hero({
         className="pointer-events-none absolute inset-3 -z-10 border border-white/15 sm:inset-6"
       />
 
-      <div className="animate-soft-pop" style={{ animationDelay: "80ms" }}>
+      <div>
         <BernaLogo variant="light" size="lg" src={logoUrl} />
       </div>
 
       <h1
         data-cms-text={titleKey}
-        className="mt-10 animate-fade-up font-black uppercase tracking-tight text-white text-[3.3rem] leading-[0.86] sm:mt-12 sm:text-8xl"
-        style={{ animationDelay: "220ms", ...titleStyle }}
+        className="mt-10 font-black uppercase tracking-tight text-white text-[3.3rem] leading-[0.86] sm:mt-12 sm:text-8xl"
+        style={titleStyle}
       >
         {titleLines.map((line, i) => (
           <span key={i}>
@@ -75,8 +75,8 @@ export default function Hero({
 
       <p
         data-cms-text={subtitleKey}
-        className="mt-6 animate-fade-up font-serif italic text-cream text-xl sm:text-2xl"
-        style={{ animationDelay: "360ms", ...subtitleStyle }}
+        className="mt-6 font-serif italic text-cream text-xl sm:text-2xl"
+        style={subtitleStyle}
       >
         {subtitle}
       </p>
@@ -86,9 +86,8 @@ export default function Hero({
         data-cms-text={ctaKey}
         data-cms-style="hero-btn"
         data-cms-button="hero.primary"
-        className="group mt-9 inline-flex animate-fade-up items-center gap-3 bg-hero-btn-bg px-9 py-4 font-bold uppercase tracking-widest text-sm text-hero-btn-text shadow-[0_18px_40px_rgba(0,0,0,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(0,0,0,0.3)] active:translate-y-0 sm:mt-12"
+        className="group mt-9 inline-flex items-center gap-3 bg-hero-btn-bg px-9 py-4 font-bold uppercase tracking-widest text-sm text-hero-btn-text shadow-[0_18px_40px_rgba(0,0,0,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(0,0,0,0.3)] active:translate-y-0 sm:mt-12"
         style={{
-          animationDelay: "500ms",
           borderRadius: "var(--hero-btn-radius, 0px)",
           fontFamily: "var(--hero-btn-font, inherit)",
           fontWeight: "var(--hero-btn-weight, 700)" as React.CSSProperties["fontWeight"],

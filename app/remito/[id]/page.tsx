@@ -4,6 +4,9 @@ import PrintButton from "@/components/PrintButton";
 import RemitoSheet from "@/components/RemitoSheet";
 import { getRemito, padRemitoNumber, remitoQrDataUrl } from "@/lib/remitos";
 
+// Cada remito se consulta por id en runtime; nunca debe prerenderizarse con DB.
+export const dynamic = "force-dynamic";
+
 // No indexar esta página: es una constancia individual, no contenido del sitio.
 export const metadata: Metadata = {
   robots: { index: false, follow: false },

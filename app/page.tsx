@@ -20,6 +20,10 @@ import type { Metadata } from "next";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 import { loadHomeData } from "@/lib/home-data";
 
+// La home depende de CMS, productos y configuración vivos. El loader publicado
+// ya tiene su propia cache; evitar que Next abra conexiones a Neon al prerender.
+export const dynamic = "force-dynamic";
+
 // Home metadata from the CMS (seo.home.*), falling back to the global SEO.
 export async function generateMetadata(): Promise<Metadata> {
   try {
