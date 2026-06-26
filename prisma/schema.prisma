@@ -242,8 +242,9 @@ model Customer {
   barrioId String?
   barrio   Barrio? @relation(fields: [barrioId], references: [id], onDelete: SetNull)
 
-  sales  ManualSale[]
-  orders Order[]
+  sales   ManualSale[]
+  orders  Order[]
+  remitos Remito[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -581,7 +582,13 @@ model Remito {
   id        String   @id @default(cuid())
   number    Int      @unique
   date      DateTime
+  // Nombre del cliente (snapshot visible, histórico). Se mantiene siempre.
   customerName String
+  // Cliente registrado vinculado (opcional). Los remitos nuevos eligen un cliente
+  // del registro; los viejos quedan con customerName y se pueden vincular después.
+  // Aditivo y nullable: no reescribe remitos existentes.
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   subtotal       Int @default(0)
   discountPercent Float @default(0)

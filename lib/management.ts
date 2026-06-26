@@ -11,6 +11,7 @@ import {
   type PaymentBadgeTone,
 } from "@/lib/mp-order-status";
 import { adjustStockForLines } from "@/lib/stock";
+import { findCustomerByNormalizedName, normalizeClientName } from "@/lib/clients";
 
 // ---- Customers ----
 
@@ -65,25 +66,34 @@ function cleanCustomer(input: CustomerInput) {
 // recent ones. Includes barrio + a count of linked web orders.
 export async function searchCustomers(query: string) {
   const q = query.trim();
-  // `mode: "insensitive"` para que la búsqueda no distinga mayúsculas/minúsculas
-  // (Postgres `contains` es case-sensitive por defecto: sin esto, escribir el
-  // nombre en minúscula no encontraba al cliente). Busca por nombre, barrio,
-  // teléfono y email.
-  return prisma.customer.findMany({
-    where: q
-      ? {
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { barrio: { name: { contains: q, mode: "insensitive" } } },
-            { phone: { contains: q, mode: "insensitive" } },
-            { email: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
+  // Sin query: los más recientes (orden alfabético, tope 30).
+  if (!q) {
+    return prisma.customer.findMany({
+      include: { barrio: true, _count: { select: { orders: true, sales: true } } },
+      orderBy: { name: "asc" },
+      take: 30,
+    });
+  }
+  // Con query: traemos el universo de clientes (en un admin son pocos) y
+  // filtramos en memoria por nombre NORMALIZADO (acento/caso/espacio-insensible),
+  // más matches por barrio/teléfono/email. Así "proveeduria" encuentra
+  // "La Proveeduría" y "LA PROVEEDURIA", que el `contains` de Postgres no capta
+  // por los acentos.
+  const all = await prisma.customer.findMany({
     include: { barrio: true, _count: { select: { orders: true, sales: true } } },
     orderBy: { name: "asc" },
-    take: q ? 50 : 30,
   });
+  const nq = normalizeClientName(q);
+  return all
+    .filter((c) => {
+      const byName = nq && normalizeClientName(c.name).includes(nq);
+      const byBarrio =
+        c.barrio && normalizeClientName(c.barrio.name).includes(nq);
+      const byPhone = c.phone?.toLowerCase().includes(q.toLowerCase());
+      const byEmail = c.email?.toLowerCase().includes(q.toLowerCase());
+      return byName || byBarrio || byPhone || byEmail;
+    })
+    .slice(0, 50);
 }
 
 // Full customer file: data + web orders + manual sales.
@@ -105,13 +115,31 @@ export async function getCustomerFile(id: string) {
 }
 
 export async function createCustomer(input: CustomerInput) {
+  const data = cleanCustomer(input);
+  // Guarda anti-duplicado: si ya existe un cliente con el mismo nombre normalizado
+  // (mismas letras ignorando mayúsculas/acentos/espacios), NO creamos otro.
+  const existing = await findCustomerByNormalizedName(data.name);
+  if (existing) {
+    throw new Error(
+      `Ya existe un cliente con ese nombre: "${existing.name}". Usá el existente en vez de crear un duplicado.`
+    );
+  }
   return prisma.customer.create({
-    data: { ...cleanCustomer(input), source: "MANUAL" },
+    data: { ...data, source: "MANUAL" },
   });
 }
 
 export async function updateCustomer(id: string, input: CustomerInput) {
-  await prisma.customer.update({ where: { id }, data: cleanCustomer(input) });
+  const data = cleanCustomer(input);
+  // Si el nuevo nombre normaliza igual que OTRO cliente, bloquear (sería crear un
+  // duplicado por la puerta de atrás). Permitir mantener el mismo registro.
+  const clash = await findCustomerByNormalizedName(data.name);
+  if (clash && clash.id !== id) {
+    throw new Error(
+      `Ya existe otro cliente con ese nombre: "${clash.name}".`
+    );
+  }
+  await prisma.customer.update({ where: { id }, data });
 }
 
 // Deletes a customer. Their orders/sales stay (customerId set to null).

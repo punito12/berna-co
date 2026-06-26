@@ -4,6 +4,7 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BREADCRUMB_LABELS } from "@/lib/products";
+import ClientSelect from "@/components/ClientSelect";
 
 type Item = {
   quantity: string;
@@ -47,6 +48,8 @@ export type RemitoFormInitial = {
   publicUrl?: string;
   date: string;
   customerName: string;
+  // Cliente registrado vinculado (al editar un remito que ya tiene uno).
+  customerId?: string | null;
   items: InitialItem[];
   discountPercent: string;
   discountAmount: string;
@@ -89,6 +92,9 @@ export default function RemitoForm({
   const [number, setNumber] = useState(initial.number);
   const [date, setDate] = useState(initial.date);
   const [customerName, setCustomerName] = useState(initial.customerName);
+  const [customerId, setCustomerId] = useState<string | null>(
+    initial.customerId ?? null
+  );
   const [items, setItems] = useState<Item[]>(
     initial.items.length > 0
       ? initial.items.map((item) => ({
@@ -215,6 +221,7 @@ export default function RemitoForm({
         number: number.trim(),
         date,
         customerName,
+        customerId: customerId || undefined,
         items: items.map((item) => ({
           quantity: Number(item.quantity),
           unit: item.unit,
@@ -280,12 +287,14 @@ export default function RemitoForm({
             />
           </Field>
         </div>
-        <Field label="Nombre">
-          <input
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className={inputClass}
-            placeholder="Cliente / razón social"
+        <Field label="Cliente">
+          <ClientSelect
+            name={customerName}
+            customerId={customerId}
+            onChange={(next) => {
+              setCustomerName(next.name);
+              setCustomerId(next.customerId);
+            }}
           />
         </Field>
 

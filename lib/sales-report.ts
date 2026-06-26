@@ -16,6 +16,15 @@
 import { prisma } from "@/lib/db";
 import { SALE_PAYMENT_METHOD_LABELS } from "@/lib/management";
 import { BREADCRUMB_LABELS } from "@/lib/products";
+import { normalizeClientName } from "@/lib/clients";
+
+// Clave de agrupación de cliente para los reportes: el clientId si la venta
+// está vinculada a un Customer registrado; si no (texto libre / remito viejo),
+// el NOMBRE NORMALIZADO (acento/caso/espacio-insensible) para que "LA
+// PROVEEDURÍA" y "La Proveeduría" caigan en la misma fila. Nunca el texto crudo.
+function customerKey(customerId: string | null, customerName: string): string {
+  return customerId ?? `name:${normalizeClientName(customerName)}`;
+}
 
 // Para los reportes, cada empanado/variedad cuenta como un producto distinto:
 // "Pechuga Pastoril — Tradicional" y "… — Keto" son productos separados.
@@ -576,7 +585,9 @@ async function loadNormalizedSales(
       id: r.id,
       kind: "REMITO",
       date: r.date,
-      customerId: null, // los remitos no vinculan un Customer
+      // Remitos nuevos vinculan un Customer registrado → se agrupan por su id.
+      // Remitos viejos sin vincular caen al fallback por nombre normalizado.
+      customerId: r.customerId ?? null,
       customerName: r.customerName?.trim() || "Cliente sin registrar",
       customerClass: classifySale({ kind: "REMITO" }), // siempre MAYORISTA
       paymentMethod: normalizePaymentMethod(r.paymentMethod),
@@ -665,7 +676,7 @@ export async function buildSalesReport(
 
     // --- ranking de clientes ---
     {
-      const key = sale.customerId ?? `name:${sale.customerName}`;
+      const key = customerKey(sale.customerId, sale.customerName);
       const row =
         customerMap.get(key) ??
         {
@@ -718,7 +729,7 @@ export async function buildSalesReport(
       classRow.kgEq += kgEq;
 
       // cliente
-      const custKey = sale.customerId ?? `name:${sale.customerName}`;
+      const custKey = customerKey(sale.customerId, sale.customerName);
       const cust = customerMap.get(custKey);
       if (cust) {
         cust.kg += kg;

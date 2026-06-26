@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import QRCode from "qrcode";
 import { absoluteUrl } from "@/lib/seo";
+import { findOrCreateCustomerByName } from "@/lib/clients";
 
 export type RemitoItemInput = {
   quantity: number;
@@ -12,6 +13,10 @@ export type RemitoItemInput = {
 export type RemitoInput = {
   date: string;
   customerName: string;
+  // Cliente registrado elegido en el selector (opcional). Si viene, el remito se
+  // vincula a ese cliente. Si no, se resuelve por nombre vía el registro
+  // deduplicado (reusa el existente o crea uno nuevo sin duplicar).
+  customerId?: string | null;
   items: RemitoItemInput[];
   // Número de remito. Opcional: si no viene, el server sugiere el siguiente.
   // Si viene, se valida que sea un entero positivo y que no esté repetido.
@@ -170,14 +175,42 @@ function isUniqueNumberError(error: unknown): boolean {
   );
 }
 
+// Resuelve a qué cliente registrado se vincula el remito. Si el form mandó un
+// customerId, se usa ese (y su nombre canónico). Si no, se resuelve por nombre
+// con el registro deduplicado: reusa el cliente existente con el mismo nombre
+// normalizado, o crea uno nuevo (sin duplicar). Los remitos cuentan como
+// mayorista por origen en los reportes, pero el TIPO del cliente registrado no
+// se fuerza: un cliente nuevo creado desde un remito nace mayorista por defecto.
+async function resolveRemitoCustomer(
+  input: RemitoInput
+): Promise<{ customerId: string; customerName: string }> {
+  if (input.customerId) {
+    const c = await prisma.customer.findUnique({
+      where: { id: input.customerId },
+      select: { id: true, name: true },
+    });
+    if (c) return { customerId: c.id, customerName: c.name };
+    // Si el id no existe (raro), caemos al resolución por nombre.
+  }
+  const { customer } = await findOrCreateCustomerByName({
+    name: input.customerName,
+    type: "MAYORISTA",
+    source: "MANUAL",
+  });
+  return { customerId: customer.id, customerName: customer.name };
+}
+
 export async function createRemito(input: RemitoInput) {
   const data = normalizeRemitoInput(input);
   const number = await resolveRemitoNumber(input);
+  const client = await resolveRemitoCustomer(input);
   try {
     return await prisma.remito.create({
       data: {
         number,
         ...data.header,
+        customerName: client.customerName,
+        customerId: client.customerId,
         items: { create: data.items },
       },
       select: { id: true },
@@ -197,6 +230,7 @@ export async function updateRemito(id: string, input: RemitoInput) {
   if (!existing) throw new Error("Remito no encontrado.");
   const data = normalizeRemitoInput(input);
   const number = await resolveRemitoNumber(input, id);
+  const client = await resolveRemitoCustomer(input);
   try {
     await prisma.$transaction([
       prisma.remitoItem.deleteMany({ where: { remitoId: id } }),
@@ -205,6 +239,8 @@ export async function updateRemito(id: string, input: RemitoInput) {
         data: {
           number,
           ...data.header,
+          customerName: client.customerName,
+          customerId: client.customerId,
           items: { create: data.items },
         },
       }),

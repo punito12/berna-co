@@ -43,6 +43,7 @@ export default async function EditarRemitoPage({
           publicUrl: remitoPublicUrl(remito.id),
           date: dateInput(remito.date),
           customerName: remito.customerName,
+          customerId: remito.customerId,
           items: remito.items.map((item) => ({
             quantity: String(item.quantity),
             unit: item.unit === "paq." ? "paq." : "kg",
