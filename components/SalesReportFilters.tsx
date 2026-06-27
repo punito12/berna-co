@@ -37,16 +37,62 @@ export default function SalesReportFilters({
   const [ps, setPs] = useState(paymentStatus);
   const [pid, setPid] = useState(productId);
 
-  function apply() {
+  function applyWith(nextFrom: string, nextTo: string) {
     const q = new URLSearchParams();
-    q.set("from", f);
-    q.set("to", t);
+    q.set("from", nextFrom);
+    q.set("to", nextTo);
     if (ct) q.set("customerType", ct);
     if (or) q.set("origin", or);
     if (ps) q.set("paymentStatus", ps);
     if (pid) q.set("productId", pid);
     router.push(`/admin/operaciones/resumen-ventas?${q.toString()}`);
   }
+
+  function apply() {
+    applyWith(f, t);
+  }
+
+  // Rangos rápidos en hora de Argentina (yyyy-mm-dd).
+  function arToday(): string {
+    return new Date().toLocaleDateString("en-CA", {
+      timeZone: "America/Argentina/Buenos_Aires",
+    });
+  }
+  function quickRange(kind: "today" | "7d" | "month" | "prevMonth") {
+    const today = arToday();
+    const [y, m] = today.split("-").map(Number);
+    let nf = today;
+    let nt = today;
+    if (kind === "today") {
+      nf = today;
+      nt = today;
+    } else if (kind === "7d") {
+      const d = new Date(`${today}T12:00:00`);
+      d.setDate(d.getDate() - 6);
+      nf = d.toISOString().slice(0, 10);
+      nt = today;
+    } else if (kind === "month") {
+      nf = `${today.slice(0, 7)}-01`;
+      nt = today;
+    } else {
+      // mes anterior completo
+      const first = new Date(y, m - 2, 1);
+      const last = new Date(y, m - 1, 0);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      nf = `${first.getFullYear()}-${pad(first.getMonth() + 1)}-01`;
+      nt = `${last.getFullYear()}-${pad(last.getMonth() + 1)}-${pad(last.getDate())}`;
+    }
+    setF(nf);
+    setT(nt);
+    applyWith(nf, nt);
+  }
+
+  const QUICK = [
+    { key: "today", label: "Hoy" },
+    { key: "7d", label: "Últimos 7 días" },
+    { key: "month", label: "Este mes" },
+    { key: "prevMonth", label: "Mes anterior" },
+  ] as const;
 
   function exportCsv() {
     const q = new URLSearchParams(params.toString());
@@ -65,7 +111,19 @@ export default function SalesReportFilters({
   }
 
   return (
-    <div className="rounded-lg border border-line bg-white p-4">
+    <div className="rounded-xl border border-line bg-white p-4">
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {QUICK.map((r) => (
+          <button
+            key={r.key}
+            type="button"
+            onClick={() => quickRange(r.key)}
+            className="rounded-full border border-line px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-ink transition-colors hover:border-black hover:bg-cream/50"
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <label className="block">
           <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">

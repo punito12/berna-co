@@ -10,6 +10,11 @@ import {
 } from "@/lib/sales-report";
 import { listProductsForAdmin } from "@/lib/admin";
 import SalesReportFilters from "@/components/SalesReportFilters";
+import {
+  RevenueShareDonut,
+  CorteBarChart,
+  HorizontalBarChart,
+} from "@/components/SalesChartsLazy";
 
 export const dynamic = "force-dynamic";
 
@@ -70,17 +75,44 @@ export default async function ResumenVentasPage({
   const totalUnits = g.kg + g.packs;
 
   // --- datos derivados para los insights (sin tocar cálculos) ---
-  const totalCorte = report.corteKg.reduce((a, c) => a + c.kgEq, 0);
   const mayorista = report.byCustomerClass.find((c) => c.class === "MAYORISTA")?.row;
   const minorista = report.byCustomerClass.find((c) => c.class === "MINORISTA")?.row;
   const topClientes = report.customers.slice(0, 6);
   const topProductosKg = [...report.byProduct]
     .filter((p) => p.kgEq > 0)
     .sort((a, b) => b.kgEq - a.kgEq)
-    .slice(0, 6);
-  const maxClienteNet = Math.max(1, ...topClientes.map((c) => c.net));
-  const maxProductoKg = Math.max(1, ...topProductosKg.map((p) => p.kgEq));
-  const maxCorte = Math.max(1, ...report.corteKg.map((c) => c.kgEq));
+    .slice(0, 8);
+  const topProductosNet = [...report.byProduct]
+    .filter((p) => p.net > 0)
+    .sort((a, b) => b.net - a.net)
+    .slice(0, 8);
+
+  // --- participación Mayorista vs Minorista: por UNIDADES y por FACTURACIÓN ---
+  const mayUnits = (mayorista?.kg ?? 0) + (mayorista?.packs ?? 0);
+  const minUnits = (minorista?.kg ?? 0) + (minorista?.packs ?? 0);
+  const totalUnitsMM = mayUnits + minUnits;
+  const mayNet = mayorista?.net ?? 0;
+  const minNet = minorista?.net ?? 0;
+  const totalNetMM = mayNet + minNet;
+  const shareUnits = (v: number) => (totalUnitsMM > 0 ? (v / totalUnitsMM) * 100 : 0);
+  const shareNet = (v: number) => (totalNetMM > 0 ? (v / totalNetMM) * 100 : 0);
+
+  // --- datos para gráficos (preparados en server, sin trabajo pesado en cliente) ---
+  const revenueShareData = [
+    { name: "Mayorista", value: mayNet },
+    { name: "Minorista", value: minNet },
+  ];
+  const corteChartData = report.corteKg.map((c) => ({ corte: c.corte, kg: c.kgEq }));
+  const productKgChartData = topProductosKg.map((p) => ({ name: p.name, value: p.kgEq }));
+  const productNetChartData = topProductosNet.map((p) => ({ name: p.name, value: p.net }));
+  const clientChartData = topClientes.map((c) => ({ name: c.name, value: c.net }));
+
+  // --- insights del período (derivados de totales existentes) ---
+  const topProdKg = topProductosKg[0] ?? null;
+  const topProdNet = topProductosNet[0] ?? null;
+  const topCliente = report.customers[0] ?? null;
+  const topCorte = [...report.corteKg].sort((a, b) => b.kgEq - a.kgEq)[0] ?? null;
+  const canalDominante = mayNet >= minNet ? "Mayorista" : "Minorista";
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -138,86 +170,91 @@ export default async function ResumenVentasPage({
             </p>
           )}
 
-          {/* ===== Insights: lectura rápida ===== */}
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* Mayorista vs minorista */}
-            <SectionCard title="Mayorista vs minorista">
-              {mayorista && minorista && (
-                <>
-                  {/* Split por UNIDADES (kg + paquetes juntos, como el "% sobre
-                      total" de las tablas), no por facturación. */}
-                  <SplitBar
-                    aLabel="Mayorista"
-                    aValue={mayorista.kg + mayorista.packs}
-                    bLabel="Minorista"
-                    bValue={minorista.kg + minorista.packs}
-                  />
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <MiniStat label="Mayorista" net={pesos(mayorista.net)} sub={`${units(mayorista.kg + mayorista.packs)} u · ${mayorista.kgEq > 0 ? pesos(pricePerKg(mayorista)) + "/kg" : "—"}`} />
-                    <MiniStat label="Minorista" net={pesos(minorista.net)} sub={`${units(minorista.kg + minorista.packs)} u · ${minorista.kgEq > 0 ? pesos(pricePerKg(minorista)) + "/kg" : "—"}`} />
-                  </div>
-                </>
-              )}
-            </SectionCard>
+          {/* ===== Insights del período ===== */}
+          <div>
+            <h2 className="mb-3 font-black uppercase tracking-tight text-lg text-ink">
+              Insights del período
+            </h2>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+              <InsightCard title="Producto más vendido (kg)" value={topProdKg?.name ?? "—"} sub={topProdKg ? kg(topProdKg.kgEq) : ""} />
+              <InsightCard title="Mayor facturación" value={topProdNet?.name ?? "—"} sub={topProdNet ? pesos(topProdNet.net) : ""} />
+              <InsightCard title="Cliente principal" value={topCliente?.name ?? "—"} sub={topCliente ? pesos(topCliente.net) : ""} />
+              <InsightCard title="Corte más vendido" value={topCorte?.corte ?? "—"} sub={topCorte ? kg(topCorte.kgEq) : ""} />
+              <InsightCard title="Canal dominante" value={canalDominante} sub={`${shareNet(canalDominante === "Mayorista" ? mayNet : minNet).toFixed(0)}% de la facturación`} />
+              <InsightCard title="Share mayorista (facturación)" value={`${shareNet(mayNet).toFixed(0)}%`} sub={`${shareUnits(mayUnits).toFixed(0)}% de las unidades`} />
+            </div>
+          </div>
 
-            {/* Kg vendidos por corte */}
-            <SectionCard title="Kg vendidos por corte">
-              <div className="space-y-2">
-                {report.corteKg.map((c) => (
-                  <BarRow
-                    key={c.corte}
-                    label={c.corte}
-                    valueLabel={kg(c.kgEq)}
-                    fraction={c.kgEq / maxCorte}
-                    hint={pct(c.kgEq, totalCorte)}
-                  />
-                ))}
-              </div>
+          {/* ===== Dashboard visual (gráficos) ===== */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Mayorista vs Minorista: facturación (donut) + unidades (split) */}
+            <ChartCard
+              title="Mayorista vs Minorista"
+              subtitle="Participación por facturación y por unidades/kg"
+            >
+              {totalNetMM <= 0 ? (
+                <EmptyHint>Sin datos en el período.</EmptyHint>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Facturación neta (donut) */}
+                  <div>
+                    <p className="mb-1 text-center text-[11px] font-bold uppercase tracking-wide text-muted">
+                      Por facturación neta
+                    </p>
+                    <RevenueShareDonut data={revenueShareData} />
+                    <div className="mt-1 space-y-1 text-[11px]">
+                      <Legend color="bg-ink" label="Mayorista" pctTxt={`${shareNet(mayNet).toFixed(0)}%`} valueTxt={pesos(mayNet)} />
+                      <Legend color="bg-accent" label="Minorista" pctTxt={`${shareNet(minNet).toFixed(0)}%`} valueTxt={pesos(minNet)} />
+                    </div>
+                  </div>
+                  {/* Unidades / kg (split bar) */}
+                  <div className="flex flex-col justify-center">
+                    <p className="mb-2 text-center text-[11px] font-bold uppercase tracking-wide text-muted">
+                      Por unidades / kg
+                    </p>
+                    <div className="flex h-4 overflow-hidden rounded-full bg-cream">
+                      <div className="bg-ink" style={{ width: `${shareUnits(mayUnits)}%` }} />
+                      <div className="bg-accent" style={{ width: `${shareUnits(minUnits)}%` }} />
+                    </div>
+                    <div className="mt-2 space-y-1 text-[11px]">
+                      <Legend color="bg-ink" label="Mayorista" pctTxt={`${shareUnits(mayUnits).toFixed(0)}%`} valueTxt={`${units(mayUnits)} u`} />
+                      <Legend color="bg-accent" label="Minorista" pctTxt={`${shareUnits(minUnits).toFixed(0)}%`} valueTxt={`${units(minUnits)} u`} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </ChartCard>
+
+            {/* Kg vendidos por corte (barras) */}
+            <ChartCard title="Kg vendidos por corte" subtitle="En kilos equivalentes">
+              <CorteBarChart data={corteChartData} />
               {report.productsNotConvertible.length > 0 && (
-                <p className="mt-3 text-[11px] text-muted">
-                  Sin corte asignado / sin kg-equivalente:{" "}
-                  {report.productsNotConvertible.join(", ")}.
+                <p className="mt-2 text-[11px] text-muted">
+                  Sin corte asignado: {report.productsNotConvertible.join(", ")}.
                 </p>
               )}
-            </SectionCard>
+            </ChartCard>
 
-            {/* Top clientes */}
-            <SectionCard title="Top clientes">
-              {topClientes.length === 0 ? (
-                <EmptyHint>Sin clientes en el período.</EmptyHint>
-              ) : (
-                <div className="space-y-2">
-                  {topClientes.map((c) => (
-                    <BarRow
-                      key={c.customerId ?? c.name}
-                      label={c.name}
-                      valueLabel={pesos(c.net)}
-                      fraction={c.net / maxClienteNet}
-                      hint={CUSTOMER_CLASS_LABELS[c.type]}
-                    />
-                  ))}
-                </div>
-              )}
-            </SectionCard>
+            {/* Facturación por producto (barras horizontales) */}
+            <ChartCard title="Facturación por producto" subtitle="Top por facturación neta">
+              <HorizontalBarChart data={productNetChartData} unit="money" />
+            </ChartCard>
 
-            {/* Top productos por kg */}
-            <SectionCard title="Top productos (kg)">
-              {topProductosKg.length === 0 ? (
-                <EmptyHint>Sin productos con kg en el período.</EmptyHint>
-              ) : (
-                <div className="space-y-2">
-                  {topProductosKg.map((p) => (
-                    <BarRow
-                      key={p.productId}
-                      label={p.name}
-                      valueLabel={kg(p.kgEq)}
-                      fraction={p.kgEq / maxProductoKg}
-                      hint={pesos(p.net)}
-                    />
-                  ))}
-                </div>
-              )}
-            </SectionCard>
+            {/* Kg por producto (barras horizontales) */}
+            <ChartCard title="Kg por producto" subtitle="Top por kilos vendidos">
+              <HorizontalBarChart data={productKgChartData} unit="kg" />
+            </ChartCard>
+
+            {/* Top clientes (barras horizontales) — ocupa el ancho completo */}
+            <div className="lg:col-span-2">
+              <ChartCard title="Top clientes" subtitle="Por facturación neta">
+                {clientChartData.length === 0 ? (
+                  <EmptyHint>Sin clientes en el período.</EmptyHint>
+                ) : (
+                  <HorizontalBarChart data={clientChartData} unit="money" />
+                )}
+              </ChartCard>
+            </div>
           </div>
 
           {/* ===== Detalle: tablas colapsables para no saturar ===== */}
@@ -353,94 +390,73 @@ export default async function ResumenVentasPage({
 
 // ---- pequeños componentes de presentación ----
 
-// Card de sección con título (para los insights).
-function SectionCard({
+// Tarjeta de insight: título chico + dato grande + subtexto.
+function InsightCard({
   title,
+  value,
+  sub,
+}: {
+  title: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-line bg-white p-4">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-muted">
+        {title}
+      </p>
+      <p className="mt-1 truncate text-lg font-black leading-tight text-ink">
+        {value}
+      </p>
+      {sub && <p className="mt-0.5 text-[11px] text-muted">{sub}</p>}
+    </div>
+  );
+}
+
+// Card contenedora de un gráfico: título + subtítulo + contenido.
+function ChartCard({
+  title,
+  subtitle,
   children,
 }: {
   title: string;
+  subtitle?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="rounded-xl border border-line bg-white p-4">
-      <h3 className="mb-3 text-[11px] font-bold uppercase tracking-wide text-muted">
-        {title}
-      </h3>
+      <div className="mb-3">
+        <h3 className="font-black uppercase tracking-tight text-sm text-ink">
+          {title}
+        </h3>
+        {subtitle && <p className="text-[11px] text-muted">{subtitle}</p>}
+      </div>
       {children}
     </div>
   );
 }
 
-// Barra dividida A vs B (mayorista/minorista) por participación en el neto.
-function SplitBar({
-  aLabel,
-  aValue,
-  bLabel,
-  bValue,
-}: {
-  aLabel: string;
-  aValue: number;
-  bLabel: string;
-  bValue: number;
-}) {
-  const total = aValue + bValue;
-  const aPct = total > 0 ? (aValue / total) * 100 : 0;
-  const bPct = total > 0 ? 100 - aPct : 0;
-  return (
-    <div>
-      <div className="flex h-3 overflow-hidden rounded-full bg-cream">
-        <div className="bg-ink" style={{ width: `${aPct}%` }} />
-        <div className="bg-accent" style={{ width: `${bPct}%` }} />
-      </div>
-      <div className="mt-2 flex justify-between text-[11px] font-bold uppercase tracking-wide text-muted">
-        <span>
-          <span className="mr-1 inline-block h-2 w-2 rounded-full bg-ink align-middle" />
-          {aLabel} {aPct.toFixed(0)}%
-        </span>
-        <span>
-          {bLabel} {bPct.toFixed(0)}%
-          <span className="ml-1 inline-block h-2 w-2 rounded-full bg-accent align-middle" />
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({ label, net, sub }: { label: string; net: string; sub: string }) {
-  return (
-    <div className="rounded-lg border border-line bg-cream/30 px-3 py-2">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-muted">{label}</p>
-      <p className="mt-0.5 text-lg font-black text-ink">{net}</p>
-      <p className="text-[10px] text-muted">{sub}</p>
-    </div>
-  );
-}
-
-// Fila con barra horizontal proporcional (para rankings visuales sin librerías).
-function BarRow({
+// Fila de leyenda para los gráficos M/M (color + etiqueta + % + valor).
+function Legend({
+  color,
   label,
-  valueLabel,
-  fraction,
-  hint,
+  pctTxt,
+  valueTxt,
 }: {
+  color: string;
   label: string;
-  valueLabel: string;
-  fraction: number;
-  hint?: string;
+  pctTxt: string;
+  valueTxt: string;
 }) {
-  const width = Math.max(2, Math.min(100, fraction * 100));
   return (
-    <div>
-      <div className="flex items-baseline justify-between gap-2 text-sm">
-        <span className="min-w-0 truncate text-ink">{label}</span>
-        <span className="shrink-0 font-bold text-ink">{valueLabel}</span>
-      </div>
-      <div className="mt-1 flex items-center gap-2">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-cream">
-          <div className="h-full rounded-full bg-ink/80" style={{ width: `${width}%` }} />
-        </div>
-        {hint && <span className="shrink-0 text-[10px] text-muted">{hint}</span>}
-      </div>
+    <div className="flex items-center justify-between gap-2">
+      <span className="flex items-center gap-1.5 text-ink">
+        <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} />
+        {label}
+      </span>
+      <span className="font-bold text-ink">
+        {pctTxt} <span className="font-normal text-muted">· {valueTxt}</span>
+      </span>
     </div>
   );
 }

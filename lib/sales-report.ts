@@ -254,9 +254,11 @@ function normalize(s: string): string {
 }
 
 // Cortes del negocio, en ORDEN FIJO para la tabla "Kg vendidos por corte".
+// "Peceto de Pastura" es un corte SEPARADO de "Peceto" (no se mezclan).
 export const CORTES = [
   "Peceto",
-  "Bife",
+  "Peceto de Pastura",
+  "Bife de Chorizo",
   "Cerdo",
   "Pollo",
   "Berenjenas",
@@ -265,11 +267,12 @@ export const CORTES = [
 export type Corte = (typeof CORTES)[number];
 
 // Mapea el nombre de un producto/ítem (con o sin sufijo de empanado) a un corte.
-// Usa substrings normalizados. "Long Chicken Fingers"/"LCF" caen en Pollo.
-// Devuelve null si no se puede asignar (→ "Sin corte asignado").
+// Usa substrings normalizados. EL ORDEN IMPORTA: "peceto de pastura" se chequea
+// ANTES que "peceto" genérico, para no mezclarlos. "Long Chicken Fingers"/"LCF"
+// caen en Pollo. Devuelve null si no se puede asignar (→ "Sin corte asignado").
 export function corteForName(name: string): Corte | null {
   const n = normalize(name);
-  // Pollo primero: "long chicken fingers"/"lcf"/"chicken"/"pollo".
+  // Pollo primero: "long chicken fingers"/"lcf"/"chicken"/"pollo"/"pechuga".
   if (
     n.includes("pollo") ||
     n.includes("chicken") ||
@@ -278,8 +281,10 @@ export function corteForName(name: string): Corte | null {
     n.includes("pechuga")
   )
     return "Pollo";
-  if (n.includes("peceto")) return "Peceto"; // incluye "peceto de pastura"
-  if (n.includes("bife")) return "Bife"; // incluye "bife de chorizo"
+  // Peceto de Pastura ANTES que Peceto genérico (orden crítico).
+  if (n.includes("peceto de pastura")) return "Peceto de Pastura";
+  if (n.includes("peceto")) return "Peceto";
+  if (n.includes("bife")) return "Bife de Chorizo"; // bife / bife de chorizo
   if (n.includes("cerdo")) return "Cerdo";
   if (n.includes("berenjena")) return "Berenjenas"; // berenjena/berenjenas
   if (n.includes("girgola")) return "Gírgolas"; // gírgola(s)/girgola(s) (sin acento)
