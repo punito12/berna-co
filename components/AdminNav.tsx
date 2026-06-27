@@ -21,6 +21,7 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
       { href: "/admin/entregas", label: "Entregas" },
       { href: "/admin/ventas", label: "Cargar venta manual" },
       { href: "/admin/remitos", label: "Remitos" },
+      { href: "/admin/operaciones/presupuestos", label: "Presupuestos" },
     ],
   },
   {

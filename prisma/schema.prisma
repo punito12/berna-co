@@ -242,9 +242,10 @@ model Customer {
   barrioId String?
   barrio   Barrio? @relation(fields: [barrioId], references: [id], onDelete: SetNull)
 
-  sales   ManualSale[]
-  orders  Order[]
-  remitos Remito[]
+  sales        ManualSale[]
+  orders       Order[]
+  remitos      Remito[]
+  presupuestos Presupuesto[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -740,4 +741,80 @@ model AnalyticsEvent {
   @@index([anonymousId])
   @@index([orderId])
   @@index([productId])
+}
+
+// ---- Presupuestos (documentos comerciales / cotizaciones) ----
+
+// Un presupuesto es SOLO un documento comercial (cotización). NO es remito, ni
+// pedido, ni venta: no toca stock, caja, cuentas por cobrar ni reportes. El
+// primer tipo ("LISTA_MAYORISTA") es una lista personalizada de precios: por
+// cada producto muestra P. Lista (precio de remito) y P. Mayor. (P. Lista −%).
+model Presupuesto {
+  id     String @id @default(cuid())
+  number Int    @unique
+  // PRICE_LIST = lista de precios mayorista (Descripción/P.Lista/P.Mayor, sin
+  // cantidades ni total). QUOTATION = cotización tipo remito (cantidad × precio
+  // = subtotal, con total). Ambos son SOLO documentos, sin efectos operativos.
+  type   String @default("PRICE_LIST") // PRICE_LIST | QUOTATION
+
+  // Cliente registrado (opcional) o potencial cliente por nombre libre.
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerName String
+
+  date       DateTime
+  validUntil DateTime? // validez del presupuesto (opcional)
+
+  // Total del documento (solo QUOTATION; PRICE_LIST queda en 0). Snapshot para
+  // mostrarlo en la lista sin recalcular.
+  total Int @default(0)
+
+  // Borrador | Enviado | Aceptado | Rechazado. Solo informativo: NO dispara
+  // ningún efecto de negocio (stock/caja/ventas).
+  status String @default("BORRADOR") // BORRADOR | ENVIADO | ACEPTADO | RECHAZADO
+
+  // Descuento mayorista por defecto 25% (P. Mayor. = P. Lista * (1 - %/100)).
+  discountPercent Float @default(25)
+
+  notesInternal String @default("") // nota interna, NO se imprime
+
+  items PresupuestoItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([status])
+  @@index([customerId])
+}
+
+// Una línea del presupuesto. Snapshots como remito/orden: el presupuesto viejo
+// no cambia si el precio del producto cambia después.
+model PresupuestoItem {
+  id            String      @id @default(cuid())
+  presupuestoId String
+  presupuesto   Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  // Producto/empanado de origen (opcional: permite ítem de texto libre).
+  productId      String?
+  breadcrumbType String? // empanado elegido
+
+  // Snapshots para histórico estable.
+  productName    String // "Peceto de Pastura"
+  variantName    String @default("") // empanado, ej "Integral"
+
+  // --- PRICE_LIST: lista de precios mayorista (sin cantidad, sin total) ---
+  listPrice      Int @default(0) // P. Lista (precio de remito) en pesos
+  wholesalePrice Int @default(0) // P. Mayor. = listPrice * (1 - discount/100)
+
+  // --- QUOTATION: cotización tipo remito (cantidad × precio = subtotal) ---
+  quantity  Float @default(0) // cantidad cotizada
+  unitPrice Int   @default(0) // precio unitario (misma lógica que remito)
+  subtotal  Int   @default(0) // quantity * unitPrice
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([presupuestoId])
 }

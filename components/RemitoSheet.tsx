@@ -137,12 +137,22 @@ export default function RemitoSheet({
             gap: "12mm",
           }}
         >
-          {/* Logo real de Berna&co (mismo archivo que usa el sitio). */}
+          {/* Logo real de Berna&co (mismo archivo que usa el sitio). El PNG tiene
+              ~4.4% de aire transparente a la izquierda y ~7.2% arriba; lo
+              cancelamos con márgenes negativos para que el recuadro VISIBLE quede
+              a ras del borde izquierdo del documento (nombre, tabla) y su tope
+              alineado con el bloque de la derecha. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/logo-dark.png"
             alt="Berna&co — Congelados Caseros"
-            style={{ width: "62mm", height: "auto", display: "block" }}
+            style={{
+              width: "62mm",
+              height: "auto",
+              display: "block",
+              marginLeft: "-2.7mm",
+              marginTop: "-2.4mm",
+            }}
           />
 
           <div
@@ -151,7 +161,6 @@ export default function RemitoSheet({
               alignItems: "flex-start",
               gap: "8mm",
               textAlign: "right",
-              paddingTop: "4px",
             }}
           >
             <div>
