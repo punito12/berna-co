@@ -21,6 +21,7 @@ import {
   type ProductForUI,
 } from "@/lib/products";
 import { quantityPromoDiscount } from "@/lib/discounts";
+import { track } from "@/lib/track-client";
 
 // One line in the cart. Same product with a different empanado = separate line.
 export type CartLine = {
@@ -127,12 +128,32 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           },
         ];
       });
+      // Analytics (best-effort, no bloquea): se agregó una unidad al carrito.
+      track("add_to_cart", {
+        productId: product.id,
+        productName: product.name,
+        variantName: breadcrumbType,
+        quantity: 1,
+        value: promoPriceFor(product, breadcrumbType),
+      });
       return true;
     },
     []
   );
 
   const changeQuantity = useCallback((key: string, delta: number) => {
+    // Analytics: bajar cantidad = remove_from_cart (best-effort).
+    if (delta < 0) {
+      const line = linesRef.current.find((l) => l.key === key);
+      if (line) {
+        track("remove_from_cart", {
+          productId: line.productId,
+          productName: line.name,
+          variantName: line.breadcrumbType,
+          quantity: 1,
+        });
+      }
+    }
     setLines((prev) =>
       prev
         .map((line) => {

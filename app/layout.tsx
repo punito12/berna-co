@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
+import AnalyticsTracker from "@/components/AnalyticsTracker";
 import {
   loadCmsBundle,
   getThemeColors,
@@ -200,6 +201,7 @@ export default async function RootLayout({
         <CartProvider>{children}</CartProvider>
         <Analytics />
         <SpeedInsights />
+        <AnalyticsTracker />
       </body>
     </html>
   );

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { track } from "@/lib/track-client";
 import ProductGallery from "@/components/ProductGallery";
 import AddToCartPanel from "@/components/AddToCartPanel";
 import RichText from "@/components/RichText";
@@ -39,6 +40,26 @@ export default function ProductDetail({
   const [selected, setSelected] = useState<string>(
     product.breadcrumbs[0] ?? "TRADITIONAL"
   );
+
+  // Analytics: vista de producto (una vez al montar la ficha).
+  useEffect(() => {
+    track("product_view", {
+      productId: product.id,
+      productName: product.name,
+      variantName: product.breadcrumbs[0] ?? undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+
+  // Cambio de empanado: variant_selected (además de actualizar la galería).
+  function handleSelect(breadcrumb: string) {
+    setSelected(breadcrumb);
+    track("variant_selected", {
+      productId: product.id,
+      productName: product.name,
+      variantName: breadcrumb,
+    });
+  }
 
   const images = product.imagesByBreadcrumb[selected] ?? [];
   const descriptionStyle: React.CSSProperties = {
@@ -124,7 +145,7 @@ export default function ProductDetail({
           <AddToCartPanel
             product={product}
             selected={selected}
-            onSelect={setSelected}
+            onSelect={handleSelect}
             labels={labels}
           />
         )}

@@ -695,3 +695,49 @@ model SiteVersion {
   publishedAt DateTime @default(now())
   publishedBy String   @default("admin")
 }
+
+// ---- Analytics (embudo del ecommerce público) ----
+
+// Un evento de analytics anónimo: page views + eventos de negocio del funnel.
+// SIN datos personales (nombre/teléfono/email/dirección exacta nunca se guardan).
+// La identidad es anónima (anonymousId persistente + sessionId por sesión). Los
+// nombres de evento se validan en lib/analytics.ts contra ANALYTICS_EVENTS.
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  eventName   String // page_view | product_view | add_to_cart | order_created | ... (ver lib/analytics)
+  sessionId   String // id de sesión (cookie, expira con la sesión)
+  anonymousId String // id anónimo persistente (cookie 1 año)
+
+  path     String? // ruta de la página (sin querystring sensible)
+  referrer String?
+
+  // Campaña (UTM) capturada al entrar y persistida por la sesión.
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmContent  String?
+  utmTerm     String?
+
+  // Contexto de producto / funnel (todo opcional según el evento).
+  productId      String?
+  productName    String?
+  variantName    String? // empanado elegido
+  quantity       Int?
+  value          Int? // monto en pesos enteros (ej. total del pedido)
+  paymentMethod  String? // EFECTIVO | TRANSFERENCIA | MERCADOPAGO
+  deliveryMethod String? // DELIVERY | PICKUP
+  locality       String? // localidad/barrio GENERAL (nunca dirección exacta)
+  orderId        String? // para order_created (dedupe por este id)
+
+  // Datos extra flexibles (JSON stringificado), para crecer sin migrar.
+  metadata String?
+
+  createdAt DateTime @default(now())
+
+  @@index([eventName])
+  @@index([createdAt])
+  @@index([sessionId])
+  @@index([anonymousId])
+  @@index([orderId])
+  @@index([productId])
+}

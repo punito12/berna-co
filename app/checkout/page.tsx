@@ -10,6 +10,7 @@ import { BREADCRUMB_LABELS, formatPrice } from "@/lib/products";
 import { quantityPromoDiscount } from "@/lib/discounts";
 import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 import type { DeliveryOptions } from "@/lib/delivery";
+import { track, currentUtm, currentIds } from "@/lib/track-client";
 
 type DeliveryType = "DELIVERY" | "PICKUP";
 type LocalityScheduleDay = {
@@ -211,6 +212,35 @@ export default function CheckoutPage() {
   // --- submission state ---
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // --- analytics del embudo de checkout (best-effort, no bloquea) ---
+  // begin_checkout + cart_view una vez al entrar al checkout con carrito.
+  useEffect(() => {
+    if (!hydrated || lines.length === 0) return;
+    track("cart_view", { value: totalPrice, quantity: totalUnits });
+    track("begin_checkout", { value: totalPrice, quantity: totalUnits });
+    // Solo al montar (con carrito ya hidratado).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
+  // Selección de método de entrega.
+  useEffect(() => {
+    if (!hydrated) return;
+    track("delivery_method_selected", { deliveryMethod: deliveryType });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveryType]);
+  // Selección de medio de pago.
+  useEffect(() => {
+    if (!hydrated) return;
+    track("payment_method_selected", { paymentMethod });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentMethod]);
+  // Localidad de entrega elegida (zona cubierta confirmada).
+  useEffect(() => {
+    if (!hydrated || deliveryType !== "DELIVERY") return;
+    const loc = (zoneName || locality).trim();
+    if (loc) track("delivery_locality_selected", { locality: loc, deliveryMethod: "DELIVERY" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoneName, locality]);
 
   const covered = Boolean(options);
 
@@ -593,12 +623,24 @@ export default function CheckoutPage() {
             breadcrumbType: l.breadcrumbType,
             quantity: l.quantity,
           })),
+          // Contexto de analytics (anónimo): el server registra order_created con
+          // estos datos (sesión + campaña + localidad general). No incluye PII.
+          analytics: {
+            ...currentIds(),
+            ...currentUtm(),
+            locality: deliveryType === "DELIVERY" ? locality.trim() || undefined : "PICKUP",
+          },
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
         setError(data?.error ?? ct("checkout.validation.submit_error", "No pudimos guardar el pedido."));
+        track("checkout_error", {
+          paymentMethod,
+          deliveryMethod: deliveryType,
+          metadata: { message: data?.error ?? "submit_error" },
+        });
         setSubmitting(false);
         return;
       }
