@@ -4,7 +4,6 @@
 
 import { MercadoPagoConfig, Preference, Payment } from "mercadopago";
 import { prisma } from "@/lib/db";
-import { BREADCRUMB_LABELS } from "@/lib/products";
 import { recordMpPaymentIncome } from "@/lib/cash";
 import { getSiteUrl } from "@/lib/seo";
 import { setSaleStatus } from "@/lib/sale-actions";
@@ -42,34 +41,38 @@ export async function createPreferenceForOrder(
 ): Promise<{ url: string; preferenceId: string }> {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { items: { include: { product: true } } },
+    select: {
+      id: true,
+      total: true,
+      customerName: true,
+      customerEmail: true,
+    },
   });
   if (!order) throw new Error("Pedido no encontrado.");
 
-  // Build line items from the order. Shipping (if any) is a separate item so
-  // the MP total matches order.total exactly.
-  const items = order.items.map((it) => {
-    const empanado = BREADCRUMB_LABELS[it.breadcrumbType] ?? it.breadcrumbType;
-    return {
-      id: it.id,
-      title: `${it.product?.name ?? "Producto"} (${empanado})`,
-      quantity: it.quantity,
-      unit_price: it.priceAtTime,
-      currency_id: "ARS",
-    };
-  });
-  if (order.shippingCost > 0) {
-    items.push({
-      id: `envio-${order.id}`,
-      title: "Envío",
+  const shortId = order.id.slice(-6).toUpperCase();
+
+  // IMPORTANTE (consistencia de pago): le pasamos a Mercado Pago UN SOLO ítem
+  // por el TOTAL FINAL del pedido (`order.total`), que ya incluye TODOS los
+  // descuentos (promos por producto, 2x1/3x2, descuento por cantidad/+5
+  // unidades, código, descuento por método) y el envío — calculados y guardados
+  // por createOrder en lib/orders.ts. Antes se armaban los ítems desde
+  // `priceAtTime` (precio unitario ANTES del descuento por cantidad) + envío,
+  // así que MP cobraba el total SIN el descuento por +5 unidades. Cobrar
+  // `order.total` (entero en pesos) garantiza MP == total del pedido, exacto y
+  // sin problemas de redondeo/distribución. El detalle de ítems vive en nuestra
+  // DB; MP solo necesita el monto a cobrar.
+  const items = [
+    {
+      id: order.id,
+      title: `Pedido Berna&Co #${shortId}`,
       quantity: 1,
-      unit_price: order.shippingCost,
+      unit_price: order.total,
       currency_id: "ARS",
-    });
-  }
+    },
+  ];
 
   const base = baseUrl();
-  const shortId = order.id.slice(-6).toUpperCase();
 
   const preference = await new Preference(client()).create({
     body: {
