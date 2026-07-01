@@ -182,8 +182,23 @@ export type CustomerRow = {
 // Una fila de la tabla "Kg vendidos por corte" (agrega por encima del nivel
 // producto+empanado: junta todas las variedades del mismo corte).
 export type CorteRow = {
-  corte: string; // etiqueta fija (Peceto, Bife, Cerdo, Pollo, Berenjenas, Gírgolas)
+  corte: string; // etiqueta fija (Peceto, Peceto de Pastura, Bife de Chorizo, ...)
   kgEq: number; // kg equivalentes vendidos del corte
+  net: number; // facturación neta del corte (suma del neto prorrateado por ítem)
+};
+
+// Desglose por ORIGEN de la venta (para Inteligencia Comercial): pedidos web,
+// ventas manuales y remitos, cada uno con sus totales.
+export type OriginRow = {
+  kind: "ORDER" | "MANUAL" | "REMITO";
+  label: string;
+  count: number;
+  gross: number;
+  discount: number;
+  net: number;
+  kg: number;
+  packs: number;
+  kgEq: number;
 };
 
 export type PaymentRow = {
@@ -227,6 +242,8 @@ export type SalesReport = {
   payments: PaymentRow[];
   // 11. Kg vendidos por corte (orden fijo). En kg equivalentes.
   corteKg: CorteRow[];
+  // 12. Desglose por origen (web / manual / remito).
+  byOrigin: OriginRow[];
   // Ítems que no se pudieron convertir a kg (sin peso ni unidad kg conocidos).
   // Se reportan; no rompen el cálculo.
   productsNotConvertible: string[];
@@ -643,14 +660,43 @@ export async function buildSalesReport(
   ]);
   const customerMap = new Map<string, CustomerRow>();
   const paymentMap = new Map<string, PaymentRow>();
-  // Kg equivalentes por corte + ítems no convertibles a kg.
-  const corteMap = new Map<Corte, number>(CORTES.map((c) => [c, 0]));
+  // Kg equivalentes + neta por corte + ítems no convertibles a kg.
+  const corteMap = new Map<Corte, { kgEq: number; net: number }>(
+    CORTES.map((c) => [c, { kgEq: 0, net: 0 }])
+  );
   const notConvertible = new Set<string>();
+  // Desglose por origen (web / manual / remito).
+  const ORIGIN_LABELS: Record<string, string> = {
+    ORDER: "Pedidos web",
+    MANUAL: "Ventas manuales",
+    REMITO: "Remitos",
+  };
+  const originMap = new Map<string, OriginRow>();
 
   for (const sale of sales) {
     general.gross += sale.gross;
     general.discount += sale.discount;
     general.net += sale.net;
+
+    // --- por origen ---
+    const originRow =
+      originMap.get(sale.kind) ??
+      {
+        kind: sale.kind,
+        label: ORIGIN_LABELS[sale.kind] ?? sale.kind,
+        count: 0,
+        gross: 0,
+        discount: 0,
+        net: 0,
+        kg: 0,
+        packs: 0,
+        kgEq: 0,
+      };
+    originRow.count += 1;
+    originRow.gross += sale.gross;
+    originRow.discount += sale.discount;
+    originRow.net += sale.net;
+    originMap.set(sale.kind, originRow);
 
     if (sale.customerClass === "MINORISTA") {
       minoristaNet += sale.net;
@@ -741,10 +787,17 @@ export async function buildSalesReport(
         cust.packs += packs;
       }
 
-      // --- kg por corte (agrega por encima de producto+empanado) ---
+      // origen (kg/paq/kgEq del ítem suman al origen de su venta)
+      originRow.kg += kg;
+      originRow.packs += packs;
+      originRow.kgEq += kgEq;
+
+      // --- kg + neta por corte (agrega por encima de producto+empanado) ---
       const corte = corteForName(it.productName);
       if (corte && kgEq > 0) {
-        corteMap.set(corte, (corteMap.get(corte) ?? 0) + kgEq);
+        const c = corteMap.get(corte)!;
+        c.kgEq += kgEq;
+        c.net += it.net;
       } else if (kgEq > 0) {
         // Tiene kg pero no se pudo mapear a un corte conocido → reportar.
         notConvertible.add(it.productName);
@@ -841,12 +894,33 @@ export async function buildSalesReport(
 
   const payments = [...paymentMap.values()].sort((a, b) => b.sold - a.sold);
 
-  // Kg por corte en ORDEN FIJO (no por monto). Solo cortes con kg > 0... pero
-  // mostramos todos para que el operador vea los 6 cortes aunque alguno sea 0.
-  const corteKg: CorteRow[] = CORTES.map((c) => ({
-    corte: c,
-    kgEq: round2(corteMap.get(c) ?? 0),
-  }));
+  // Kg + neta por corte en ORDEN FIJO (no por monto). Mostramos todos los cortes
+  // aunque alguno esté en 0.
+  const corteKg: CorteRow[] = CORTES.map((c) => {
+    const row = corteMap.get(c) ?? { kgEq: 0, net: 0 };
+    return { corte: c, kgEq: round2(row.kgEq), net: row.net };
+  });
+
+  // Origen en orden fijo (web / manual / remito), incluyendo los que están en 0.
+  const byOrigin: OriginRow[] = (["ORDER", "MANUAL", "REMITO"] as const).map(
+    (kind) =>
+      originMap.get(kind) ?? {
+        kind,
+        label:
+          kind === "ORDER"
+            ? "Pedidos web"
+            : kind === "MANUAL"
+              ? "Ventas manuales"
+              : "Remitos",
+        count: 0,
+        gross: 0,
+        discount: 0,
+        net: 0,
+        kg: 0,
+        packs: 0,
+        kgEq: 0,
+      }
+  );
 
   // redondeos finales de kg/packs/kgEq (por las dudas)
   general.kg = round2(general.kg);
@@ -872,6 +946,7 @@ export async function buildSalesReport(
     customers,
     payments,
     corteKg,
+    byOrigin,
     productsNotConvertible: [...notConvertible].sort(),
   };
 }

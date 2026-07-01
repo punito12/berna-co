@@ -17,6 +17,7 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
     links: [
       { href: "/admin/operaciones/ventas", label: "Pedidos y ventas" },
       { href: "/admin/operaciones/resumen-ventas", label: "Resumen de ventas" },
+      { href: "/admin/operaciones/inteligencia-comercial", label: "Inteligencia Comercial" },
       { href: "/admin/analytics", label: "Analytics web" },
       { href: "/admin/entregas", label: "Entregas" },
       { href: "/admin/ventas", label: "Cargar venta manual" },

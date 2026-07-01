@@ -22,3 +22,7 @@ export const HorizontalBarChart = dynamic(
   () => import("@/components/SalesCharts").then((m) => m.HorizontalBarChart),
   { ssr: false, loading }
 );
+export const ComparisonBars = dynamic(
+  () => import("@/components/SalesCharts").then((m) => m.ComparisonBars),
+  { ssr: false, loading }
+);

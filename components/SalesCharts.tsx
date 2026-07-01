@@ -139,6 +139,53 @@ export function HorizontalBarChart({
   );
 }
 
+// Barras horizontales agrupadas A vs B (comparador de períodos). Gris = período
+// A (base), negro = período B (actual).
+export function ComparisonBars({
+  data,
+  unit,
+  labelA = "Período A",
+  labelB = "Período B",
+}: {
+  data: { name: string; a: number; b: number }[];
+  unit: "money" | "kg" | "int";
+  labelA?: string;
+  labelB?: string;
+}) {
+  if (data.length === 0 || data.every((d) => d.a <= 0 && d.b <= 0)) {
+    return <ChartEmpty />;
+  }
+  const fmt =
+    unit === "money"
+      ? pesos
+      : unit === "kg"
+        ? kgFmt
+        : (n: number) => n.toLocaleString("es-AR");
+  const height = Math.max(180, data.length * 52);
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart
+        data={data}
+        layout="vertical"
+        margin={{ top: 4, right: 16, bottom: 4, left: 8 }}
+        barGap={2}
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke="#E8E3DC" horizontal={false} />
+        <XAxis type="number" tick={{ fontSize: 10, fill: GRAY }} hide />
+        <YAxis
+          type="category"
+          dataKey="name"
+          tick={{ fontSize: 11, fill: INK }}
+          width={150}
+        />
+        <Tooltip formatter={(v) => fmt(Number(v))} contentStyle={tooltipStyle} />
+        <Bar dataKey="a" name={labelA} fill="#c9c2ba" radius={[0, 3, 3, 0]} maxBarSize={14} />
+        <Bar dataKey="b" name={labelB} fill={INK} radius={[0, 3, 3, 0]} maxBarSize={14} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 function ChartEmpty() {
   return (
     <div className="flex h-[200px] items-center justify-center rounded-lg border border-dashed border-line text-sm text-muted">
