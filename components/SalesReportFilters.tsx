@@ -202,6 +202,14 @@ export default function SalesReportFilters({
         >
           Exportar CSV
         </button>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="border border-line px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-ink hover:border-black"
+          title="Vista limpia del reporte para mostrar o guardar como PDF"
+        >
+          Modo presentación
+        </button>
       </div>
     </div>
   );
