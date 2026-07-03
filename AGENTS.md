@@ -120,6 +120,71 @@ Si la migración reescribe una tabla con datos (rename/type-change de columna), 
 - Precios y totales se **recalculan siempre en el server** desde la DB (`lib/orders.ts createOrder`). El browser solo manda ids + cantidades.
 - Sub-tabs de secciones (`CAJA_TABS`, `COSTOS_TABS`, etc.): definir el array en el `lib/` del dominio y exportarlo desde ahí. **NUNCA exportar constantes arbitrarias desde un `page.tsx`/`layout.tsx`** (Next.js solo permite exports específicos en route files → rompe el build).
 
+## UI / CSS / Surgical Edit Rules
+
+When working on this project, preserve existing UI unless the task explicitly asks for a redesign.
+
+**Hard rules**
+
+- Do not rewrite entire pages for small feature requests.
+- Do not replace existing styled markup with new basic HTML.
+- Do not remove existing wrappers, cards, tables, badges, buttons, spacing or Tailwind class structures unless explicitly requested.
+- Do not extract a new component if doing so requires deleting the existing visual structure.
+- Do not touch `app/globals.css`, Tailwind config, PostCSS config, root layout, admin shell layout, or shared UI primitives unless the task explicitly asks for it.
+- Do not change public site visuals unless the task is specifically about the public site.
+- Do not change admin shell/navigation layout unless the task is specifically about navigation/layout.
+
+**Surgical edit policy**
+
+For normal tasks, prefer surgical edits:
+
+- keep the current visual structure
+- add logic inside the existing markup
+- preserve `className` strings where possible
+- keep diffs small
+- avoid broad refactors
+- avoid moving code unless necessary
+
+If a change requires:
+
+- deleting more than 30 lines from a UI page,
+- creating a new component to replace existing markup,
+- changing global CSS,
+- changing admin layout,
+- changing shared UI primitives,
+
+STOP and explain the plan before editing.
+
+**Required final report**
+
+Every coding task must report:
+
+- Files changed
+- Lines added/deleted
+- CSS/global files changed: yes/no
+- `className` changes outside task scope: yes/no
+- Layout/wrapper changes outside task scope: yes/no
+- Existing visual markup preserved: yes/no
+- Business logic changed: yes/no
+
+**Expected behavior**
+
+For UI improvements like filters/search/sorting:
+
+- keep the existing page design
+- add controls using existing styles
+- do not rebuild the page
+- do not create a plain HTML replacement
+- do not remove existing design classes
+
+For backend/API/auth/data tasks:
+
+- CSS untouched
+- layout untouched
+- public website untouched
+
+These rules are mandatory.
+
 ## Patrones existentes a respetar
 
 - **Nueva mutación**: función en `lib/<dominio>.ts` (valida + usa `prisma`) → ruta `app/api/admin/<x>/route.ts` (auth + parse + try/catch) → componente client que hace `fetch` y `router.refresh()`.
