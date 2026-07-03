@@ -1,45 +1,29 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
-import { updateSupplier, deleteSupplier } from "@/lib/suppliers";
 
-// Update a supplier. Admin-only.
+// Proveedores is disabled in Admin V2. Keep the route authenticated but non-mutable.
 export async function PATCH(
-  request: Request,
+  _request: Request,
   { params }: { params: { id: string } }
 ) {
   if (!isAuthenticated())
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  let body: Parameters<typeof updateSupplier>[1];
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
-  }
-  try {
-    await updateSupplier(params.id, body);
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json(
-      { error: (error as Error).message || "No se pudo actualizar." },
-      { status: 400 }
-    );
-  }
+  void params;
+  return NextResponse.json(
+    { error: "Caja/Compras está desactivado en Admin V2." },
+    { status: 410 }
+  );
 }
 
-// Delete a supplier (and its purchases). Admin-only.
 export async function DELETE(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
   if (!isAuthenticated())
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  try {
-    await deleteSupplier(params.id);
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json(
-      { error: (error as Error).message || "No se pudo eliminar." },
-      { status: 400 }
-    );
-  }
+  void params;
+  return NextResponse.json(
+    { error: "Caja/Compras está desactivado en Admin V2." },
+    { status: 410 }
+  );
 }

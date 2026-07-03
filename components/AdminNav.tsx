@@ -36,7 +36,7 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
     title: "Clientes",
     links: [
       { href: "/admin/clientes", label: "Lista de clientes" },
-      { href: "/admin/facturacion/barrios", label: "Barrios" },
+      { href: "/admin/clientes/barrios", label: "Barrios" },
     ],
   },
   {

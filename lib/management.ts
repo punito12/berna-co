@@ -3,7 +3,6 @@
 // storefront logic. API routes call these after checking isAuthenticated().
 
 import { prisma } from "@/lib/db";
-import { recordManualSaleIncome } from "@/lib/cash";
 import { DEFAULT_DUE_DAYS, createPayment } from "@/lib/payments";
 import {
   orderPaymentBadgeTone,
@@ -210,71 +209,6 @@ export async function deleteBarrio(id: string) {
   await prisma.barrio.delete({ where: { id } });
 }
 
-// Aggregated view of one barrio: its customers + their orders/sales totals.
-export async function getBarrioReport(id: string) {
-  const barrio = await prisma.barrio.findUnique({
-    where: { id },
-    include: {
-      customers: {
-        include: {
-          orders: { include: { items: true } },
-          sales: { include: { items: true } },
-        },
-        orderBy: { name: "asc" },
-      },
-    },
-  });
-  if (!barrio) return null;
-
-  let ordersCount = 0;
-  let units = 0;
-  let gross = 0;
-  let net = 0;
-
-  const customers = barrio.customers.map((c) => {
-    let cNet = 0;
-    let cOrders = 0;
-    // Web orders: bill on products subtotal (exclude shipping).
-    for (const o of c.orders) {
-      if (o.status === "CANCELLED") continue;
-      const subtotal = o.total - (o.shippingCost ?? 0);
-      cNet += subtotal;
-      gross += subtotal;
-      net += subtotal;
-      cOrders += 1;
-      ordersCount += 1;
-      for (const it of o.items) units += it.quantity;
-    }
-    // Manual sales.
-    for (const s of c.sales) {
-      cNet += s.net;
-      gross += s.gross;
-      net += s.net;
-      cOrders += 1;
-      ordersCount += 1;
-      for (const it of s.items) units += it.quantity;
-    }
-    return {
-      id: c.id,
-      name: c.name,
-      type: c.type,
-      orders: cOrders,
-      net: cNet,
-    };
-  });
-
-  return {
-    id: barrio.id,
-    name: barrio.name,
-    customersCount: barrio.customers.length,
-    ordersCount,
-    units,
-    gross,
-    net,
-    customers,
-  };
-}
-
 // ---- Manual sales ----
 
 export const SALE_CHANNELS = ["WEB", "WHATSAPP", "MAYORISTA", "KIOSCO"] as const;
@@ -316,7 +250,7 @@ export type SaleInput = {
   notes?: string;
   // Medio de pago (EFECTIVO | TRANSFERENCIA | MERCADO_PAGO | OTRO). Default efectivo.
   paymentMethod?: string;
-  // true = pendiente de pago (no entra a caja hasta registrar el pago).
+  // true = pendiente de pago hasta registrar el pago.
   paymentPending?: boolean;
   // ¿Descontar stock al cargar la venta? Default true (comportamiento histórico).
   // false = no toca inventario (p. ej. mercadería ya descontada antes): la venta
@@ -380,10 +314,9 @@ export async function createManualSale(input: SaleInput) {
   const customerName =
     customer?.name ?? input.customerName?.trim() ?? null;
 
-  // Cuenta corriente / pendiente: la venta queda PENDING (sin ingreso a caja
-  // hasta registrar el pago) si el admin la marca pendiente O si el cliente es
-  // mayorista (cuenta corriente, vencimiento a 30 días). Si no, PAID y entra a
-  // caja como antes, reflejando el medio de pago elegido.
+  // Cuenta corriente / pendiente: la venta queda PENDING si el admin la marca
+  // pendiente O si el cliente es mayorista. Si no, queda PAID. Admin V2 no usa
+  // Caja, por lo que no se generan movimientos contables invisibles.
   const onCredit = Boolean(input.paymentPending) || customer?.type === "MAYORISTA";
   const dueDate =
     customer?.type === "MAYORISTA"
@@ -440,22 +373,6 @@ export async function createManualSale(input: SaleInput) {
     }
   }
 
-  // Contado: mirror the sale into Caja as income (deduped by saleId). Credit
-  // sales wait for a Payment to create the income.
-  if (!onCredit) {
-    try {
-      await recordManualSaleIncome({
-        id: sale.id,
-        net: sale.net,
-        soldAt: sale.soldAt,
-        label: customerName ?? SALE_CHANNEL_LABELS[input.channel] ?? "Venta",
-        method: paymentMethod,
-      });
-    } catch (e) {
-      console.error("recordManualSaleIncome failed:", e);
-    }
-  }
-
   // El caller (ruta API) revalida el cache del home si cambió stock. La
   // revalidación vive en la ruta (server-only) para no arrastrar next/headers
   // al bundle cliente que importa labels de este módulo.
@@ -470,9 +387,8 @@ export async function listManualSales(limit = 100) {
   });
 }
 
-// Reverse everything a manual sale put into the system: restock its items and
-// remove the Caja movements it generated (auto-income + payment incomes). Used
-// by both cancel and delete.
+// Reverse everything a manual sale put into the system: restock its items.
+// Payment rows cascade on delete; cancelling keeps the sale visible as cancelled.
 async function reverseSaleEffects(saleId: string) {
   const sale = await prisma.manualSale.findUnique({
     where: { id: saleId },
@@ -494,17 +410,10 @@ async function reverseSaleEffects(saleId: string) {
       console.error("restock on reverse failed:", e);
     }
   }
-  // Remove the Caja income(s) tied to this sale (auto-income and any payment
-  // incomes share the saleId on the CashMovement).
-  try {
-    await prisma.cashMovement.deleteMany({ where: { saleId } });
-  } catch (e) {
-    console.error("cash reversal on sale failed:", e);
-  }
 }
 
 export async function deleteManualSale(id: string) {
-  // Reverse stock + Caja first, then delete (payments cascade-delete with it).
+  // Reverse stock first, then delete (payments cascade-delete with it).
   await reverseSaleEffects(id);
   await prisma.manualSale.delete({ where: { id } });
 }
@@ -515,8 +424,8 @@ export const SALE_DELIVERY_STATUSES = [
   "CANCELLED",
 ] as const;
 
-// Set the logistic status of a manual sale. Cancelling restocks and reverses
-// its Caja movements (once). Moving OUT of cancelled re-discounts the stock.
+// Set the logistic status of a manual sale. Cancelling restocks once. Moving
+// OUT of cancelled re-discounts the stock.
 export async function setSaleDeliveryStatus(id: string, status: string) {
   if (
     !SALE_DELIVERY_STATUSES.includes(
@@ -538,8 +447,7 @@ export async function setSaleDeliveryStatus(id: string, status: string) {
   if (willCancel && !wasCancelled) {
     await reverseSaleEffects(id);
   } else if (wasCancelled && !willCancel) {
-    // Re-activating a cancelled sale: discount stock again. (Caja income is not
-    // auto-recreated — re-register the payment/cobro if it applied.) Solo si la
+    // Re-activating a cancelled sale: discount stock again. Solo si la
     // venta descuenta stock; si se cargó sin descontar, reactivarla tampoco lo mueve.
     if (sale.stockDiscounted) {
       try {
@@ -561,8 +469,8 @@ export async function setSaleDeliveryStatus(id: string, status: string) {
   });
 }
 
-// "Marcar pagado": register a payment for the outstanding balance, so it flows
-// through Caja and cuenta corriente like any other cobro. No-op if already paid.
+// "Marcar pagado": register a payment for the outstanding balance and recompute
+// paymentStatus. Admin V2 does not create Caja movements.
 export async function markSalePaid(id: string, method = "EFECTIVO") {
   const sale = await prisma.manualSale.findUnique({
     where: { id },
@@ -786,207 +694,7 @@ export async function listProductsForSale() {
   });
 }
 
-// ---- Billing dashboard ----
-
-export type BillingTotals = {
-  gross: number; // sum of subtotals before discount
-  discount: number; // total discounts in pesos
-  net: number; // total charged
-  salesCount: number;
-};
-
-export type BillingReport = {
-  totals: BillingTotals;
-  byProduct: { name: string; units: number; net: number }[];
-  byCustomer: { name: string; net: number; salesCount: number }[];
-  byChannel: { channel: string; net: number; gross: number }[];
-  byNeighborhood: {
-    neighborhood: string;
-    units: number;
-    gross: number;
-    net: number;
-  }[];
-};
-
-// Builds the billing report over [from, to). Combines manual sales and web
-// orders (web orders count as channel WEB, no discount, qty in units).
-export async function getBillingReport(
-  from: Date,
-  to: Date
-): Promise<BillingReport> {
-  const [sales, orders] = await Promise.all([
-    prisma.manualSale.findMany({
-      where: { soldAt: { gte: from, lt: to } },
-      include: { items: true, customer: { include: { barrio: true } } },
-    }),
-    prisma.order.findMany({
-      where: {
-        createdAt: { gte: from, lt: to },
-        status: { not: "CANCELLED" },
-      },
-      include: {
-        items: { include: { product: true } },
-        customer: { include: { barrio: true } },
-      },
-    }),
-  ]);
-
-  let gross = 0;
-  let discount = 0;
-  let net = 0;
-  const byProduct = new Map<
-    string,
-    { name: string; units: number; net: number }
-  >();
-  const byCustomer = new Map<string, { net: number; salesCount: number }>();
-  const byChannel = new Map<string, { net: number; gross: number }>();
-  // Keyed by neighborhood; only real neighborhoods are added (no "sin barrio").
-  const byNeighborhood = new Map<
-    string,
-    { units: number; gross: number; net: number }
-  >();
-
-  function addNeighborhood(
-    name: string | null | undefined,
-    units: number,
-    g: number,
-    n: number
-  ) {
-    const key = name?.trim();
-    if (!key) return; // sales without a neighborhood are left out of this table
-    const cur = byNeighborhood.get(key) ?? {
-      units: 0,
-      gross: 0,
-      net: 0,
-    };
-    cur.units += units;
-    cur.gross += g;
-    cur.net += n;
-    byNeighborhood.set(key, cur);
-  }
-
-  function addProduct(name: string, units: number, netAmount: number) {
-    const cur = byProduct.get(name) ?? { name, units: 0, net: 0 };
-    cur.units += units;
-    cur.net += netAmount;
-    byProduct.set(name, cur);
-  }
-  function addChannel(channel: string, g: number, n: number) {
-    const cur = byChannel.get(channel) ?? { net: 0, gross: 0 };
-    cur.gross += g;
-    cur.net += n;
-    byChannel.set(channel, cur);
-  }
-
-  // Manual sales.
-  for (const s of sales) {
-    gross += s.gross;
-    discount += s.discountAmount;
-    net += s.net;
-    addChannel(s.channel, s.gross, s.net);
-
-    const name = s.customerName || "Sin cliente";
-    const c = byCustomer.get(name) ?? { net: 0, salesCount: 0 };
-    c.net += s.net;
-    c.salesCount += 1;
-    byCustomer.set(name, c);
-
-    // Distribute the sale's net across items proportionally to their subtotal,
-    // so per-product net reflects the discount.
-    const saleGross = s.gross || 1;
-    let saleUnits = 0;
-    for (const it of s.items) {
-      const share = s.net * (it.lineSubtotal / saleGross);
-      addProduct(it.productName, it.quantity, Math.round(share));
-      saleUnits += it.quantity;
-    }
-    addNeighborhood(s.customer?.barrio?.name, saleUnits, s.gross, s.net);
-  }
-
-  // Web orders (channel WEB; no discount; quantities are units).
-  for (const o of orders) {
-    // Order.total includes shipping; bill on the products subtotal only.
-    const productsTotal = o.total - (o.shippingCost ?? 0);
-    gross += productsTotal;
-    net += productsTotal;
-    addChannel("WEB", productsTotal, productsTotal);
-
-    const name = o.customerName || "Cliente web";
-    const c = byCustomer.get(name) ?? { net: 0, salesCount: 0 };
-    c.net += productsTotal;
-    c.salesCount += 1;
-    byCustomer.set(name, c);
-
-    let orderUnits = 0;
-    for (const it of o.items) {
-      addProduct(
-        it.product?.name ?? "Producto",
-        it.quantity,
-        it.priceAtTime * it.quantity
-      );
-      orderUnits += it.quantity;
-    }
-    // The web order's barrio comes from its linked customer (if any).
-    addNeighborhood(
-      o.customer?.barrio?.name,
-      orderUnits,
-      productsTotal,
-      productsTotal
-    );
-  }
-
-  return {
-    totals: { gross, discount, net, salesCount: sales.length + orders.length },
-    byProduct: [...byProduct.values()].sort((a, b) => b.net - a.net),
-    byCustomer: [...byCustomer.entries()]
-      .map(([name, v]) => ({ name, ...v }))
-      .sort((a, b) => b.net - a.net),
-    byChannel: [...byChannel.entries()]
-      .map(([channel, v]) => ({ channel, ...v }))
-      .sort((a, b) => b.net - a.net),
-    byNeighborhood: [...byNeighborhood.entries()]
-      .map(([neighborhood, v]) => ({ neighborhood, ...v }))
-      .sort((a, b) => b.net - a.net),
-  };
-}
-
 // (Profitability moved to Catálogo → Costos y Precios; see lib/pricing.ts.)
-
-// Resolves a period preset or custom range into [from, to) dates.
-export function resolvePeriod(
-  preset: string,
-  fromStr?: string,
-  toStr?: string
-): { from: Date; to: Date; label: string } {
-  const now = new Date();
-  if (preset === "today") {
-    const from = new Date(now);
-    from.setHours(0, 0, 0, 0);
-    const to = new Date(from);
-    to.setDate(to.getDate() + 1);
-    return { from, to, label: "Hoy" };
-  }
-  if (preset === "week") {
-    const from = new Date(now);
-    from.setDate(from.getDate() - 7);
-    from.setHours(0, 0, 0, 0);
-    return { from, to: now, label: "Últimos 7 días" };
-  }
-  if (preset === "custom" && fromStr && toStr) {
-    const from = new Date(`${fromStr}T00:00:00`);
-    const to = new Date(`${toStr}T00:00:00`);
-    to.setDate(to.getDate() + 1); // inclusive of the end day
-    return { from, to, label: `${fromStr} a ${toStr}` };
-  }
-  // default: current month
-  const from = new Date(now.getFullYear(), now.getMonth(), 1);
-  const to = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const monthName = from.toLocaleDateString("es-AR", {
-    month: "long",
-    year: "numeric",
-  });
-  return { from, to, label: monthName };
-}
 
 // ---- Discount codes (admin CRUD) ----
 

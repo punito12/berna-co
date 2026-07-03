@@ -78,10 +78,19 @@ npm run lint           # next lint
 **Base de datos / Prisma (SQLite)**
 ```bash
 npx prisma generate    # regenerar client tras cambiar schema
+npm run db:whoami      # verificar entorno/branch DB sin imprimir secretos
 npm run db:seed        # seed catálogo/datos
 npm run db:seed:cms    # seed contenido CMS (textos/imágenes/secciones)
 npm run db:reset       # reset + ambos seeds (DESTRUCTIVO)
 ```
+
+**Separación DEV/PROD de base de datos**
+
+- En localhost, la app usa `.env.local` y ese archivo debe apuntar siempre a la base/branch DEV.
+- `.env.local` debe tener etiquetas explícitas no secretas, por ejemplo `APP_ENV="development"` y `DATABASE_BRANCH="dev"`.
+- Vercel Production no usa `.env.local`: usa sus propias Environment Variables configuradas en Project Settings.
+- Antes de migraciones, imports, pruebas destructivas o cualquier operación riesgosa, correr `npm run db:whoami`.
+- Si `db:whoami` no muestra `APP_ENV: development` y `DATABASE_BRANCH: dev`, frenar y verificar la DB activa antes de seguir.
 
 **Migraciones — usar SIEMPRE este flujo (NO `prisma migrate dev`, que no anda en este entorno):**
 ```bash

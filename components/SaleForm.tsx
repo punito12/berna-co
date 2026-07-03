@@ -646,7 +646,7 @@ export default function SaleForm({
           </select>
           {paymentPending && (
             <span className="mt-1 block text-[11px] text-muted">
-              La venta queda pendiente y no entra a caja hasta registrar el pago.
+              La venta queda pendiente hasta registrar el pago.
             </span>
           )}
         </label>

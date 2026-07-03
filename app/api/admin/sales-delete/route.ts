@@ -3,7 +3,7 @@ import { isAuthenticated } from "@/lib/auth";
 import { deleteSaleOrOrder } from "@/lib/sale-actions";
 import type { SaleKind } from "@/lib/sales-detail";
 
-// Hard-delete a web order or manual sale (reverts stock + Caja). Admin-only.
+// Hard-delete a web order or manual sale (reverts stock). Admin-only.
 // Only for load errors — cancelling is the normal path.
 // POST { kind: "ORDER"|"MANUAL", id }
 export async function POST(request: Request) {

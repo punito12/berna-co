@@ -3,7 +3,6 @@
 // call these first check isAuthenticated().
 
 import { prisma } from "@/lib/db";
-import { recordCashOrderIncome } from "@/lib/cash";
 
 // ---- Orders ----
 
@@ -116,30 +115,10 @@ export async function updateOrderStatus(id: string, status: string) {
   if (!ORDER_STATUSES.includes(status as OrderStatus)) {
     throw new Error("Estado inválido.");
   }
-  const order = await prisma.order.update({
+  await prisma.order.update({
     where: { id },
     data: { status },
-    select: {
-      id: true,
-      status: true,
-      total: true,
-      paymentMethod: true,
-      customerName: true,
-      createdAt: true,
-    },
   });
-
-  // Efectivo / transferencia web orders hit Caja when DELIVERED (deduped by
-  // orderId). The source reflects the method. MP orders are handled by the
-  // payment webhook, not here.
-  const nonMpMethods = ["CASH", "EFECTIVO", "TRANSFERENCIA"];
-  if (order.status === "DELIVERED" && nonMpMethods.includes(order.paymentMethod)) {
-    try {
-      await recordCashOrderIncome(order);
-    } catch (e) {
-      console.error("recordCashOrderIncome failed:", e);
-    }
-  }
 }
 
 // ---- Products ----

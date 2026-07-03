@@ -4,7 +4,6 @@
 
 import { MercadoPagoConfig, Preference, Payment } from "mercadopago";
 import { prisma } from "@/lib/db";
-import { recordMpPaymentIncome } from "@/lib/cash";
 import { getSiteUrl } from "@/lib/seo";
 import { setSaleStatus } from "@/lib/sale-actions";
 
@@ -114,8 +113,6 @@ export async function syncPaymentToOrder(paymentId: string): Promise<void> {
       id: true,
       status: true,
       paymentMethod: true,
-      total: true,
-      customerName: true,
       mpPaymentId: true,
     },
   });
@@ -128,30 +125,10 @@ export async function syncPaymentToOrder(paymentId: string): Promise<void> {
       where: { id: order.id },
       data: {
         mpPaymentId: String(payment.id),
+        paymentStatus: "PAID",
         status: "CONFIRMED",
       },
     });
-    const releaseRaw = (payment as { money_release_date?: string })
-      .money_release_date;
-    const releaseDate = releaseRaw ? new Date(releaseRaw) : null;
-    const approvedRaw =
-      (payment as { date_approved?: string }).date_approved || undefined;
-    const approvedAt = approvedRaw ? new Date(approvedRaw) : new Date();
-    const amount = Math.round(
-      Number(payment.transaction_amount ?? order.total)
-    );
-    try {
-      await recordMpPaymentIncome({
-        paymentId: String(payment.id),
-        orderId,
-        amount,
-        customerName: order.customerName,
-        approvedAt,
-        releaseDate,
-      });
-    } catch (e) {
-      console.error("recordMpPaymentIncome failed:", e);
-    }
     return;
   }
 

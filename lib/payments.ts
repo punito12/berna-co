@@ -1,8 +1,8 @@
 // Cuenta corriente (cuentas por cobrar): payments against sales/orders.
 //
-// A Payment records money received toward a ManualSale or an Order. Each one
-// creates a CashMovement (INCOME) in Caja, and the sale/order paymentStatus is
-// recomputed from the sum of its payments (PAID / PARTIAL / PENDING).
+// A Payment records money received toward a ManualSale or an Order. Admin V2
+// runs without Caja, so payments only update paymentStatus; no CashMovement is
+// created.
 //
 // Only sales/orders in cuenta corriente carry a balance here; cash sales and
 // MP web orders are PAID and excluded from "cuentas por cobrar".
@@ -50,45 +50,26 @@ export async function createPayment(input: PaymentInput) {
       ? new Date(`${input.date}T12:00:00`)
       : new Date();
 
-  // Build the description from the linked sale/order.
-  let label = "Cobro";
   if (input.saleId) {
     const s = await prisma.manualSale.findUnique({
       where: { id: input.saleId },
-      select: { customerName: true },
+      select: { id: true },
     });
     if (!s) throw new Error("Venta no encontrada.");
-    label = `Cobro venta — ${s.customerName ?? "Sin nombre"}`;
   } else if (input.orderId) {
     const o = await prisma.order.findUnique({
       where: { id: input.orderId },
-      select: { customerName: true },
+      select: { id: true },
     });
     if (!o) throw new Error("Pedido no encontrado.");
-    label = `Cobro pedido — ${o.customerName}`;
   }
 
-  // Create the payment + its CashMovement together, then recompute status.
   const payment = await prisma.payment.create({
     data: {
       amount,
       method: input.method,
       date,
       notes: input.notes?.trim() || null,
-      saleId: input.saleId ?? null,
-      orderId: input.orderId ?? null,
-    },
-  });
-
-  await prisma.cashMovement.create({
-    data: {
-      date,
-      type: "INCOME",
-      amount,
-      description: label,
-      category: "Cobro cuenta corriente",
-      source: input.method,
-      status: "AVAILABLE",
       saleId: input.saleId ?? null,
       orderId: input.orderId ?? null,
     },
@@ -110,8 +91,6 @@ export async function deletePayment(id: string) {
     saleId: payment.saleId ?? undefined,
     orderId: payment.orderId ?? undefined,
   });
-  // Note: the matching CashMovement is left for the operator to remove from
-  // Caja if desired (kept simple — no automatic cash reversal here).
 }
 
 // Sum payments for a sale/order and set PAID / PARTIAL / PENDING accordingly.

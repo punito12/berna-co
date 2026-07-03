@@ -31,15 +31,14 @@ export const STOCK_REFERENCE_LABELS: Record<string, string> = {
   MANUAL: "Manual",
 };
 
-// The detail of a sale/order is reached ONLY from "Pedidos y ventas", not from
-// the stock movements list — so movements show the reference as plain text.
-// Purchases still link to their section.
+// The detail of a sale/order/purchase is reached from its owning admin section,
+// not from the stock movement list, so movements show the reference as plain text.
 export function stockReferenceHref(
   refType: string | null,
   refId: string | null
 ): string | null {
   if (!refId) return null;
-  if (refType === "PURCHASE") return `/admin/compras`;
+  void refType;
   return null;
 }
 

@@ -1,24 +1,12 @@
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
-import { createSupplierPayment } from "@/lib/purchases";
 
-// Register a payment to a supplier against a purchase. Admin-only.
-export async function POST(request: Request) {
+// Supplier payments are disabled with Compras/Caja in Admin V2.
+export async function POST(_request: Request) {
   if (!isAuthenticated())
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  let body: Parameters<typeof createSupplierPayment>[0];
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
-  }
-  try {
-    await createSupplierPayment(body);
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json(
-      { error: (error as Error).message || "No se pudo registrar el pago." },
-      { status: 400 }
-    );
-  }
+  return NextResponse.json(
+    { error: "Caja/Compras está desactivado en Admin V2." },
+    { status: 410 }
+  );
 }

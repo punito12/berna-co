@@ -1,11 +1,18 @@
-// Caja (cash box): incomes and expenses, with MP money-release accrual.
+// Caja (cash box): legacy accounting backend.
 //
-// A CashMovement is either INCOME or EXPENSE. INCOME from Mercado Pago may be
-// PENDING until its real `accrualDate` (money_release_date) passes; everything
-// else is AVAILABLE immediately. Today's balance counts only AVAILABLE rows;
-// "a acreditar" sums the PENDING ones, grouped by release date.
+// Admin V2 intentionally runs in "modo sin Caja": Payment/paymentStatus remain
+// active, but CashMovement writes are disabled so the app does not keep invisible
+// accounting without an operator-facing Caja UI. Existing rows are left untouched.
 
 import { prisma } from "@/lib/db";
+
+export function isCajaEnabled(): boolean {
+  return false;
+}
+
+function assertCajaEnabled(): never {
+  throw new Error("Caja/Compras está desactivado en Admin V2.");
+}
 
 // Sub-tabs for the Caja section (shared by the three Caja pages). Lives here
 // (not in a page file) because Next.js forbids arbitrary named exports from
@@ -204,6 +211,7 @@ export type IncomeInput = {
 };
 
 export async function createManualIncome(input: IncomeInput) {
+  if (!isCajaEnabled()) assertCajaEnabled();
   const amount = Math.round(Number(input.amount));
   if (!Number.isFinite(amount) || amount <= 0)
     throw new Error("El monto tiene que ser mayor a 0.");
@@ -234,6 +242,7 @@ export type ExpenseInput = {
 };
 
 export async function createExpense(input: ExpenseInput) {
+  if (!isCajaEnabled()) assertCajaEnabled();
   const amount = Math.round(Number(input.amount));
   if (!Number.isFinite(amount) || amount <= 0)
     throw new Error("El monto tiene que ser mayor a 0.");
@@ -260,6 +269,7 @@ export async function createExpense(input: ExpenseInput) {
 }
 
 export async function deleteMovement(id: string) {
+  if (!isCajaEnabled()) assertCajaEnabled();
   await prisma.cashMovement.delete({ where: { id } });
 }
 
@@ -275,6 +285,7 @@ export async function recordCashOrderIncome(order: {
   createdAt: Date;
   paymentMethod?: string;
 }): Promise<void> {
+  if (!isCajaEnabled()) assertCajaEnabled();
   const existing = await prisma.cashMovement.findFirst({
     where: { orderId: order.id },
     select: { id: true },
@@ -307,6 +318,7 @@ export async function recordManualSaleIncome(sale: {
   // cae a EFECTIVO porque la caja solo conoce EFECTIVO/MERCADO_PAGO/TRANSFERENCIA.
   method?: string;
 }): Promise<void> {
+  if (!isCajaEnabled()) assertCajaEnabled();
   if (sale.net <= 0) return;
   const existing = await prisma.cashMovement.findFirst({
     where: { saleId: sale.id },
@@ -342,6 +354,7 @@ export async function recordMpPaymentIncome(args: {
   approvedAt: Date;
   releaseDate: Date | null;
 }): Promise<void> {
+  if (!isCajaEnabled()) assertCajaEnabled();
   const existing = await prisma.cashMovement.findUnique({
     where: { paymentId: args.paymentId },
     select: { id: true },

@@ -1,10 +1,8 @@
-// Compras (purchases) and supplier payments — the expense-side mirror of
-// lib/payments.ts.
+// Compras (purchases) and supplier payments — legacy/future backend.
 //
-// A Purchase records what was bought from a supplier. A SupplierPayment records
-// money paid toward it and creates a CashMovement (EXPENSE). The purchase's
-// paymentStatus is recomputed from the sum of its payments. "Cuentas por pagar"
-// lists suppliers with an outstanding balance plus an aging breakdown.
+// Admin V2 disables the visible Compras/Caja UI and mutable APIs. If this module
+// is reused later, SupplierPayment still updates purchase paymentStatus but does
+// not create CashMovement records.
 
 import { prisma } from "@/lib/db";
 import { INCOME_SOURCE_LABELS } from "@/lib/cash";
@@ -118,13 +116,7 @@ export async function createPurchase(input: PurchaseInput) {
 }
 
 export async function deletePurchase(id: string) {
-  // Remove the Caja expense(s) this purchase generated, then delete it
-  // (items + payments cascade).
-  try {
-    await prisma.cashMovement.deleteMany({ where: { purchaseId: id } });
-  } catch (e) {
-    console.error("cash reversal on purchase delete failed:", e);
-  }
+  // Items and supplier payments cascade with the purchase.
   await prisma.purchase.delete({ where: { id } });
 }
 
@@ -147,7 +139,7 @@ export async function createSupplierPayment(input: SupplierPaymentInput) {
 
   const purchase = await prisma.purchase.findUnique({
     where: { id: input.purchaseId },
-    include: { supplier: { select: { name: true } } },
+    select: { id: true },
   });
   if (!purchase) throw new Error("Compra no encontrada.");
 
@@ -163,19 +155,6 @@ export async function createSupplierPayment(input: SupplierPaymentInput) {
       method: input.method,
       date,
       notes: input.notes?.trim() || null,
-    },
-  });
-
-  // Mirror into Caja as an expense.
-  await prisma.cashMovement.create({
-    data: {
-      date,
-      type: "EXPENSE",
-      amount,
-      description: `Pago proveedor — ${purchase.supplier.name}`,
-      category: "Compra proveedor",
-      status: "AVAILABLE",
-      purchaseId: input.purchaseId,
     },
   });
 

@@ -12,9 +12,23 @@ export type QuantityTier = {
 };
 
 export async function listQuantityDiscounts(): Promise<QuantityTier[]> {
-  const rows = await prisma.quantityDiscount.findMany({
-    orderBy: { minKg: "asc" },
-  });
+  let rows: {
+    id: string;
+    minKg: number;
+    discountPercent: number;
+    active: boolean;
+  }[];
+  try {
+    rows = await prisma.quantityDiscount.findMany({
+      orderBy: { minKg: "asc" },
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === "P2021") {
+      console.error("QuantityDiscount table is missing; using empty tiers.");
+      return [];
+    }
+    throw error;
+  }
   return rows.map((r) => ({
     id: r.id,
     minKg: r.minKg,

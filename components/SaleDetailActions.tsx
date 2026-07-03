@@ -57,7 +57,7 @@ export default function SaleDetailActions(props: ActionsData) {
       )
     )
       return;
-    if (!confirm("Confirmá de nuevo: se borra para siempre y se revierte stock y caja.")) return;
+    if (!confirm("Confirmá de nuevo: se borra para siempre y se revierte el stock.")) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/sales-delete`, {
@@ -118,7 +118,7 @@ export default function SaleDetailActions(props: ActionsData) {
             onClick={() =>
               setStatus(
                 "CANCELLED",
-                "¿Cancelar este pedido? Se repone el stock y se ajusta la caja. No se puede reactivar."
+                "¿Cancelar este pedido? Se repone el stock. No se puede reactivar."
               )
             }
             disabled={busy}

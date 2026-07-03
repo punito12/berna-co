@@ -72,7 +72,7 @@ export default function SaleRow({ sale }: { sale: Sale }) {
   }
 
   async function remove() {
-    if (!confirm("¿Eliminar esta venta? Se reintegra el stock y se quita de la caja."))
+    if (!confirm("¿Eliminar esta venta? Se reintegra el stock."))
       return;
     setBusy(true);
     try {
@@ -135,7 +135,7 @@ export default function SaleRow({ sale }: { sale: Sale }) {
           <button
             type="button"
             onClick={() =>
-              call({ action: "markPaid" }, "¿Marcar como pagada? Se registra el cobro en caja.")
+              call({ action: "markPaid" }, "¿Marcar como pagada? Se registra el pago.")
             }
             disabled={busy}
             className="bg-green-700 px-3 py-1.5 font-bold uppercase tracking-widest text-[11px] text-white disabled:opacity-50"
@@ -161,7 +161,7 @@ export default function SaleRow({ sale }: { sale: Sale }) {
             onClick={() =>
               call(
                 { action: "deliveryStatus", status: "CANCELLED" },
-                "¿Cancelar la venta? Se reintegra el stock y se revierte la caja."
+                "¿Cancelar la venta? Se reintegra el stock."
               )
             }
             disabled={busy}

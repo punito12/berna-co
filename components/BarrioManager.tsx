@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type Barrio = { id: string; name: string; customers: number };
 
-// Create barrios and list them; each links to its detail page.
+// Create barrios and list them. Commercial reports live in Operaciones.
 export default function BarrioManager({ barrios }: { barrios: Barrio[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -86,15 +85,12 @@ export default function BarrioManager({ barrios }: { barrios: Barrio[] }) {
               key={b.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-white px-4 py-3"
             >
-              <Link
-                href={`/admin/facturacion/barrios/${b.id}`}
-                className="font-bold uppercase tracking-tight text-ink hover:text-muted"
-              >
+              <div className="font-bold uppercase tracking-tight text-ink">
                 {b.name}
                 <span className="ml-2 font-bold uppercase tracking-wide text-[11px] text-muted">
-                  {b.customers} cliente{b.customers === 1 ? "" : "s"} ›
+                  {b.customers} cliente{b.customers === 1 ? "" : "s"}
                 </span>
-              </Link>
+              </div>
               <button
                 type="button"
                 onClick={() => remove(b.id, b.name)}

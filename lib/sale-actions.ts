@@ -1,9 +1,8 @@
 // Unified status + cancellation logic for web orders and manual sales.
 //
 // Status cycle (both kinds): CONFIRMED → DELIVERED, or → CANCELLED. A cancelled
-// record can't be reactivated. Cancellation is fully transactional (Part 4):
-// status + stock restock (ADJUSTMENT, keeping the original SALE rows) + Caja
-// adjustment, all-or-nothing.
+// record can't be reactivated. Cancellation is transactional:
+// status + stock restock (ADJUSTMENT, keeping the original SALE rows).
 
 import { prisma } from "@/lib/db";
 import type { SaleKind } from "@/lib/sales-detail";
@@ -60,10 +59,6 @@ export async function setSaleStatus(
 //  1. status → CANCELLED (still exists; only shows under the "Cancelados" filter)
 //  2. stock: per item, a StockMovement ADJUSTMENT with +quantity (restock). The
 //     original SALE movements are NOT deleted (audit). Product stock is updated.
-//  3. Caja, depending on the recorded payments' CashMovement state:
-//     - AVAILABLE incomes → a compensating EXPENSE "DEVOLUCION" for the sum.
-//     - PENDING incomes (MP not released) → delete those PENDING CashMovements.
-//     - no payments → don't touch Caja.
 
 type CancelItem = {
   productId: string | null;
@@ -122,14 +117,14 @@ async function cancelSale(kind: SaleKind, id: string): Promise<void> {
 
 // ---- Hard delete (Part 3: "Borrar definitivamente") ------------------------
 //
-// Removes the record entirely. Reverts stock and Caja just like a cancellation,
-// then deletes. Only for load errors — cancelling is the normal path.
+// Removes the record entirely. Reverts stock, then deletes. Only for load errors
+// — cancelling is the normal path.
 export async function deleteSaleOrOrder(
   kind: SaleKind,
   id: string
 ): Promise<void> {
   if (kind === "MANUAL") {
-    // deleteManualSale already restocks + clears the sale's Caja movements.
+    // deleteManualSale already restocks when needed.
     await deleteManualSale(id);
     return;
   }
@@ -168,9 +163,7 @@ export async function deleteSaleOrOrder(
         });
       }
     }
-    // Remove the order's Caja movements and its stock movements (audit rows for
-    // a record that no longer exists would be orphaned).
-    await tx.cashMovement.deleteMany({ where: { orderId: id } });
+    // Remove stock movements for a record that no longer exists.
     await tx.stockMovement.deleteMany({
       where: { referenceType: "ORDER", referenceId: id },
     });
@@ -386,19 +379,6 @@ async function runCancellation(args: {
   setStatus: (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => Promise<unknown>;
   referenceType: "ORDER" | "MANUAL_SALE";
 }): Promise<void> {
-  // Read the cash movements linked to this sale/order up-front to decide the
-  // Caja effect. (Reads outside the tx are fine; the writes are inside.)
-  const linkField = args.referenceType === "ORDER" ? "orderId" : "saleId";
-  const cashMovements = await prisma.cashMovement.findMany({
-    where: { type: "INCOME", [linkField]: args.refId },
-  });
-  const availableSum = cashMovements
-    .filter((m) => m.status === "AVAILABLE")
-    .reduce((a, m) => a + m.amount, 0);
-  const pendingIds = cashMovements
-    .filter((m) => m.status === "PENDING")
-    .map((m) => m.id);
-
   await prisma.$transaction(async (tx) => {
     // 1) status → CANCELLED
     await args.setStatus(tx);
@@ -445,26 +425,6 @@ async function runCancellation(args: {
           },
         });
       }
-    }
-
-    // 3) Caja
-    if (availableSum > 0) {
-      // Compensate the collected money with a DEVOLUCION expense.
-      await tx.cashMovement.create({
-        data: {
-          date: new Date(),
-          type: "EXPENSE",
-          amount: availableSum,
-          description: `Devolución por cancelación de pedido #${args.shortId}`,
-          category: "DEVOLUCION",
-          status: "AVAILABLE",
-          [linkField]: args.refId,
-        },
-      });
-    }
-    if (pendingIds.length > 0) {
-      // The money never arrived — just remove the pending incomes.
-      await tx.cashMovement.deleteMany({ where: { id: { in: pendingIds } } });
     }
   });
 }
