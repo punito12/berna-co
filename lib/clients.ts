@@ -102,6 +102,7 @@ export type DuplicateClient = {
   orders: number;
   sales: number;
   remitos: number;
+  presupuestos: number;
   createdAt: Date;
 };
 
@@ -111,10 +112,10 @@ export type DuplicateGroup = {
 };
 
 // Agrupa clientes por nombre normalizado y devuelve solo los grupos con 2+
-// miembros (los duplicados reales). Incluye conteos de remitos/ventas/pedidos
-// para que el admin decida con datos. Los remitos se cuentan por customerId si
-// el modelo lo soporta (columna agregada) — si un remito viejo solo tiene texto,
-// no cuenta acá hasta que se lo vincule.
+// miembros (los duplicados reales). Incluye conteos de remitos/ventas/pedidos/
+// presupuestos para que el admin decida con datos. Los remitos se cuentan por
+// customerId si el modelo lo soporta (columna agregada) — si un remito viejo
+// solo tiene texto, no cuenta acá hasta que se lo vincule.
 export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
   const customers = await prisma.customer.findMany({
     select: {
@@ -124,7 +125,14 @@ export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
       phone: true,
       email: true,
       createdAt: true,
-      _count: { select: { orders: true, sales: true, remitos: true } },
+      _count: {
+        select: {
+          orders: true,
+          sales: true,
+          remitos: true,
+          presupuestos: true,
+        },
+      },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -142,6 +150,7 @@ export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
       orders: c._count.orders,
       sales: c._count.sales,
       remitos: c._count.remitos,
+      presupuestos: c._count.presupuestos,
       createdAt: c.createdAt,
     };
     const arr = groups.get(key) ?? [];
@@ -160,14 +169,19 @@ export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
 export type MergeResult = {
   primaryId: string;
   mergedIds: string[];
-  reassigned: { orders: number; sales: number; remitos: number };
+  reassigned: {
+    orders: number;
+    sales: number;
+    remitos: number;
+    presupuestos: number;
+  };
 };
 
 // Funde una lista de clientes duplicados dentro del primario. TODO el historial
-// (pedidos web, ventas manuales, remitos) se reasigna al primario y luego se
-// borran SOLO los registros de cliente duplicados (ya vacíos). No se borra ni
-// modifica ninguna venta/remito/pedido, ni montos, ni stock. Todo en una sola
-// transacción: si algo falla, se revierte completo.
+// (pedidos web, ventas manuales, remitos y presupuestos) se reasigna al primario
+// y luego se borran SOLO los registros de cliente duplicados (ya vacíos). No se
+// borra ni modifica ninguna venta/remito/pedido/presupuesto, ni montos, ni
+// stock. Todo en una sola transacción: si algo falla, se revierte completo.
 export async function mergeCustomers(
   primaryId: string,
   duplicateIds: string[]
@@ -198,6 +212,10 @@ export async function mergeCustomers(
       where: { customerId: { in: dupIds } },
       data: { customerId: primaryId },
     });
+    const presupuestos = await tx.presupuesto.updateMany({
+      where: { customerId: { in: dupIds } },
+      data: { customerId: primaryId },
+    });
 
     // Los duplicados ya no tienen relaciones → borrar solo esos registros de
     // cliente (NO ventas/remitos/pedidos, que ya viven bajo el primario).
@@ -210,6 +228,7 @@ export async function mergeCustomers(
         orders: orders.count,
         sales: sales.count,
         remitos: remitos.count,
+        presupuestos: presupuestos.count,
       },
     };
   });

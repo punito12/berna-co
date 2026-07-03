@@ -35,10 +35,10 @@ export function isAuthenticated(): boolean {
 
 // Verifies a submitted password. Returns the cookie value to set, or null.
 export function tokenForPassword(password: string): string | null {
-  const expected = process.env.ADMIN_PASSWORD;
   const token = expectedToken();
-  if (!expected || !token) return null;
-  if (!safeEqual(password, expected)) return null;
+  if (!token) return null;
+  const submittedToken = createHash("sha256").update(password).digest("hex");
+  if (!safeEqual(submittedToken, token)) return null;
   return token;
 }
 

@@ -5,8 +5,18 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import BernaLogo from "@/components/BernaLogo";
 
-// Admin navigation, grouped into sections with headers. Each link points at an
-// existing route or a placeholder page; the data logic is untouched (Fase 1).
+// Navegación del admin, agrupada por función. Reorganizada para Admin V2:
+// se separa OPERAR (día a día) de ANALIZAR (reportes), y se agrupa el catálogo
+// (productos, stock, precios, promos) en un solo lugar.
+//
+// Notas de arquitectura:
+//  - Cada href apunta a una página real y viva (verificado). Las rutas legacy
+//    (/admin/pedidos, /admin/facturacion, /admin/facturacion/barrios, /admin/editor)
+//    siguen existiendo SOLO como redirects; no se linkean acá.
+//  - NO se linkea Caja, Compras ni Proveedores (deshabilitados a propósito).
+//  - Secciones con sub-navegación propia (Costos y Precios → SubTabs; Stock →
+//    SubTabs Inventario/Movimientos; Editor del sitio → CmsEditorShell) se linkean
+//    por su ENTRADA; el resto se navega adentro. Así el menú queda corto y claro.
 const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Inicio",
@@ -16,9 +26,6 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
     title: "Operaciones",
     links: [
       { href: "/admin/operaciones/ventas", label: "Pedidos y ventas" },
-      { href: "/admin/operaciones/resumen-ventas", label: "Resumen de ventas" },
-      { href: "/admin/operaciones/inteligencia-comercial", label: "Inteligencia Comercial" },
-      { href: "/admin/analytics", label: "Analytics web" },
       { href: "/admin/entregas", label: "Entregas" },
       { href: "/admin/ventas", label: "Cargar venta manual" },
       { href: "/admin/remitos", label: "Remitos" },
@@ -26,23 +33,25 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
     ],
   },
   {
-    title: "Stock",
+    title: "Análisis",
     links: [
-      { href: "/admin/stock", label: "Inventario actual" },
-      { href: "/admin/stock/movimientos", label: "Movimientos" },
+      { href: "/admin/operaciones/resumen-ventas", label: "Resumen de ventas" },
+      { href: "/admin/operaciones/inteligencia-comercial", label: "Inteligencia Comercial" },
+      { href: "/admin/analytics", label: "Analytics web" },
     ],
   },
   {
     title: "Clientes",
     links: [
       { href: "/admin/clientes", label: "Lista de clientes" },
-      { href: "/admin/clientes/barrios", label: "Barrios" },
+      { href: "/admin/clientes/barrios", label: "Barrios y localidades" },
     ],
   },
   {
     title: "Catálogo",
     links: [
       { href: "/admin/productos", label: "Productos" },
+      { href: "/admin/stock", label: "Stock" },
       { href: "/admin/catalogo/costos", label: "Costos y Precios" },
       { href: "/admin/ventas/promociones", label: "Promociones" },
       { href: "/admin/catalogo/codigos", label: "Cupones de descuento" },
@@ -53,17 +62,17 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
     links: [{ href: "/admin/newsletter", label: "Suscriptores" }],
   },
   {
-    title: "Editor del sitio",
+    title: "Sitio web",
     links: [
-      { href: "/admin/editor/visual", label: "Editor visual (nuevo)" },
-      { href: "/admin/editor/home", label: "Editar sitio web (avanzado)" },
+      { href: "/admin/editor/visual", label: "Editor visual" },
+      { href: "/admin/editor/home", label: "Editor avanzado" },
     ],
   },
   {
     title: "Configuración",
     links: [
       { href: "/admin/config/envios", label: "Envíos y localidades" },
-      { href: "/admin/config/zonas", label: "Zonas" },
+      { href: "/admin/config/zonas", label: "Zonas de entrega" },
       { href: "/admin/config/horarios", label: "Días y horarios" },
       { href: "/admin/config/metodos-pago", label: "Métodos de pago" },
       { href: "/admin/config/negocio", label: "Datos del negocio" },
