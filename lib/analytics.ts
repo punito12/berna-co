@@ -19,6 +19,8 @@ export const ANALYTICS_EVENTS = [
   "delivery_method_selected",
   "delivery_locality_selected",
   "checkout_error",
+  // Significa "pedido creado" en el sistema, no necesariamente pagado.
+  // La aprobación de Mercado Pago / cobro manual es otro estado operativo.
   "order_created",
 ] as const;
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[number];
@@ -75,30 +77,143 @@ export type TrackInput = {
   metadata?: unknown;
 };
 
+const SENSITIVE_METADATA_KEYS = [
+  "address",
+  "direccion",
+  "cliente",
+  "customer",
+  "dni",
+  "email",
+  "mail",
+  "name",
+  "nombre",
+  "password",
+  "phone",
+  "telefono",
+  "token",
+  "whatsapp",
+] as const;
+
+let lastRecordErrorLogAt = 0;
+
+function shouldLogRecordError(): boolean {
+  const now = Date.now();
+  if (now - lastRecordErrorLogAt < 60_000) return false;
+  lastRecordErrorLogAt = now;
+  return true;
+}
+
+function cleanString(v: unknown, max = 300): string | null {
+  const s = clip(v, max);
+  if (!s) return null;
+  // Control chars fuera; evita payloads raros en reportes/logs.
+  return s.replace(/[\u0000-\u001f\u007f]/g, "");
+}
+
+function cleanInt(v: unknown, min = 0, max = 10_000_000): number | null {
+  const n = clipInt(v);
+  if (n === null) return null;
+  if (n < min || n > max) return null;
+  return n;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  );
+}
+
+function isSensitiveMetadataKey(key: string): boolean {
+  const k = key.toLowerCase();
+  return SENSITIVE_METADATA_KEYS.some((sensitive) => k.includes(sensitive));
+}
+
+function sanitizeMetadataValue(value: unknown, depth = 0): unknown {
+  if (depth > 2) return null;
+  if (typeof value === "string") return cleanString(value, 160);
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "boolean") return value;
+  if (Array.isArray(value)) {
+    return value.slice(0, 20).map((item) => sanitizeMetadataValue(item, depth + 1));
+  }
+  if (isPlainObject(value)) {
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value).slice(0, 30)) {
+      if (isSensitiveMetadataKey(key)) continue;
+      out[key.slice(0, 60)] = sanitizeMetadataValue(item, depth + 1);
+    }
+    return out;
+  }
+  return null;
+}
+
+function sanitizeMetadata(value: unknown): unknown {
+  if (value == null) return null;
+  const sanitized = sanitizeMetadataValue(value);
+  try {
+    const encoded = JSON.stringify(sanitized);
+    if (!encoded || encoded.length > 2000) return null;
+    return sanitized;
+  } catch {
+    return null;
+  }
+}
+
+export function sanitizeTrackInput(input: unknown): TrackInput | null {
+  if (!isPlainObject(input)) return null;
+  if (!isValidEventName(input.eventName)) return null;
+  const sessionId = cleanString(input.sessionId, 64);
+  const anonymousId = cleanString(input.anonymousId, 64);
+  if (!sessionId || !anonymousId) return null;
+
+  return {
+    eventName: input.eventName,
+    sessionId,
+    anonymousId,
+    path: safePath(input.path),
+    referrer: safePath(input.referrer),
+    utmSource: cleanString(input.utmSource, 120),
+    utmMedium: cleanString(input.utmMedium, 120),
+    utmCampaign: cleanString(input.utmCampaign, 120),
+    utmContent: cleanString(input.utmContent, 120),
+    utmTerm: cleanString(input.utmTerm, 120),
+    productId: cleanString(input.productId, 64),
+    productName: cleanString(input.productName, 200),
+    variantName: cleanString(input.variantName, 80),
+    quantity: cleanInt(input.quantity, 0, 1000),
+    value: cleanInt(input.value),
+    paymentMethod: cleanString(input.paymentMethod, 40),
+    deliveryMethod: cleanString(input.deliveryMethod, 40),
+    locality: cleanString(input.locality, 120),
+    orderId: cleanString(input.orderId, 64),
+    metadata: sanitizeMetadata(input.metadata),
+  };
+}
+
 // Registra un evento. Devuelve true si se guardó. Best-effort: nunca lanza.
 //  - Valida el nombre del evento (descarta desconocidos).
 //  - Dedupe de order_created por orderId (un pedido cuenta una sola vez aunque
 //    el cliente recargue la página de confirmación).
 export async function recordEvent(input: TrackInput): Promise<boolean> {
   try {
-    if (!isValidEventName(input.eventName)) return false;
-    const sessionId = clip(input.sessionId, 64);
-    const anonymousId = clip(input.anonymousId, 64);
-    if (!sessionId || !anonymousId) return false;
+    const event = sanitizeTrackInput(input);
+    if (!event) return false;
 
     // Dedupe de pedidos: si ya existe un order_created con ese orderId, no repetir.
-    if (input.eventName === "order_created" && input.orderId) {
+    if (event.eventName === "order_created" && event.orderId) {
       const existing = await prisma.analyticsEvent.findFirst({
-        where: { eventName: "order_created", orderId: clip(input.orderId, 64) },
+        where: { eventName: "order_created", orderId: event.orderId },
         select: { id: true },
       });
       if (existing) return true; // ya contado
     }
 
     let metadata: string | null = null;
-    if (input.metadata != null) {
+    if (event.metadata != null) {
       try {
-        metadata = JSON.stringify(input.metadata).slice(0, 2000);
+        metadata = JSON.stringify(event.metadata).slice(0, 2000);
       } catch {
         metadata = null;
       }
@@ -106,31 +221,33 @@ export async function recordEvent(input: TrackInput): Promise<boolean> {
 
     await prisma.analyticsEvent.create({
       data: {
-        eventName: input.eventName,
-        sessionId,
-        anonymousId,
-        path: safePath(input.path),
-        referrer: clip(input.referrer, 512),
-        utmSource: clip(input.utmSource, 120),
-        utmMedium: clip(input.utmMedium, 120),
-        utmCampaign: clip(input.utmCampaign, 120),
-        utmContent: clip(input.utmContent, 120),
-        utmTerm: clip(input.utmTerm, 120),
-        productId: clip(input.productId, 64),
-        productName: clip(input.productName, 200),
-        variantName: clip(input.variantName, 80),
-        quantity: clipInt(input.quantity),
-        value: clipInt(input.value),
-        paymentMethod: clip(input.paymentMethod, 40),
-        deliveryMethod: clip(input.deliveryMethod, 40),
-        locality: clip(input.locality, 120),
-        orderId: clip(input.orderId, 64),
+        eventName: event.eventName,
+        sessionId: event.sessionId,
+        anonymousId: event.anonymousId,
+        path: event.path,
+        referrer: event.referrer,
+        utmSource: event.utmSource,
+        utmMedium: event.utmMedium,
+        utmCampaign: event.utmCampaign,
+        utmContent: event.utmContent,
+        utmTerm: event.utmTerm,
+        productId: event.productId,
+        productName: event.productName,
+        variantName: event.variantName,
+        quantity: event.quantity,
+        value: event.value,
+        paymentMethod: event.paymentMethod,
+        deliveryMethod: event.deliveryMethod,
+        locality: event.locality,
+        orderId: event.orderId,
         metadata,
       },
     });
     return true;
   } catch (e) {
-    console.error("recordEvent failed:", e);
+    if (shouldLogRecordError()) {
+      console.error("recordEvent failed:", e);
+    }
     return false;
   }
 }

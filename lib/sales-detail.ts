@@ -183,7 +183,10 @@ export async function getSaleDetail(
       paymentTone: orderPaymentBadgeTone(o),
       stockDiscounted: null,
       paymentNote:
-        o.paymentMethod === "MERCADOPAGO" && !o.mpPaymentId && o.status !== "CANCELLED"
+        o.paymentMethod === "MERCADOPAGO" &&
+        !o.mpPaymentId &&
+        paymentStatus === "PENDING" &&
+        o.status !== "CANCELLED"
           ? "Stock reservado hasta que el pago se apruebe o se cancele."
           : null,
       dueDate: o.dueDate,

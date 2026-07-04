@@ -25,11 +25,15 @@ export function mpPaymentState(
 export function orderPaymentListLabel(order: MpOrderStatusInput): string {
   const state = mpPaymentState(order);
   if (state === "APPROVED") return "MP aprobado";
+  if (state === "PENDING" && order.paymentStatus === "PAID") return "Pagado";
+  if (state === "PENDING" && order.paymentStatus === "PARTIAL") return "Pago parcial";
   if (state === "PENDING") return "MP pendiente de pago";
   if (state === "CANCELLED") return "MP cancelado/rechazado";
   const status =
     order.paymentStatus === "PAID"
-      ? "pagado"
+      ? order.paymentMethod === "TRANSFERENCIA"
+        ? "pagada"
+        : "pagado"
       : order.paymentStatus === "PARTIAL"
       ? "parcial"
       : "pendiente";
@@ -40,6 +44,12 @@ export function orderPaymentListLabel(order: MpOrderStatusInput): string {
 export function orderPaymentMethodLabel(order: MpOrderStatusInput): string {
   const state = mpPaymentState(order);
   if (state === "APPROVED") return "Mercado Pago (aprobado)";
+  if (state === "PENDING" && order.paymentStatus === "PAID") {
+    return "Pago registrado manualmente";
+  }
+  if (state === "PENDING" && order.paymentStatus === "PARTIAL") {
+    return "Pago parcial registrado";
+  }
   if (state === "PENDING") return "Mercado Pago (pendiente de pago)";
   if (state === "CANCELLED") return "Mercado Pago (cancelado/rechazado)";
   if (order.paymentMethod === "TRANSFERENCIA") return "Transferencia bancaria";
@@ -52,6 +62,8 @@ export function orderPaymentMethodLabel(order: MpOrderStatusInput): string {
 export function orderPaymentStatusLabel(order: MpOrderStatusInput): string | null {
   const state = mpPaymentState(order);
   if (state === "APPROVED") return "Pagado";
+  if (state === "PENDING" && order.paymentStatus === "PAID") return "Pagado";
+  if (state === "PENDING" && order.paymentStatus === "PARTIAL") return "Parcial";
   if (state === "PENDING") return "Pendiente de pago";
   if (state === "CANCELLED") return "Cancelado/rechazado";
   return null;
@@ -60,6 +72,8 @@ export function orderPaymentStatusLabel(order: MpOrderStatusInput): string | nul
 export function orderPaymentBadgeTone(order: MpOrderStatusInput): PaymentBadgeTone {
   const state = mpPaymentState(order);
   if (state === "APPROVED") return "success";
+  if (state === "PENDING" && order.paymentStatus === "PAID") return "success";
+  if (state === "PENDING" && order.paymentStatus === "PARTIAL") return "warning";
   if (state === "PENDING") return "warning";
   if (state === "CANCELLED") return "danger";
   if (order.paymentStatus === "PAID") return "success";
@@ -73,6 +87,8 @@ export function effectiveOrderPaymentStatus(
 ): string {
   const state = mpPaymentState(order);
   if (state === "APPROVED") return "PAID";
+  if (state === "PENDING" && order.paymentStatus === "PAID") return "PAID";
+  if (state === "PENDING" && order.paymentStatus === "PARTIAL") return "PARTIAL";
   if (state === "PENDING" || state === "CANCELLED") return "PENDING";
   return order.paymentStatus;
 }

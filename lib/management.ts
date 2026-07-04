@@ -601,7 +601,12 @@ export async function listSalesUnified(
       customerType: s.customer?.type ?? null,
       total: s.net,
       status: normalizeStatus(s.deliveryStatus),
-      paymentLabel: s.paymentStatus === "PAID" ? "Cobrada" : "Cta. corriente",
+      paymentLabel:
+        s.paymentStatus === "PAID"
+          ? "Cobrada"
+          : s.paymentStatus === "PARTIAL"
+          ? "Pago parcial"
+          : "Pendiente de pago",
       paymentTone: s.paymentStatus === "PAID" ? "success" : "warning",
       itemsCount: s.items.length,
       href: detailHref("MANUAL", s.id),
