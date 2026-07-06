@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import ProductCard from "@/components/ProductCard";
 import Reveal from "@/components/Reveal";
-import { useCart } from "@/components/CartProvider";
-import { BREADCRUMB_LABELS, formatPrice, type ProductForUI } from "@/lib/products";
+import { type ProductForUI } from "@/lib/products";
 
 const DEFAULT_CATEGORY_LABELS: Record<string, string> = {
   CARNE: "Carne",
@@ -104,9 +103,24 @@ export default function Catalog({
   // detalle del producto y mantener la vista previa activa.
   previewToken?: string;
 }) {
-  const { lines, totalItems, totalPrice, changeQuantity } = useCart();
-  const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<string>("ALL");
+
+  // Sincronización con las píldoras de filtro del header flotante:
+  // el header dispara "berna:set-category" y acá se aplica; cada cambio local
+  // se anuncia con "berna:category" para que el header marque la activa.
+  useEffect(() => {
+    function onSet(e: Event) {
+      const code = (e as CustomEvent<string>).detail;
+      if (typeof code === "string") setCategory(code);
+    }
+    window.addEventListener("berna:set-category", onSet);
+    return () => window.removeEventListener("berna:set-category", onSet);
+  }, []);
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("berna:category", { detail: category })
+    );
+  }, [category]);
 
   // Categories present in the catalog, kept in a stable, sensible order.
   const categories = useMemo(() => {
@@ -134,57 +148,151 @@ export default function Catalog({
       style={sectionStyle}
       className="bg-cream"
     >
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:py-20">
-        <Reveal as="header" dataCmsSection="catalog.header" className="mb-8 text-center sm:mb-12">
-          <p
-            className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
-            data-cms-text={textKeys.eyebrow}
-          >
-            {eyebrow}
-          </p>
-          <h2
-            className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
-            style={titleStyle}
-            data-cms-text={textKeys.title}
-          >
-            {title}
-          </h2>
-          <p
-            className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted"
-            style={subtitleStyle}
-            data-cms-text={textKeys.subtitle}
-          >
-            {subtitle}
-          </p>
+      {/* Ancho completo tipo CRAV: las cards aprovechan toda la página (con un
+          respiro en los bordes), no una columna centrada. */}
+      <div className="mx-auto w-full max-w-[1800px] px-4 py-10 sm:px-8 sm:py-20">
+        {/* Header tipo "sobre nosotros": texto a la izquierda (sello + título
+            en 2 líneas con cortina direccional + subtítulo) y foto redondeada
+            a la derecha, en dos columnas balanceadas. */}
+        {/* "NUESTROS PRODUCTOS" (bloque texto + foto). Contenido en un ancho
+            más angosto que el display: lejos de los bordes de la pantalla. */}
+        <Reveal as="header" dataCmsSection="catalog.header" className="reveal-quiet mx-auto mb-10 w-full max-w-6xl sm:mb-16 sm:pt-6">
+          <div className="grid items-stretch gap-8 sm:grid-cols-2 sm:gap-12">
+            {/* Columna de texto: título + subtítulo + píldoras arriba, y las
+                dos imágenes-píldora abajo (alineadas con el borde inferior de
+                la foto vía mt-auto). */}
+            {/* Mobile: sello, título y subtítulo centrados. Desktop: a la izq. */}
+            <div className="flex flex-col text-center sm:text-left">
+              <div>
+              <p
+                className="stamp-pop inline-block rounded-full bg-ink px-5 py-2 font-bold uppercase tracking-[0.25em] text-xs text-white shadow-[0_10px_30px_rgba(10,10,10,0.2)]"
+                data-cms-text={textKeys.eyebrow}
+              >
+                {eyebrow}
+              </p>
+              <h2
+                className="title-curtain mt-6 font-black uppercase tracking-tight text-5xl leading-[0.95] text-ink sm:w-max sm:max-w-none sm:text-7xl lg:text-8xl"
+                style={titleStyle}
+                data-cms-text={textKeys.title}
+              >
+                <span className="title-slide">
+                  {/* Una palabra por línea → "NUESTROS / PRODUCTOS" */}
+                  {title.split(" ").map((word, i) => (
+                    <Fragment key={i}>
+                      {i > 0 && <br />}
+                      {word}
+                    </Fragment>
+                  ))}
+                </span>
+              </h2>
+              </div>
+              <p
+                className="sub-fade mx-auto mt-6 max-w-md font-serif italic text-lg text-muted sm:mx-0 sm:text-2xl"
+                style={subtitleStyle}
+                data-cms-text={textKeys.subtitle}
+              >
+                {subtitle}
+              </p>
+
+              {/* Las dos etiquetas-píldora (PNG con exterior transparente y su
+                  propia forma), lado a lado, apoyadas en el borde inferior de
+                  la foto. Archivos: nuestros-productos-1.png / -2.png */}
+              <div className="mt-8 hidden items-end gap-4 sm:mt-auto sm:flex sm:pt-8">
+                <div
+                  className="rise-in relative h-36 w-1/2 lg:h-44"
+                  style={{ animationDelay: "950ms" }}
+                >
+                  <Image
+                    src="/images/nuestros-productos-1.png"
+                    alt="Huevos de gallinas libres"
+                    fill
+                    sizes="320px"
+                    loading="eager"
+                    className="object-contain object-left-bottom"
+                  />
+                </div>
+                <div
+                  className="rise-in relative h-36 w-1/2 lg:h-44"
+                  style={{ animationDelay: "1080ms" }}
+                >
+                  <Image
+                    src="/images/nuestros-productos-2.png"
+                    alt="Empanado simple"
+                    fill
+                    sizes="320px"
+                    loading="eager"
+                    className="object-contain object-right-bottom"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Foto, proporción 2:3 natural. MOBILE: va PRIMERA (order-first) y
+                full-bleed de borde a borde (márgenes negativos que rompen el
+                px-4 del contenedor, sin redondeo ni borde). Desktop: igual que
+                siempre (derecha, redondeada, acotada). OJO: es un único div
+                como item del grid — un wrapper con justify-self + hijo w-full
+                colapsa a 0px de ancho. */}
+            <div className="photo-reveal relative order-first -mx-4 aspect-[2/3] w-[calc(100%+2rem)] max-w-none overflow-hidden sm:order-none sm:mx-0 sm:w-full sm:max-w-sm sm:justify-self-end sm:rounded-3xl sm:border sm:border-line">
+              <Image
+                src="/images/nuestros-productos.jpg"
+                alt="Milanesas Berna&Co"
+                fill
+                sizes="(max-width: 640px) 90vw, 440px"
+                // eager: decodificada ANTES de llegar scrolleando (el decode
+                // lazy en pleno scroll trababa la animación de la sección)
+                loading="eager"
+                className="object-cover"
+              />
+            </div>
+          </div>
         </Reveal>
 
-        {/* Category filter */}
-        <Reveal dataCmsSection="catalog.filters" className="mb-8 flex flex-wrap justify-center gap-2 sm:mb-12" delay={80}>
-          <FilterChip
-            active={category === "ALL"}
-            onClick={() => setCategory("ALL")}
-            textKey={textKeys.allLabel}
-            chipStyle={chipStyle}
-            chipActiveStyle={chipActiveStyle}
-          >
-            {allLabel}
-          </FilterChip>
-          {categories.map((c) => (
-            <FilterChip
-              key={c}
-              active={category === c}
-              onClick={() => setCategory(c)}
-              chipStyle={chipStyle}
-              chipActiveStyle={chipActiveStyle}
-            >
-              {categoryLabel(c)}
-            </FilterChip>
-          ))}
-        </Reveal>
+        {/* DISPLAY (filtros + cards). El id lo observa HomeHeader para mostrar
+            los cortes en el header solo dentro de esta zona. */}
+        <div id="display">
 
-        <div data-cms-section="catalog.cards" className="grid min-w-0 grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
+        {/* Filtros: cápsula liquid glass, igual a la del header. El id lo
+            observa HomeHeader: los cortes del header aparecen recién cuando
+            esta cápsula ya quedó ARRIBA del viewport. */}
+        <div id="display-filters">
+        {/* Cápsula única liquid glass en TODOS los tamaños. En mobile los
+            botones van lo más grandes posible sin quebrar a 2 líneas (texto
+            10px, padding ajustado, sin tracking ancho). */}
+        <Reveal dataCmsSection="catalog.filters" className="mb-8 flex justify-center sm:mb-12" delay={80}>
+          <div className="flex items-center gap-0.5 rounded-full border border-line bg-white/85 p-1 shadow-[0_10px_30px_rgba(10,10,10,0.1)] backdrop-blur-xl sm:gap-1.5 sm:p-1.5">
+            {[
+              { code: "ALL", label: allLabel },
+              ...categories.map((c) => ({ code: c, label: categoryLabel(c) })),
+            ].map((opt) => (
+              <button
+                key={opt.code}
+                type="button"
+                onClick={() => setCategory(opt.code)}
+                aria-pressed={category === opt.code}
+                className={`min-h-10 shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 font-bold uppercase tracking-tight text-[11px] transition-colors duration-200 sm:min-h-11 sm:px-5 sm:py-2.5 sm:tracking-widest sm:text-xs ${
+                  category === opt.code
+                    ? "bg-ink text-white"
+                    : "text-ink hover:bg-ink/10"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </Reveal>
+        </div>{/* /display-filters */}
+
+        {/* flex + justify-center (en vez de grid): cuando el filtro deja una
+            fila incompleta (3 carnes, 2 veggies), queda centrada. Los anchos
+            calc replican las columnas del grid (2 en mobile, 4 en desktop). */}
+        <div data-cms-section="catalog.cards" className="flex min-w-0 flex-wrap justify-center gap-4 sm:gap-6 lg:gap-7">
           {visible.map((product, i) => (
-            <Reveal key={product.id} className="min-w-0" delay={(i % 3) * 90}>
+            <Reveal
+              key={product.id}
+              className="min-w-0 w-full sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.3125rem)]"
+              delay={(i % 4) * 90}
+            >
               <ProductCard
                 product={product}
                 efectivoPct={efectivoPct}
@@ -211,156 +319,11 @@ export default function Catalog({
             </Reveal>
           ))}
         </div>
+
+        </div>{/* /display */}
       </div>
 
-      {/* Sticky cart bar — only when there is something in the cart */}
-      {totalItems > 0 && (
-        <div data-cms-section="catalog.cart" className="sticky bottom-0 z-20 border-t border-line bg-white/95 shadow-[0_-18px_45px_rgba(10,10,10,0.08)] backdrop-blur-xl">
-          {/* Extra right padding (pr-20) keeps the total clear of the floating
-              WhatsApp button in the corner. */}
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 py-3 pl-4 pr-20 sm:pr-4">
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
-              className="flex items-center gap-2 font-bold uppercase tracking-wide text-sm text-ink transition-colors hover:text-muted"
-            >
-              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-ink px-2 text-xs text-white shadow-sm">
-                {totalItems}
-              </span>
-              {open ? cartHideLabel : cartShowLabel}
-            </button>
-            <span className="font-black text-xl text-ink">
-              {formatPrice(totalPrice)}
-            </span>
-          </div>
-
-          {open && (
-            <div className="animate-soft-pop border-t border-line bg-white">
-              <ul className="mx-auto max-w-6xl divide-y divide-line px-4">
-                {lines.map((line) => (
-                  <li
-                    key={line.key}
-                    data-cms-section="cart.item"
-                    className="flex items-center justify-between gap-4 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-bold uppercase tracking-tight text-sm text-ink">
-                        {line.name}
-                      </p>
-                      <p className="text-xs text-muted">
-                        Empanado:{" "}
-                        {BREADCRUMB_LABELS[line.breadcrumbType] ??
-                          line.breadcrumbType}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div
-                        data-cms-section="cart.quantity"
-                        className="flex items-center gap-2"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => changeQuantity(line.key, -1)}
-                          aria-label="Quitar uno"
-                          className="h-11 w-11 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white"
-                        >
-                          −
-                        </button>
-                        <span className="w-5 text-center font-bold text-ink">
-                          {line.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => changeQuantity(line.key, 1)}
-                          disabled={
-                            typeof line.maxStock === "number" &&
-                            line.quantity >= line.maxStock
-                          }
-                          aria-label="Agregar uno"
-                          className="h-11 w-11 border border-black font-bold text-ink transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-ink"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <span className="w-24 text-right font-black text-ink">
-                        {formatPrice(line.price * line.quantity)}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              {/* pr-20 en mobile: deja libre la esquina del botón flotante de
-                  WhatsApp para que no tape el botón "Continuar". */}
-              <div
-                data-cms-section="cart.actions"
-                className="mx-auto max-w-6xl py-4 pl-4 pr-20 sm:px-4"
-              >
-                <Link
-                  href="/checkout"
-                  data-cms-style="button"
-                  data-cms-button="cart.continue"
-                  style={{
-                    borderRadius: "var(--btn-radius, 0px)",
-                    fontFamily: "var(--btn-font, inherit)",
-                    fontWeight:
-                      "var(--btn-weight, 700)" as React.CSSProperties["fontWeight"],
-                    textTransform:
-                      "var(--btn-transform, uppercase)" as React.CSSProperties["textTransform"],
-                    ...cartContinueButtonStyle,
-                  }}
-                  className="block w-full bg-button px-4 py-4 text-center font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0"
-                >
-                  {cartContinueLabel}
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </section>
   );
 }
 
-function FilterChip({
-  active,
-  onClick,
-  children,
-  textKey,
-  chipStyle,
-  chipActiveStyle,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  textKey?: string;
-  chipStyle?: React.CSSProperties;
-  chipActiveStyle?: React.CSSProperties;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      data-cms-text={textKey}
-      data-cms-style="filter"
-      data-cms-element="filter-chip"
-      data-cms-active={active ? "true" : "false"}
-      style={{
-        borderRadius: "var(--filter-radius, 9999px)",
-        fontWeight: "var(--filter-weight, 700)" as React.CSSProperties["fontWeight"],
-        textTransform:
-          "var(--filter-transform, uppercase)" as React.CSSProperties["textTransform"],
-        // El diseño de filtros del editor (fase 3) pisa lo de arriba cuando existe.
-        ...(active ? chipActiveStyle : chipStyle),
-      }}
-      className={`inline-flex min-h-11 items-center border px-4 py-2.5 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
-        active
-          ? "border-filter-active-bg bg-filter-active-bg text-filter-active-text shadow-sm"
-          : "border-filter-border bg-filter-inactive-bg text-filter-inactive-text hover:-translate-y-0.5 hover:border-black"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}

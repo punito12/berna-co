@@ -83,8 +83,9 @@ export default function ProductCard({
     product.breadcrumbs[0] ?? "TRADITIONAL"
   );
   const [justAdded, setJustAdded] = useState(false);
-  // Mobile-only: bottom sheet open to pick breadcrumb when >1 option.
-  const [sheetOpen, setSheetOpen] = useState(false);
+  // Mobile-only: el botón "+" abre el MISMO panel glass que el hover de
+  // desktop (empanados + precio efectivo + agregar).
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const cover = product.imagesByBreadcrumb[selected]?.[0] ?? product.imageUrl;
   const selectedOutOfStock = stockFor(product, selected) <= 0;
@@ -111,30 +112,6 @@ export default function ProductCard({
   function handleAdd() {
     if (selectedOutOfStock || selectedAtLimit) return;
     const added = addToCart(product, selected);
-    if (!added) return;
-    setJustAdded(true);
-    window.setTimeout(() => setJustAdded(false), 1200);
-  }
-
-  // On mobile: if only one breadcrumb → add directly. If multiple → open sheet.
-  function handleMobileAdd() {
-    if (allOutOfStock) return;
-    if (!hasMultipleBreadcrumbs) {
-      handleAdd();
-    } else {
-      setSheetOpen(true);
-    }
-  }
-
-  function handleSheetSelect(code: string) {
-    setSelected(code);
-    setSheetOpen(false);
-    const stock = stockFor(product, code);
-    const inCart =
-      lines.find((line) => line.key === `${product.id}__${code}`)?.quantity ??
-      0;
-    if (stock <= 0 || inCart >= stock) return;
-    const added = addToCart(product, code);
     if (!added) return;
     setJustAdded(true);
     window.setTimeout(() => setJustAdded(false), 1200);
@@ -182,21 +159,6 @@ export default function ProductCard({
       "var(--badge-transform, uppercase)" as React.CSSProperties["textTransform"],
   };
 
-  const priceDisplay = selPromoPercent > 0 ? (
-    <p className="flex min-w-0 flex-wrap items-baseline gap-2">
-      <span data-cms-style="price" style={priceStyle} className="font-black text-xl text-price-promo sm:text-2xl">
-        {formatPrice(promoPriceFor(product, selected))}
-      </span>
-      <span className="text-sm text-muted line-through">
-        {formatPrice(priceFor(product, selected))}
-      </span>
-    </p>
-  ) : (
-    <p data-cms-style="price" style={priceStyle} className="font-black text-xl text-price sm:text-2xl">
-      {formatPrice(priceFor(product, selected))}
-    </p>
-  );
-
   // Precio principal = PRECIO WEB (lo que se muestra en el badge). El precio
   // efectivo/transferencia (precio base) va como línea aparte debajo, sin badge.
   const webShown =
@@ -217,36 +179,37 @@ export default function ProductCard({
       <article
         style={cardStyle}
         data-cms-element="product-card"
-        className="group flex h-full min-w-0 max-w-full flex-col overflow-hidden border border-card-border bg-card-bg transition-all duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_22px_55px_rgba(10,10,10,0.10)]"
+        className="group relative flex h-full min-w-0 max-w-full flex-col overflow-hidden border border-card-border bg-card-bg transition-all duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_22px_55px_rgba(10,10,10,0.10)]"
       >
         {/* Photo */}
+        {/* Mobile: contenedor cuadrado con la foto COMPLETA (object-contain,
+            sin recorte) más chica en un área inset — el botón + vive en el
+            margen superior sin pisarla. Desktop: la foto llena la card 4:5. */}
         <Link
           href={productHref}
           data-cms-el="card-image"
           style={cardImageStyleProp}
-          className="relative block aspect-[4/5] w-full overflow-hidden bg-white sm:aspect-[2/3]"
+          className="relative block aspect-[6/7] w-full overflow-hidden bg-white sm:aspect-[4/5]"
           aria-label={`Ver ${product.name}`}
         >
           <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line">
             {product.name}
           </span>
           {cover && (
-            <Image
-              key={cover}
-              src={cover}
-              alt={product.name}
-              fill
-              // Lazy (default): las cards están debajo del hero. next/image pide
-              // un tamaño acorde al ancho real de la card (mobile: 2 columnas;
-              // desktop: ~1/4 del layout), no la imagen original full-size.
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              // Mobile: object-cover llena la card (recorta solo el margen blanco
-              // de la foto). Desktop: object-contain (el contenedor 2:3 coincide
-              // con la foto).
-              className={`object-cover object-center sm:object-contain transition-transform duration-700 ease-out ${
-                allOutOfStock ? "opacity-40 grayscale" : "group-hover:scale-105"
-              }`}
-            />
+            <div className="absolute inset-x-2 bottom-1 top-9 sm:inset-0">
+              <Image
+                key={cover}
+                src={cover}
+                alt={product.name}
+                fill
+                // Lazy (default): las cards están debajo del hero. next/image
+                // pide un tamaño acorde al ancho real de la card.
+                sizes="(max-width: 640px) 90vw, 25vw"
+                className={`object-contain object-center transition-transform duration-300 ease-out sm:object-cover ${
+                  allOutOfStock ? "opacity-40 grayscale" : "group-hover:scale-105"
+                }`}
+              />
+            </div>
           )}
 
           <div className="absolute left-2 top-2 flex flex-col items-start gap-1 sm:left-3 sm:top-3 sm:gap-1.5">
@@ -273,136 +236,159 @@ export default function ProductCard({
           </div>
         </Link>
 
-        <div className="flex min-w-0 flex-1 flex-col p-2.5 pt-2 sm:p-5 md:p-6">
-          <Link href={productHref}>
-            <h3
-              data-cms-style="name"
-              data-cms-el="card-title"
-              style={{ ...nameStyle, ...cardTitleStyleProp }}
-              className="break-words font-black uppercase tracking-tight text-base leading-tight text-product-name transition-colors hover:text-muted sm:text-xl"
+        {/* Botón + (solo mobile), esquina superior derecha estilo CRAV: abre
+            el mismo panel glass que el hover de desktop. Abierto muta a ×. */}
+        <button
+          type="button"
+          onClick={() => setPanelOpen((v) => !v)}
+          disabled={allOutOfStock}
+          aria-label={allOutOfStock ? outOfStockLabel : addToCartLabel}
+          aria-expanded={panelOpen}
+          data-cms-button="catalog.add"
+          className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-ink text-2xl font-bold leading-none text-white shadow-[0_10px_25px_rgba(10,10,10,0.3)] transition-transform duration-200 active:scale-90 disabled:bg-muted sm:hidden"
+        >
+          <span
+            key={`${justAdded}-${panelOpen}`}
+            className={justAdded ? "inline-block animate-counter-pop" : "inline-block"}
+          >
+            {justAdded ? "✓" : panelOpen ? "×" : "+"}
+          </span>
+        </button>
+
+        {/* Cuerpo estilo CRAV en desktop: solo nombre + precio web en una fila.
+            El resto (empanados, precio efectivo, CTA) vive en el panel glass
+            que aparece al hover. En mobile queda el layout de siempre. */}
+        <div className="flex min-w-0 flex-1 flex-col px-4 pb-3.5 pt-1 sm:px-5 sm:pb-7 sm:pt-2">
+          {/* Desktop: nombre izq + precio der en la misma fila. items-baseline
+              alinea el precio con la PRIMERA línea del nombre, así queda a la
+              misma altura en todas las cards (tengan nombre de 1 o 2 líneas)
+              sin reservar altura fija; la altura total la iguala el grid. */}
+          {/* Desktop: nombre y precio CENTRADOS, precio debajo. El bloque del
+              nombre reserva SIEMPRE el alto de 2 líneas (centrando el texto
+              vertical adentro), así los nombres largos no desproporcionan las
+              cards y el precio queda a la misma altura en toda la fila. Se
+              esconde al toque cuando entra el panel glass. */}
+          {/* Mobile: fila CRAV — nombre abajo-izquierda, precio abajo-derecha.
+              Se esconde cuando el panel glass está abierto (mobile) o al hover
+              (desktop). */}
+          <div
+            className={`flex min-w-0 items-baseline justify-between gap-3 transition-opacity duration-100 sm:block sm:text-center sm:group-hover:opacity-0 ${
+              panelOpen ? "opacity-0" : ""
+            }`}
+          >
+            <Link
+              href={productHref}
+              className="min-w-0 sm:flex sm:h-[2.6rem] sm:items-start sm:justify-center"
             >
-              {product.name}
-            </h3>
-          </Link>
-          <p className="mt-0.5 font-bold uppercase tracking-wide text-xs text-muted">
-            {formatWeight(product.weightGrams)}
-          </p>
-          <p
-            data-cms-el="card-text"
-            style={{ fontFamily: "var(--description-font, inherit)", ...cardTextStyleProp }}
-            className="mt-3 hidden text-sm leading-relaxed text-muted sm:block"
-          >
-            {product.description}
-          </p>
-
-          <Link
-            href={productHref}
-            data-cms-style="button2"
-            data-cms-button="catalog.detail"
-            style={{
-              fontFamily: "var(--btn2-font, inherit)",
-              fontWeight:
-                "var(--btn2-weight, 700)" as React.CSSProperties["fontWeight"],
-              textTransform:
-                "var(--btn2-transform, uppercase)" as React.CSSProperties["textTransform"],
-              textDecoration: "var(--btn2-underline, none)",
-              ...detailButtonStyle,
-            }}
-            className="mt-2 hidden font-bold uppercase tracking-widest text-[11px] text-button-secondary-text underline-offset-4 hover:underline sm:inline-flex sm:items-center"
-          >
-            {viewDetailLabel}
-          </Link>
-
-          {/* Empanado selector — desktop only */}
-          <div className="mt-3 hidden sm:mt-4 sm:block">
-            <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
-              {chooseBreadcrumbLabel}
+              <h3
+                data-cms-style="name"
+                data-cms-el="card-title"
+                style={{ ...nameStyle, ...cardTitleStyleProp }}
+                className="break-words font-black uppercase tracking-tight text-lg leading-tight text-product-name transition-colors hover:text-muted sm:line-clamp-2 sm:text-lg"
+              >
+                {product.name}
+              </h3>
+            </Link>
+            {/* Precio web mobile — texto plano bold, a la derecha */}
+            <p
+              data-cms-style="price"
+              style={priceStyle}
+              className="shrink-0 font-black text-xl leading-none tabular-nums text-price sm:hidden"
+            >
+              {formatPrice(webShown)}
             </p>
-            <div className="flex flex-wrap gap-2">
-              {product.breadcrumbs.map((code) => {
-                const active = code === selected;
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => setSelected(code)}
-                    aria-pressed={active}
-                    data-cms-style="empanado"
-                    style={{
-                      borderRadius: "var(--empanado-radius, 9999px)",
-                      fontFamily: "var(--empanado-font, inherit)",
-                      fontWeight: "var(--empanado-weight, 700)" as React.CSSProperties["fontWeight"],
-                      textTransform: "var(--empanado-transform, uppercase)" as React.CSSProperties["textTransform"],
-                    }}
-                    className={`border border-empanado-border px-3 py-1.5 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
-                      active
-                        ? "bg-empanado-active-bg text-empanado-active-text shadow-sm"
-                        : "bg-empanado-inactive-bg text-empanado-inactive-text hover:-translate-y-0.5 hover:bg-cream"
-                    }`}
-                  >
-                    {BREADCRUMB_LABELS[code] ?? code}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Precio web desktop — pastilla tinta con sombra */}
+            <p
+              data-cms-style="price"
+              data-cms-element="card-web-price-badge"
+              style={priceStyle}
+              className="mt-3 hidden rounded-full bg-ink px-8 py-3 font-black text-3xl leading-none tabular-nums text-white shadow-[0_10px_25px_rgba(10,10,10,0.22)] sm:inline-block"
+            >
+              {formatPrice(webShown)}
+            </p>
           </div>
 
-          {/* Price + CTA */}
-          <div className="mt-auto pt-3 sm:pt-5">
-            {showCashPrice ? (
-              <>
-                {/* Precio PRINCIPAL = precio web, solo el número, DENTRO de un
-                    badge editable. Usa los tokens de "Etiquetas de formas de
-                    pago" (chip-bg/chip-border/chip-text) de Marca y estilo. */}
-                <div>
-                  <span
-                    data-cms-style="chip"
-                    data-cms-element="card-web-price-badge"
-                    style={chipStyle}
-                    className="inline-flex max-w-full items-baseline border border-chip-border bg-chip-bg px-3 py-1.5 text-chip-text"
-                  >
-                    <span className="font-black text-xl sm:text-2xl">
-                      {formatPrice(webShown)}
-                    </span>
-                  </span>
-                </div>
-                {/* Precio efectivo/transferencia: abajo, sin badge (como antes). */}
-                <p className="mt-1.5 flex min-w-0 flex-wrap items-baseline gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-muted sm:text-[11px]">
-                    Efectivo o transferencia
-                  </span>
-                  <span className="font-black text-base text-price sm:text-lg">
-                    {formatPrice(cashShown)}
-                  </span>
-                </p>
-              </>
-            ) : (
-              priceDisplay
-            )}
+        </div>
 
-            {payDiscountPct > 0 && (
-              <div className="mt-2">
-                <span
-                  data-cms-style="chip"
-                  style={chipStyle}
-                  className="inline-flex max-w-full items-baseline gap-1 border border-chip-border bg-chip-bg px-2 py-1 text-chip-text sm:px-2.5"
-                >
-                  <span className="font-black text-xs sm:text-sm">
-                    {payDiscountPct}% OFF
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wide sm:text-[11px]">
-                    <span className="sm:hidden">
-                      {paymentCashLabel}/{paymentTransferShortLabel}
-                    </span>
-                    <span className="hidden sm:inline">
-                      {paymentCashLabel} o {paymentTransferLabel}
-                    </span>
-                  </span>
-                </span>
+        {/* Panel liquid glass — solo desktop. Invisible hasta hover (o foco de
+            teclado en sus controles); flota sobre la parte baja de la card con
+            los empanados, el precio efectivo/transf y el CTA. pointer-events
+            apagado mientras está oculto para no tapar el link de la imagen. */}
+        {/* transition-transform (no -all): la opacidad cambia INSTANTÁNEA al
+            hover — el panel tapa la imagen de una — y solo el deslizamiento
+            se anima. */}
+        <div
+          className={`absolute inset-x-3 bottom-3 z-10 transition-transform duration-300 ease-out motion-reduce:transition-none ${
+            panelOpen
+              ? "pointer-events-auto translate-y-0 opacity-100"
+              : "pointer-events-none translate-y-3 opacity-0"
+          } sm:focus-within:pointer-events-auto sm:focus-within:translate-y-0 sm:focus-within:opacity-100 sm:group-hover:pointer-events-auto sm:group-hover:translate-y-0 sm:group-hover:opacity-100`}
+        >
+          <div className="rounded-2xl border border-white/40 bg-white/55 p-4 shadow-[0_18px_45px_rgba(10,10,10,0.18)] backdrop-blur-xl">
+            {/* Peso del paquete — píldora tinta, a juego con la del precio */}
+            <p className="mb-2.5 inline-block rounded-full bg-ink px-3.5 py-1.5 font-black uppercase tracking-[0.18em] text-xs text-white">
+              {formatWeight(product.weightGrams)}
+            </p>
+            {hasMultipleBreadcrumbs && (
+              <div>
+                <p className="mb-2 font-bold uppercase tracking-wide text-[11px] text-muted">
+                  {chooseBreadcrumbLabel}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {product.breadcrumbs.map((code) => {
+                    const active = code === selected;
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => setSelected(code)}
+                        aria-pressed={active}
+                        data-cms-style="empanado"
+                        style={{
+                          borderRadius: "var(--empanado-radius, 9999px)",
+                          fontFamily: "var(--empanado-font, inherit)",
+                          fontWeight: "var(--empanado-weight, 700)" as React.CSSProperties["fontWeight"],
+                          textTransform: "var(--empanado-transform, uppercase)" as React.CSSProperties["textTransform"],
+                        }}
+                        className={`border border-empanado-border px-3 py-1.5 font-bold uppercase tracking-wide text-xs transition-all duration-200 ${
+                          active
+                            ? "bg-empanado-active-bg text-empanado-active-text shadow-sm"
+                            : "bg-empanado-inactive-bg/80 text-empanado-inactive-text hover:bg-cream"
+                        }`}
+                      >
+                        {BREADCRUMB_LABELS[code] ?? code}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
-            {/* Desktop: normal add button */}
+            {/* Precio efectivo/transferencia (o el % OFF global de fallback) */}
+            {showCashPrice ? (
+              <p className={`flex items-baseline justify-between gap-2 ${hasMultipleBreadcrumbs ? "mt-3" : ""}`}>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+                  Efectivo o transferencia
+                </span>
+                <span className="font-black text-lg tabular-nums text-price">
+                  {formatPrice(cashShown)}
+                </span>
+              </p>
+            ) : payDiscountPct > 0 ? (
+              <p className={`flex items-baseline gap-1.5 ${hasMultipleBreadcrumbs ? "mt-3" : ""}`}>
+                <span
+                  data-cms-style="chip"
+                  style={chipStyle}
+                  className="inline-flex items-baseline border border-chip-border bg-chip-bg px-2 py-0.5 font-black text-xs text-chip-text"
+                >
+                  {payDiscountPct}% OFF
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+                  {paymentCashLabel} o {paymentTransferLabel}
+                </span>
+              </p>
+            ) : null}
+
             <button
               type="button"
               onClick={handleAdd}
@@ -410,7 +396,7 @@ export default function ProductCard({
               data-cms-style="button"
               data-cms-button="catalog.add"
               style={{ ...primaryBtnStyle, ...addButtonStyle }}
-              className="mt-3 hidden w-full overflow-hidden bg-button px-4 py-3.5 font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:mt-4 sm:block"
+              className="mt-3 w-full overflow-hidden bg-button px-4 py-3 font-bold uppercase tracking-widest text-sm text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted"
             >
               {selectedOutOfStock
                 ? outOfStockLabel
@@ -421,91 +407,27 @@ export default function ProductCard({
                 : addToCartLabel}
             </button>
 
-            {/* Mobile: opens sheet if >1 breadcrumb */}
-            <button
-              type="button"
-              onClick={handleMobileAdd}
-              disabled={allOutOfStock || allAtCartLimit}
-              data-cms-style="button"
-              data-cms-button="catalog.add"
-              style={{ ...primaryBtnStyle, ...addButtonStyle }}
-              className="mt-2.5 w-full overflow-hidden bg-button px-3 py-1.5 font-bold uppercase tracking-wide text-[10px] text-button-text shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-ink/80 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:hover:translate-y-0 disabled:hover:bg-muted sm:hidden"
+            <Link
+              href={productHref}
+              data-cms-style="button2"
+              data-cms-button="catalog.detail"
+              style={{
+                fontFamily: "var(--btn2-font, inherit)",
+                fontWeight:
+                  "var(--btn2-weight, 700)" as React.CSSProperties["fontWeight"],
+                textTransform:
+                  "var(--btn2-transform, uppercase)" as React.CSSProperties["textTransform"],
+                textDecoration: "var(--btn2-underline, none)",
+                ...detailButtonStyle,
+              }}
+              className="mt-2.5 block text-center font-bold uppercase tracking-widest text-[11px] text-button-secondary-text underline-offset-4 hover:underline"
             >
-              {allOutOfStock
-                ? outOfStockLabel
-                : allAtCartLimit
-                ? noMoreStockLabel
-                : justAdded
-                ? addedLabel
-                : addToCartLabel}
-            </button>
+              {viewDetailLabel}
+            </Link>
           </div>
         </div>
       </article>
 
-      {/* Mobile breadcrumb picker — bottom sheet */}
-      {sheetOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-40 bg-black/50 sm:hidden"
-            onClick={() => setSheetOpen(false)}
-          />
-          {/* Sheet */}
-          <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white px-5 pb-8 pt-5 shadow-[0_-18px_45px_rgba(10,10,10,0.15)] sm:hidden">
-            <div className="mb-1 flex items-center justify-between">
-              <p className="font-black uppercase tracking-tight text-lg text-ink">
-                {product.name}
-              </p>
-              <button
-                type="button"
-                onClick={() => setSheetOpen(false)}
-                className="p-1 text-muted"
-                aria-label="Cerrar"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="mb-5 font-bold uppercase tracking-wide text-xs text-muted">
-              {chooseBreadcrumbLabel}
-            </p>
-            <div className="flex flex-col gap-3">
-              {product.breadcrumbs.map((code) => {
-                const outOfStock = stockFor(product, code) <= 0;
-                const stock = stockFor(product, code);
-                const inCart =
-                  lines.find((line) => line.key === `${product.id}__${code}`)
-                    ?.quantity ?? 0;
-                const atLimit = stock > 0 && inCart >= stock;
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => !outOfStock && !atLimit && handleSheetSelect(code)}
-                    disabled={outOfStock || atLimit}
-                    className="flex w-full flex-col items-start rounded-lg border border-line px-4 py-3.5 transition-colors hover:border-ink hover:bg-cream disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <span className="font-bold uppercase tracking-wide text-sm text-ink">
-                      {BREADCRUMB_LABELS[code] ?? code}
-                    </span>
-                    {outOfStock ? (
-                      <span className="mt-0.5 text-xs text-muted">{outOfStockLabel}</span>
-                    ) : atLimit ? (
-                      <span className="mt-0.5 text-xs text-muted">
-                        {renderCmsTemplate(lowStockLabel, { count: stock })}
-                      </span>
-                    ) : (
-                      <span className="mt-0.5 font-black text-base text-ink">
-                        {formatPrice(priceFor(product, code))}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </>
-      )}
     </>
   );
 }

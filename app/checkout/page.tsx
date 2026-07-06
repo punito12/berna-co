@@ -726,9 +726,10 @@ export default function CheckoutPage() {
           </p>
         </div>
       )}
-      {/* Slim header */}
-      <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+      {/* Header liquid glass: barra completa translúcida con blur, igual al
+          header del home. */}
+      <header className="sticky top-0 z-30 border-b border-line bg-white/92 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-2.5">
         <Link
           href="/#productos"
           className="py-2 font-bold uppercase tracking-widest text-xs text-ink transition-colors hover:text-muted"
@@ -1239,29 +1240,46 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* Volume discount motivational message */}
-          {(kgPercent > 0 || nextTier) && totalUnits > 0 && (
-            <div className="mt-4 rounded-lg border border-black bg-cream/70 px-4 py-3 text-sm">
-              {kgPercent > 0 && (
-                <p className="font-bold text-ink">
-                  {ct("checkout.discount.quantity_earned", "Comprando")} {totalUnits}{" "}
-                  {ct("checkout.discount.units", "unidades")} {ct("checkout.discount.access", "accedés a")} {kgPercent}% off.
-                </p>
-              )}
-              {nextTier && (
-                <p className={kgPercent > 0 ? "mt-1 text-muted" : "text-ink"}>
-                  {ct("checkout.discount.missing_prefix", "Te faltan")}{" "}
-                  <span className="font-bold text-ink">
-                    {missingUnits}{" "}
-                    {missingUnits === 1
-                      ? ct("checkout.discount.unit", "unidad")
-                      : ct("checkout.discount.units", "unidades")}
-                  </span>{" "}
-                  {ct("checkout.discount.missing_suffix", "para llegar a")} {nextTier.discountPercent}% off.
-                </p>
-              )}
+          {/* Descuento por cantidad: celebración si ya lo ganó, empuje con
+              barra de progreso si le falta poco. */}
+          {totalUnits > 0 && kgPercent > 0 ? (
+            <div className="mt-4 rounded-xl bg-ink px-5 py-4 text-white">
+              <p className="font-black uppercase tracking-wide text-sm">
+                ¡Felicitaciones! Tenés {kgPercent}% OFF por cantidad
+              </p>
+              <p className="mt-1 text-sm text-white/80">
+                Comprando {totalUnits} unidades el descuento se aplica solo al
+                total.
+                {nextTier &&
+                  ` Sumá ${missingUnits} más y pasás al ${nextTier.discountPercent}% OFF.`}
+              </p>
             </div>
-          )}
+          ) : totalUnits > 0 && nextTier ? (
+            <div className="mt-4 rounded-xl border-2 border-ink bg-cream/70 px-5 py-4">
+              <p className="font-black uppercase tracking-wide text-sm text-ink">
+                Te {missingUnits === 1 ? "falta" : "faltan"} {missingUnits}{" "}
+                {missingUnits === 1 ? "unidad" : "unidades"} para el{" "}
+                {nextTier.discountPercent}% OFF
+              </p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-line">
+                <div
+                  className="h-full rounded-full bg-ink transition-all duration-500"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.round((totalUnits / nextTier.minKg) * 100)
+                    )}%`,
+                  }}
+                />
+              </div>
+              <a
+                href="/#productos"
+                className="mt-3 inline-block font-bold uppercase tracking-widest text-xs text-ink underline underline-offset-4 hover:text-muted"
+              >
+                ‹ Agregar más productos
+              </a>
+            </div>
+          ) : null}
 
           {/* Totals breakdown */}
           <div className="mt-4 space-y-1 border-t border-line pt-4 text-sm">

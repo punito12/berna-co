@@ -54,6 +54,16 @@ body {
   animation: fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Variante "quiet": el Reveal NO anima su propio bloque (solo dispara las
+   animaciones de sus hijos vía .is-visible). Evita animar dos veces un
+   subtree grande — p. ej. el header de "nuestros productos". */
+[data-reveal].reveal-quiet {
+  opacity: 1;
+}
+[data-reveal].reveal-quiet.is-visible {
+  animation: none;
+}
+
 /* A slow, faint drift for the hero background photo — adds life without noise. */
 @keyframes slow-zoom {
   from {
@@ -67,6 +77,152 @@ body {
   animation: slow-zoom 18s ease-out both;
 }
 
+/* Header del home (liquid glass): baja deslizándose al aparecer tras el hero. */
+@keyframes header-down {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.animate-header-down {
+  animation: header-down 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Pop de sello del contador del carrito (se remonta con key={totalItems}). */
+@keyframes counter-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.28);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-counter-pop {
+  animation: counter-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Título del catálogo: efecto CORTINA, solo de ENTRADA — se desliza desde el
+   costado izquierdo recortado por la máscara del h2 (overflow hidden). CSS
+   puro: cero re-renders de React durante el scroll. */
+.title-curtain {
+  display: block;
+  overflow: hidden;
+}
+.title-slide {
+  display: inline-block;
+  transform: translateX(-110%);
+}
+[data-reveal].is-visible .title-slide {
+  animation: title-slide 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+@keyframes title-slide {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.stamp-pop {
+  opacity: 0;
+  transform: scale(0.4);
+}
+[data-reveal].is-visible .stamp-pop {
+  animation: stamp-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes stamp-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.sub-fade {
+  opacity: 0;
+}
+[data-reveal].is-visible .sub-fade {
+  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+}
+
+/* Piezas de "nuestros productos" que suben en cascada (píldoras, etiquetas).
+   El stagger va por animation-delay inline. */
+.rise-in {
+  opacity: 0;
+}
+[data-reveal].is-visible .rise-in {
+  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* La foto: aparece asentándose desde un leve zoom (sin inclinaciones). */
+.photo-reveal {
+  opacity: 0;
+  transform: scale(1.05);
+}
+[data-reveal].is-visible .photo-reveal {
+  animation: photo-reveal 1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+@keyframes photo-reveal {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Marquee del footer: cinta infinita del slogan. El contenido va duplicado
+   (dos mitades idénticas) y se traslada -50% en loop → costura invisible. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee 22s linear infinite;
+}
+
+/* Carrito flotante: el panel salta desde la esquina y el backdrop hace fade. */
+@keyframes cart-pop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-cart-pop {
+  animation: cart-pop 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-backdrop {
+  animation: backdrop-fade 0.2s ease-out both;
+}
+
 /* Respect users who prefer less motion. */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -74,8 +230,26 @@ body {
   }
   .animate-fade-up,
   .animate-slow-zoom,
+  .animate-header-down,
+  .animate-counter-pop,
+  .animate-cart-pop,
+  .animate-backdrop,
+  .animate-marquee,
+  [data-reveal].is-visible .title-slide,
+  [data-reveal].is-visible .stamp-pop,
+  [data-reveal].is-visible .sub-fade,
+  [data-reveal].is-visible .rise-in,
+  [data-reveal].is-visible .photo-reveal,
   [data-reveal].is-visible {
     animation: none;
+  }
+  .title-slide,
+  .stamp-pop,
+  .sub-fade,
+  .rise-in,
+  .photo-reveal {
+    opacity: 1;
+    transform: none;
   }
   [data-reveal] {
     opacity: 1;

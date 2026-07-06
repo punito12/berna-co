@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getProductBySlug } from "@/lib/products";
 import ProductDetail from "@/components/ProductDetail";
-import QuantityDiscountBanner from "@/components/QuantityDiscountBanner";
-import SiteHeader from "@/components/SiteHeader";
+import HomeHeader from "@/components/HomeHeader";
 import CmsFooter from "@/components/CmsFooter";
 import WhatsappFloat from "@/components/WhatsappFloat";
+import CartOverlay from "@/components/CartOverlay";
 import {
   getLogo,
   getSiteText,
@@ -151,18 +151,15 @@ export default async function ProductPage({
       {previewTextCss && (
         <style dangerouslySetInnerHTML={{ __html: previewTextCss }} />
       )}
-      <QuantityDiscountBanner />
-      <SiteHeader
-        logoUrl={logoUrl}
-        productsLabel={getSiteText(cms, "catalog.page_title", "Productos", preview)}
-        cartLabel={cartLabel}
-      />
+      {/* Mismo header que el home (variante visible al tope de la página) */}
+      <HomeHeader variant="page" />
 
-      <div className="mx-auto max-w-6xl px-4 py-5 sm:py-12">
+      {/* pt alto: el header flotante es fixed y no empuja el contenido. */}
+      <div className="mx-auto max-w-6xl px-4 pb-8 pt-24 sm:pb-12 sm:pt-28">
         <Link
           href="/#productos"
           data-cms-section="product.back"
-          className="mb-4 inline-flex items-center gap-2 font-bold uppercase tracking-widest text-xs text-muted transition-colors hover:text-ink sm:mb-6"
+          className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-white/85 px-5 py-2 font-bold uppercase tracking-widest text-xs text-ink shadow-[0_8px_25px_rgba(10,10,10,0.08)] backdrop-blur-xl transition-transform duration-200 hover:scale-105 active:scale-95 sm:mb-7"
         >
           ‹ Volver a {productLabels.backToProducts.toLowerCase()}
         </Link>
@@ -172,6 +169,8 @@ export default async function ProductPage({
 
       <CmsFooter preview={preview} />
       <WhatsappFloat />
+      {/* Carrito flotante CRAV-style (desktop): FAB + blur + panel esquina. */}
+      <CartOverlay />
     </main>
   );
 }

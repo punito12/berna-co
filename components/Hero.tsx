@@ -41,7 +41,9 @@ export default function Hero({
     <section
       data-cms-section="home.hero"
       style={sectionStyle}
-      className="relative isolate flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-ink px-4 py-16 text-center sm:min-h-screen sm:py-24"
+      // sticky top-0 z-0: el hero queda PINNEADO y el resto de la home (capa
+      // z-10 opaca en page.tsx) se desliza por encima al scrollear.
+      className="sticky top-0 z-0 isolate flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-ink px-4 py-16 text-center sm:min-h-screen sm:py-24"
     >
       {/* Background photo with a slow drift + flat dark overlay for legibility */}
       <HeroBackgroundCarousel
@@ -49,12 +51,6 @@ export default function Hero({
         fallbackUrl={backgroundUrl}
       />
       <div aria-hidden className="absolute inset-0 -z-10 bg-black/65" />
-
-      {/* Thin catalog-style frame inset from the edges */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-3 -z-10 border border-white/15 sm:inset-6"
-      />
 
       <div>
         <BernaLogo variant="light" size="lg" src={logoUrl} />

@@ -1,7 +1,8 @@
 import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 
-// Fixed WhatsApp button in the bottom-right corner — just the logo, in a round
-// button. Opens a chat with the shop.
+// Botón flotante de WhatsApp — solo el logo, redondo. En mobile queda abajo a
+// la derecha (la barra del carrito ya le deja lugar con pr-20); en desktop va
+// abajo a la IZQUIERDA para dejarle la esquina derecha al carrito flotante.
 export default function WhatsappFloat() {
   const text = encodeURIComponent("¡Hola Berna&co! Tengo una consulta 🙂");
   const href = `https://wa.me/${BUSINESS_WHATSAPP}?text=${text}`;
@@ -14,7 +15,7 @@ export default function WhatsappFloat() {
       aria-label="Contactanos por WhatsApp"
       title="Contactanos por WhatsApp"
       data-cms-section="global.whatsapp"
-      className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-white/40 bg-[#25D366] text-white shadow-[0_16px_35px_rgba(10,10,10,0.22)] transition-transform duration-300 hover:scale-105 active:scale-100"
+      className="fixed bottom-5 z-40 hidden h-14 w-14 items-center justify-center rounded-full border border-white/40 bg-[#25D366] text-white shadow-[0_16px_35px_rgba(10,10,10,0.22)] transition-transform duration-300 hover:scale-105 active:scale-100 sm:left-5 sm:flex"
     >
       {/* WhatsApp glyph (inline SVG, no extra deps) */}
       <svg viewBox="0 0 32 32" className="h-7 w-7 fill-current" aria-hidden="true">

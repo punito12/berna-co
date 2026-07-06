@@ -78,17 +78,23 @@ export default function ProductDetail({
         category={categoryLabel}
       />
 
-      {/* Info + buy */}
-      <div className="lg:pt-4" data-cms-section="product.info">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="rounded-full border border-line bg-white px-3 py-1 font-bold uppercase tracking-[0.22em] text-[11px] text-muted">
+      {/* Info + buy — entrada en capas al montar (animate-fade-up + delays).
+          flex-col: el panel de compra se empuja al fondo (mt-auto) para quedar
+          alineado con el borde INFERIOR de la foto. */}
+      <div className="flex flex-col lg:pt-4" data-cms-section="product.info">
+        <div className="animate-fade-up flex flex-wrap items-center gap-2">
+          {/* Categoría como sello tinta + peso como píldora glass */}
+          <p className="rounded-full bg-ink px-4 py-1.5 font-bold uppercase tracking-[0.22em] text-[11px] text-white shadow-[0_8px_25px_rgba(10,10,10,0.2)]">
             {categoryLabel}
           </p>
-          <p className="rounded-full border border-line bg-white px-3 py-1 font-bold uppercase tracking-wide text-[11px] text-muted">
+          <p className="rounded-full border border-line bg-white/85 px-4 py-1.5 font-bold uppercase tracking-widest text-[11px] text-ink backdrop-blur-xl">
             {formatWeight(product.weightGrams)}
           </p>
         </div>
-        <h1 className="mt-3 max-w-2xl text-balance font-black uppercase tracking-tight text-4xl leading-[0.95] text-ink sm:text-6xl">
+        <h1
+          className="animate-fade-up mt-4 max-w-2xl text-balance font-black uppercase tracking-tight text-4xl leading-[0.95] text-ink sm:text-7xl"
+          style={{ animationDelay: "90ms" }}
+        >
           {product.name}
         </h1>
 
@@ -97,18 +103,20 @@ export default function ProductDetail({
             (--description-font) va DIRECTO en el contenedor del texto (igual que
             la descripción corta de la card) para que el cambio de fuente del CMS
             aplique sí o sí, sin depender de herencia desde un wrapper externo. */}
-        <RichText
-          text={product.longDescription?.trim() || product.description}
-          style={descriptionStyle}
-          dataCmsSection="product.description"
-          className="mt-5 border-y border-line py-5 text-base leading-relaxed text-ink/80 sm:mt-6 sm:py-6 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
-        />
+        <div className="animate-fade-up" style={{ animationDelay: "180ms" }}>
+          <RichText
+            text={product.longDescription?.trim() || product.description}
+            style={descriptionStyle}
+            dataCmsSection="product.description"
+            className="mt-5 border-y border-line py-5 font-serif italic text-base leading-relaxed text-ink/80 sm:mt-6 sm:py-6 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
+          />
+        </div>
 
         {/* Per-empanado description: swaps when the customer picks a different
             empanado. Only shown when this empanado has its own text. */}
         {product.empanadoDescriptionByBreadcrumb[selected]?.trim() && (
-          <div className="mt-4 rounded-lg border border-line bg-cream/40 p-4 sm:p-5">
-            <p className="mb-1 font-bold uppercase tracking-wide text-[11px] text-muted">
+          <div className="mt-4 rounded-2xl border border-line bg-white/70 p-4 backdrop-blur-sm sm:p-5">
+            <p className="mb-1.5 inline-block rounded-full bg-ink px-3 py-1 font-bold uppercase tracking-widest text-[10px] text-white">
               {BREADCRUMB_LABELS[selected] ?? selected}
             </p>
             <RichText
@@ -125,29 +133,34 @@ export default function ProductDetail({
         {product.breadcrumbs.length === 0 ? (
           <div
             data-cms-section="product.purchase"
-            className="mt-5 rounded-lg border border-line bg-white p-5 text-center shadow-[0_14px_34px_rgba(10,10,10,0.07)] sm:mt-6"
+            className="mt-5 rounded-3xl border border-line bg-white p-6 text-center shadow-[0_14px_34px_rgba(10,10,10,0.07)] sm:mt-6"
           >
             <p className="font-black uppercase tracking-wide text-sm text-ink">
               {labels?.outOfStock ?? "Sin stock"}
             </p>
-            <p className="mt-2 text-sm text-muted">
+            <p className="mt-2 font-serif italic text-base text-muted">
               Por el momento no tenemos stock de este producto. Volvé pronto o
               mirá el resto del catálogo.
             </p>
             <Link
               href="/#productos"
-              className="mt-4 inline-block bg-black px-6 py-3 font-bold uppercase tracking-widest text-xs text-white"
+              className="mt-5 inline-flex min-h-11 items-center rounded-full bg-ink px-7 py-3 font-bold uppercase tracking-widest text-xs text-white transition-transform duration-200 hover:scale-105 active:scale-95"
             >
               Ver productos
             </Link>
           </div>
         ) : (
-          <AddToCartPanel
-            product={product}
-            selected={selected}
-            onSelect={handleSelect}
-            labels={labels}
-          />
+          <div
+            className="animate-fade-up mt-6 lg:mt-auto lg:pt-6"
+            style={{ animationDelay: "270ms" }}
+          >
+            <AddToCartPanel
+              product={product}
+              selected={selected}
+              onSelect={handleSelect}
+              labels={labels}
+            />
+          </div>
         )}
       </div>
     </div>

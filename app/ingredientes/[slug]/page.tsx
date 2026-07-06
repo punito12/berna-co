@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
-import BernaLogo from "@/components/BernaLogo";
+import CartOverlay from "@/components/CartOverlay";
 import CmsFooter from "@/components/CmsFooter";
 import RichText from "@/components/RichText";
+import HomeHeader from "@/components/HomeHeader";
 import WhatsappFloat from "@/components/WhatsappFloat";
 import {
   getSiteText,
@@ -73,12 +75,6 @@ export default async function IngredientDetailPage({
     ingredient.fallbackTitle,
     preview
   );
-  const intro = getSiteText(
-    cms,
-    ingredient.introKey,
-    ingredient.fallbackIntro,
-    preview
-  );
   const body = getSiteText(
     cms,
     ingredient.bodyKey,
@@ -102,62 +98,96 @@ export default async function IngredientDetailPage({
       {previewTextCss && (
         <style dangerouslySetInnerHTML={{ __html: previewTextCss }} />
       )}
-      <header className="border-b border-ink/10 bg-cream/95">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-5">
-          <Link href="/" aria-label="Volver al inicio">
-            <BernaLogo variant="dark" size="sm" />
-          </Link>
-          <Link
-            href={
-              preview && searchParams?.preview
-                ? `/?preview=${encodeURIComponent(searchParams.preview)}#ingredientes`
-                : "/#ingredientes"
-            }
-            className="text-xs font-black uppercase tracking-[0.22em] text-ink/60 transition-colors hover:text-ink"
-          >
-            Ingredientes
-          </Link>
-        </div>
-      </header>
+      {/* Mismo header que el home (variante visible al tope de la página) */}
+      <HomeHeader variant="page" />
 
       <section
-        className="mx-auto max-w-5xl px-4 py-12 sm:py-16"
+        className="mx-auto max-w-6xl px-4 pb-10 pt-24 sm:pb-16 sm:pt-28"
         data-cms-section={sectionKey}
       >
-        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+        <Link
+          href={
+            preview && searchParams?.preview
+              ? `/?preview=${encodeURIComponent(searchParams.preview)}#ingredientes`
+              : "/#ingredientes"
+          }
+          className="animate-fade-up mb-6 inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-white/85 px-5 py-2 font-bold uppercase tracking-widest text-xs text-ink shadow-[0_8px_25px_rgba(10,10,10,0.08)] backdrop-blur-xl transition-transform duration-200 hover:scale-105 active:scale-95 sm:mb-8"
+        >
+          ‹ Volver<span className="hidden sm:inline">&nbsp;a ingredientes</span>
+        </Link>
+
+        {/* Hero del ingrediente: texto izq + FOTO der (como "nuestros
+            productos"). Foto: public/images/ingredientes/{slug}.jpg */}
+        <div className="grid items-center gap-8 sm:grid-cols-2 sm:gap-12">
           <div>
-            <RichText
-              text={title}
-              textKey={ingredient.titleKey}
-              className="max-w-3xl font-display text-4xl font-black leading-none sm:text-6xl"
-            />
-            <RichText
-              text={intro}
-              textKey={ingredient.introKey}
-              className="mt-6 max-w-2xl text-base leading-7 text-ink/70 sm:text-lg"
-            />
+            <p className="animate-fade-up inline-block rounded-full bg-ink px-5 py-2 font-bold uppercase tracking-[0.25em] text-xs text-white shadow-[0_10px_30px_rgba(10,10,10,0.2)]">
+              Nuestros ingredientes
+            </p>
+            <div className="animate-fade-up" style={{ animationDelay: "90ms" }}>
+              <RichText
+                text={title}
+                textKey={ingredient.titleKey}
+                className="mt-5 max-w-xl font-black uppercase tracking-tight text-5xl leading-[0.95] text-ink sm:text-7xl"
+              />
+            </div>
           </div>
 
-          <aside className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm sm:p-6">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-muted">
-              En nuestras preparaciones
-            </p>
-            <RichText
-              text={body}
-              textKey={ingredient.bodyKey}
-              className="mt-4 space-y-2 text-sm leading-7 text-ink/75 sm:text-base"
+          {/* Fotos apaisadas 3:2 (1536×1024), todas iguales */}
+          <div
+            className="animate-fade-up relative aspect-[3/2] w-full overflow-hidden rounded-3xl border border-line"
+            style={{ animationDelay: "150ms" }}
+          >
+            <Image
+              src={`/images/ingredientes/${ingredient.slug}.png`}
+              alt={ingredient.fallbackTitle}
+              fill
+              sizes="(max-width: 640px) 90vw, 560px"
+              priority
+              className="object-cover"
             />
-          </aside>
+          </div>
         </div>
 
-        <div className="mt-10 rounded-2xl bg-ink p-5 text-white sm:flex sm:items-center sm:justify-between sm:gap-6">
-          <div>
-            <h2 className="font-black uppercase tracking-[0.12em]">
-              ¿Querés ver los productos?
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-white/70">
-              Volvé al catálogo para elegir tus milanesas y congelados.
-            </p>
+        {/* Panel tinta con el cuerpo del texto */}
+        <div
+          className="animate-fade-up mt-10 rounded-3xl bg-ink p-6 text-white shadow-[0_25px_60px_rgba(10,10,10,0.25)] sm:mt-14 sm:p-10"
+          style={{ animationDelay: "260ms" }}
+        >
+          <p className="inline-block rounded-full bg-cream px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-ink">
+            En nuestras preparaciones
+          </p>
+          <RichText
+            text={body}
+            textKey={ingredient.bodyKey}
+            className="mt-5 max-w-3xl space-y-3 text-base leading-relaxed text-cream/85 sm:text-lg"
+          />
+        </div>
+
+        {/* Otros ingredientes + CTA al catálogo */}
+        <div
+          className="animate-fade-up mt-10 flex flex-wrap items-center justify-between gap-4 sm:mt-14"
+          style={{ animationDelay: "340ms" }}
+        >
+          {/* Otros ingredientes — solo desktop */}
+          <div className="hidden flex-wrap items-center gap-2.5 sm:flex">
+            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted">
+              Otros ingredientes
+            </span>
+            {INGREDIENT_PAGES.filter((p) => p.slug !== ingredient.slug).map(
+              (p) => (
+                <Link
+                  key={p.slug}
+                  href={
+                    preview && searchParams?.preview
+                      ? `${p.href}?preview=${encodeURIComponent(searchParams.preview)}`
+                      : p.href
+                  }
+                  className="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-5 py-2 font-bold uppercase tracking-widest text-xs text-ink transition-all duration-200 hover:-translate-y-0.5 hover:border-ink active:scale-95"
+                >
+                  {p.fallbackTitle}
+                </Link>
+              )
+            )}
           </div>
           <Link
             href={
@@ -165,7 +195,7 @@ export default async function IngredientDetailPage({
                 ? `/?preview=${encodeURIComponent(searchParams.preview)}#productos`
                 : "/#productos"
             }
-            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-accent/90 sm:mt-0"
+            className="inline-flex min-h-11 items-center rounded-full bg-ink px-7 py-3 font-bold uppercase tracking-widest text-xs text-white shadow-[0_10px_30px_rgba(10,10,10,0.25)] transition-transform duration-200 hover:scale-105 active:scale-95"
           >
             Ver productos
           </Link>
@@ -173,6 +203,7 @@ export default async function IngredientDetailPage({
       </section>
 
       <WhatsappFloat />
+      <CartOverlay />
       <CmsFooter preview={preview} />
     </main>
   );

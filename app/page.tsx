@@ -1,6 +1,7 @@
 import WhatsappFloat from "@/components/WhatsappFloat";
-import QuantityDiscountBanner from "@/components/QuantityDiscountBanner";
+import CartOverlay from "@/components/CartOverlay";
 import CmsHomeSection from "@/components/CmsHomeSection";
+import HomeHeader from "@/components/HomeHeader";
 import { getAvailableProducts } from "@/lib/products";
 import { getPaymentConfig } from "@/lib/payment-config";
 import {
@@ -85,19 +86,47 @@ export default async function HomePage({
           Preview CMS
         </div>
       )}
-      <QuantityDiscountBanner />
-      {sections.map((section) => (
-        <CmsHomeSection
-          key={section.key}
-          section={section}
-          cms={cms}
-          preview={preview}
-          previewToken={searchParams?.preview}
-          products={products}
-          payCfg={payCfg}
-        />
-      ))}
+      {/* Header liquid glass: aparece deslizándose al scrollear pasado el hero. */}
+      <HomeHeader />
+
+      {/* El banner de descuento por cantidad se movió fuera de la home; va a
+          reaparecer en carrito y checkout (pendiente). */}
+      {/* Efecto de paneles: el hero (sticky top-0 z-0 en el propio componente)
+          queda pinneado y el resto de las secciones va en una capa z-10 opaca
+          que se desliza por encima al scrollear. Si el CMS moviera/ocultara el
+          hero, se cae con gracia al flujo plano. */}
+      {(() => {
+        const heroIndex = sections.findIndex(
+          (s) => s.key === "home.hero" || s.type === "hero"
+        );
+        const heroSection = heroIndex >= 0 ? sections[heroIndex] : null;
+        const rest =
+          heroIndex >= 0
+            ? sections.filter((_, i) => i !== heroIndex)
+            : sections;
+        const renderSection = (section: (typeof sections)[number]) => (
+          <CmsHomeSection
+            key={section.key}
+            section={section}
+            cms={cms}
+            preview={preview}
+            previewToken={searchParams?.preview}
+            products={products}
+            payCfg={payCfg}
+          />
+        );
+        return (
+          <>
+            {heroSection && renderSection(heroSection)}
+            <div className="relative z-10 bg-[color:var(--color-bg,#ffffff)]">
+              {rest.map(renderSection)}
+            </div>
+          </>
+        );
+      })()}
       <WhatsappFloat />
+      {/* Carrito flotante CRAV-style (desktop): FAB + blur + panel esquina. */}
+      <CartOverlay />
     </main>
   );
 }

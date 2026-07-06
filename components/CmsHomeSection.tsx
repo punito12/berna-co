@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Hero from "@/components/Hero";
+import Reveal from "@/components/Reveal";
+import ExpandableText from "@/components/ExpandableText";
 import Ingredients from "@/components/Ingredients";
 import Catalog from "@/components/Catalog";
 import PointsOfSale from "@/components/PointsOfSale";
@@ -198,65 +200,75 @@ export default function CmsHomeSection({
   if (section.key === "home.about") {
     const aboutImage =
       config.imageUrl || image("home.about.image", "/images/about/cocina.jpg");
+    // Layout original (foto completa a su proporción natural, texto simple),
+    // con fondo TINTA y las animaciones de entrada. Nada más.
     return (
-      <section className="bg-white">
+      <section className="bg-ink text-white">
         {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 md:grid-cols-2 md:items-center sm:py-24">
-          <div className="overflow-hidden rounded-lg border border-line bg-cream">
-            {aboutImage ? (
-              <Image
-                src={aboutImage}
-                alt={config.imageAlt || t("home.about.title", "Berna & Co")}
-                width={2940}
-                height={1912}
-                // Debajo del hero → lazy (default). next/image la optimiza
-                // (AVIF/WebP, tamaño según ancho real) pero SIN recortar: se
-                // muestra completa con su proporción natural, como antes.
-                sizes="(max-width: 768px) 100vw, 600px"
-                className="h-auto w-full"
-              />
-            ) : (
-              <div className="flex min-h-64 items-center justify-center px-6 text-center font-black uppercase tracking-tight text-line sm:min-h-80">
-                {t("home.about.title", "Berna & Co")}
+        <Reveal className="reveal-quiet">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 md:grid-cols-2 md:items-center sm:py-24">
+            <div className="photo-reveal overflow-hidden rounded-lg border border-white/10 bg-ink">
+              {aboutImage ? (
+                <Image
+                  src={aboutImage}
+                  alt={config.imageAlt || t("home.about.title", "Berna & Co")}
+                  width={2940}
+                  height={1912}
+                  // Debajo del hero → lazy (default). next/image la optimiza
+                  // (AVIF/WebP, tamaño según ancho real) pero SIN recortar: se
+                  // muestra completa con su proporción natural, como antes.
+                  sizes="(max-width: 768px) 100vw, 600px"
+                  className="h-auto w-full"
+                />
+              ) : (
+                <div className="flex min-h-64 items-center justify-center px-6 text-center font-black uppercase tracking-tight text-white/20 sm:min-h-80">
+                  {t("home.about.title", "Berna & Co")}
+                </div>
+              )}
+            </div>
+            <div className="text-left">
+              {(() => {
+                // Eyebrow opcional (solo si hay contenido en el CMS/config).
+                const aboutEyebrow =
+                  config.eyebrow || t("home.about.eyebrow", "");
+                if (!aboutEyebrow) return null;
+                return (
+                  <p
+                    className="stamp-pop font-bold uppercase tracking-[0.3em] text-xs text-cream/60"
+                    {...cmsTextAttrs("home.about.eyebrow")}
+                  >
+                    {aboutEyebrow}
+                  </p>
+                );
+              })()}
+              <h2
+                className="title-curtain mt-3 font-black uppercase tracking-tight text-4xl leading-none sm:text-6xl"
+                {...cmsTextAttrs("home.about.title")}
+              >
+                <span className="title-slide">
+                  {config.title || t("home.about.title", "BERNA & CO")}
+                </span>
+              </h2>
+              {/* Mobile: texto plegado a 4 líneas + "Leer más" (la pared de
+                  texto mataba la sección). Desktop: completo, como siempre. */}
+              <div className="rise-in mt-6" style={{ animationDelay: "450ms" }}>
+                <ExpandableText>
+                  <RichText
+                    text={
+                      config.body ||
+                      t(
+                        "home.about.paragraph",
+                        "Nace de nuestro amor por la comida rica, práctica y bien hecha."
+                      )
+                    }
+                    textKey="home.about.body"
+                    className="space-y-3 text-sm leading-relaxed text-cream/85 sm:text-base"
+                  />
+                </ExpandableText>
               </div>
-            )}
+            </div>
           </div>
-          <div className="text-left">
-            {(() => {
-              // "Nuestra historia" eyebrow: uses its own (optional) text. No
-              // hardcoded "LA VIDA ES RICA!" fallback — only renders if there's
-              // actual content (block config or an explicit CMS value).
-              const aboutEyebrow =
-                config.eyebrow || t("home.about.eyebrow", "");
-              if (!aboutEyebrow) return null;
-              return (
-                <p
-                  className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
-                  {...cmsTextAttrs("home.about.eyebrow")}
-                >
-                  {aboutEyebrow}
-                </p>
-              );
-            })()}
-            <h2
-              className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
-              {...cmsTextAttrs("home.about.title")}
-            >
-              {config.title || t("home.about.title", "BERNA & CO")}
-            </h2>
-            <RichText
-              text={
-                config.body ||
-                t(
-                  "home.about.paragraph",
-                  "Nace de nuestro amor por la comida rica, práctica y bien hecha."
-                )
-              }
-              textKey="home.about.body"
-              className="mt-6 space-y-3 text-base leading-relaxed text-ink/80"
-            />
-          </div>
-        </div>
+        </Reveal>
       </section>
     );
   }

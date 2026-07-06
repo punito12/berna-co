@@ -90,7 +90,7 @@ function PecetoPasturaIcon() {
       aria-hidden="true"
       width={64}
       height={64}
-      className="h-12 w-12 scale-150 object-contain sm:h-16 sm:w-16"
+      className="h-12 w-12 scale-150 object-contain transition-[filter] duration-300 group-hover:invert group-focus-within:invert sm:h-16 sm:w-16"
     />
   );
 }
@@ -135,45 +135,48 @@ export default function Ingredients({
       className="bg-cream"
     >
       <div className="mx-auto max-w-5xl px-4 py-14 sm:py-24">
-        <Reveal className="mb-10 text-center sm:mb-14">
+        {/* Header al lenguaje de hoy: sello estampado + cortina */}
+        <Reveal className="reveal-quiet mb-10 text-center sm:mb-14">
           <p
             data-cms-text="home.ingredients.eyebrow"
-            className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
+            className="stamp-pop inline-block rounded-full bg-ink px-5 py-2 font-bold uppercase tracking-[0.25em] text-xs text-white shadow-[0_10px_30px_rgba(10,10,10,0.2)]"
             style={subtitleStyle}
           >
             {eyebrow}
           </p>
           <h2
             data-cms-text="home.ingredients.title"
-            className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
+            className="title-curtain mt-5 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
             style={titleStyle}
           >
-            {title}
+            <span className="title-slide">{title}</span>
           </h2>
         </Reveal>
 
-        <ul className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-line bg-line shadow-[0_18px_45px_rgba(10,10,10,0.06)] sm:grid-cols-3">
+        {/* Cards sueltas que se INVIERTEN a tinta al hover (y con teclado):
+            fondo negro, ícono y texto en blanco, CTA como píldora crema. */}
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
           {ITEMS.map((item, i) => (
             <Reveal
               as="li"
               key={item.title}
               delay={i * 100}
-              className="group bg-white text-center transition-all duration-300 hover:bg-cream sm:min-h-64"
+              className="group overflow-hidden rounded-3xl border border-line bg-white text-center text-ink shadow-[0_18px_45px_rgba(10,10,10,0.05)] transition-all duration-300 hover:-translate-y-1 hover:border-ink hover:bg-ink hover:text-white hover:shadow-[0_25px_60px_rgba(10,10,10,0.25)] focus-within:-translate-y-1 focus-within:border-ink focus-within:bg-ink focus-within:text-white sm:min-h-72"
             >
               <Link
                 href={item.href}
-                className="flex h-full flex-col items-center gap-2.5 px-4 py-5 outline-none transition-colors focus-visible:bg-cream sm:gap-5 sm:px-6 sm:py-12"
+                className="flex h-full flex-col items-center gap-3 px-4 py-6 outline-none sm:gap-6 sm:px-6 sm:py-12"
                 aria-label={`Ver beneficios de ${item.title}`}
               >
-                <span className="rounded-full border border-line bg-cream/60 p-2.5 text-ink transition-transform duration-300 group-hover:scale-105 sm:p-4">
+                <span className="rounded-full border border-line bg-cream/60 p-2.5 transition-all duration-300 group-hover:scale-105 group-hover:border-white/20 group-hover:bg-white/10 group-focus-within:border-white/20 group-focus-within:bg-white/10 sm:p-4">
                   <item.Icon />
                 </span>
-                <h3 className="flex items-center justify-center font-black uppercase tracking-tight text-base leading-tight text-ink sm:min-h-[3.5rem] sm:text-xl">
+                <h3 className="flex items-center justify-center font-black uppercase tracking-tight text-base leading-tight sm:min-h-[3.5rem] sm:text-xl">
                   {item.title}
                 </h3>
                 <span
                   data-cms-button="ingredients.benefits"
-                  className="text-[11px] font-black uppercase tracking-[0.2em] text-accent transition-colors group-hover:text-ink sm:text-xs"
+                  className="inline-flex items-center rounded-full border border-ink px-5 py-2 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 group-hover:border-cream group-hover:bg-cream group-hover:!text-ink group-focus-within:border-cream group-focus-within:bg-cream group-focus-within:!text-ink sm:text-xs"
                   style={benefitsButtonStyle}
                 >
                   Ver beneficios
