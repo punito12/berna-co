@@ -8,6 +8,7 @@ import CheckoutCalendar from "@/components/CheckoutCalendar";
 import BernaLogo from "@/components/BernaLogo";
 import { BREADCRUMB_LABELS, formatPrice } from "@/lib/products";
 import { quantityPromoDiscount } from "@/lib/discounts";
+import { renderCmsTemplate } from "@/lib/catalog-cms-labels";
 import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 import type { DeliveryOptions } from "@/lib/delivery";
 import { track, currentUtm, currentIds } from "@/lib/track-client";
@@ -1245,7 +1246,10 @@ export default function CheckoutPage() {
           {totalUnits > 0 && kgPercent > 0 ? (
             <div className="mt-4 rounded-xl bg-ink px-5 py-4 text-white">
               <p className="font-black uppercase tracking-wide text-sm">
-                ¡Felicitaciones! Tenés {kgPercent}% OFF por cantidad
+                {renderCmsTemplate(
+                  ct("cart.discount_achieved", "¡Felicitaciones! Tenés {pct}% OFF"),
+                  { pct: kgPercent }
+                )}
               </p>
               <p className="mt-1 text-sm text-white/80">
                 Comprando {totalUnits} unidades el descuento se aplica solo al
@@ -1257,9 +1261,10 @@ export default function CheckoutPage() {
           ) : totalUnits > 0 && nextTier ? (
             <div className="mt-4 rounded-xl border-2 border-ink bg-cream/70 px-5 py-4">
               <p className="font-black uppercase tracking-wide text-sm text-ink">
-                Te {missingUnits === 1 ? "falta" : "faltan"} {missingUnits}{" "}
-                {missingUnits === 1 ? "unidad" : "unidades"} para el{" "}
-                {nextTier.discountPercent}% OFF
+                {renderCmsTemplate(
+                  ct("cart.discount_missing", "Te faltan {count} para el {pct}% OFF"),
+                  { count: missingUnits, pct: nextTier.discountPercent }
+                )}
               </p>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-line">
                 <div
@@ -1355,7 +1360,6 @@ export default function CheckoutPage() {
           onClick={handleSubmit}
           disabled={submitting}
           data-cms-button="checkout.submit"
-          data-cms-style="button"
           style={{
             borderRadius: "var(--btn-radius, 0px)",
             fontFamily: "var(--btn-font, inherit)",

@@ -2,7 +2,6 @@ import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment } from "react";
-import type { CSSProperties } from "react";
 
 const legalLinks = [
   { href: "/confianza", label: "Cómo comprar" },
@@ -12,10 +11,8 @@ const legalLinks = [
   { href: "/privacidad", label: "Privacidad" },
 ];
 
-// Footer CRAV-style, de cero: marquee infinito del slogan, wordmark GIGANTE de
-// borde a borde, contacto como píldoras y una línea legal mínima. Mantiene la
-// firma de props (CmsHomeSection/CmsFooter siguen pasando lo mismo); los props
-// de newsletter se aceptan pero ya no se usan.
+// Footer CRAV-style: marquee infinito del slogan, etiqueta de marca, contacto
+// como píldoras y línea legal mínima. Contenido editable vía CMS (footer.*).
 export default function Footer({
   slogan = "¡La vida es rica!",
   instagram = "@berna.and.co",
@@ -23,9 +20,8 @@ export default function Footer({
   email = "csberna2020@gmail.com",
   whatsapp = "+54 11 2545-0304",
   copyright = "© Berna&co. Todos los derechos reservados.",
+  badgeUrl = "/images/footer.png",
   textKeys = {},
-  sectionStyle,
-  titleStyle,
 }: {
   slogan?: string;
   instagram?: string;
@@ -33,31 +29,19 @@ export default function Footer({
   email?: string;
   whatsapp?: string;
   copyright?: string;
-  logoUrl?: string;
-  newsletterTitle?: string;
-  newsletterSubtitle?: string;
-  newsletterPlaceholder?: string;
-  newsletterButton?: string;
-  newsletterSuccess?: string;
-  sectionStyle?: CSSProperties;
-  titleStyle?: CSSProperties;
+  badgeUrl?: string;
   textKeys?: Partial<Record<
     | "slogan"
     | "instagram"
     | "email"
     | "whatsapp"
-    | "copyright"
-    | "newsletterTitle"
-    | "newsletterSubtitle"
-    | "newsletterPlaceholder"
-    | "newsletterButton",
+    | "copyright",
     string
   >>;
 }) {
   return (
     <footer
       data-cms-section="global.footer"
-      style={sectionStyle}
       className="overflow-hidden bg-ink text-white"
     >
       {/* Marquee del slogan — cinta infinita */}
@@ -78,7 +62,6 @@ export default function Footer({
                   <span
                     className="font-black uppercase tracking-tight text-xl sm:text-2xl"
                     data-cms-text={half === 0 && i === 0 ? textKeys.slogan : undefined}
-                    style={titleStyle}
                   >
                     {slogan}
                   </span>
@@ -97,7 +80,7 @@ export default function Footer({
       <div className="px-4 pt-12 sm:pt-16">
         <div className="relative mx-auto aspect-[946/277] w-full max-w-xl">
           <Image
-            src="/images/footer.png"
+            src={badgeUrl}
             alt="Berna&Co"
             fill
             sizes="576px"

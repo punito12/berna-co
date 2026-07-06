@@ -21,20 +21,6 @@ import {
   type CmsBlockConfig,
 } from "@/lib/cms-blocks";
 import { textStyleCssRule } from "@/lib/cms-text-styles";
-import {
-  buttonDesignToStyle,
-  buttonMobileCssRule,
-  cardContainerDesignToStyle,
-  cardImageDesignToStyle,
-  cardTextDesignToStyle,
-  cardTitleDesignToStyle,
-  catalogMobileCss,
-  chipDesignToStyle,
-  sectionDesignToStyle,
-  sectionMobileCssRules,
-  subtitleDesignToStyle,
-  titleDesignToStyle,
-} from "@/lib/cms-design";
 import type { ProductForUI } from "@/lib/products";
 
 type PaymentDiscounts = {
@@ -63,11 +49,6 @@ export default function CmsHomeSection({
   const image = (key: string, fb: string) => getSiteImage(cms, key, fb, preview);
   const logoUrl = getLogo(cms, preview);
   const blockStyleCss = blockTextStylesCss(section.key, config);
-  const sectionStyle = sectionDesignToStyle(config.design);
-  const titleStyle = titleDesignToStyle(config.design);
-  const subtitleStyle = subtitleDesignToStyle(config.design);
-  const buttonStyle = (key: string) => buttonDesignToStyle(config.buttons?.[key]);
-  const designCss = sectionDesignCss(section.key, config);
   const heroCarouselImages =
     config.carouselImages
       ?.filter((image) => image.enabled && image.url)
@@ -82,7 +63,6 @@ export default function CmsHomeSection({
         {blockStyleCss && (
           <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />
         )}
-        {designCss && <style dangerouslySetInnerHTML={{ __html: designCss }} />}
         <Hero
           title={t("home.hero.title", "Milanesas premium\ny congelados caseros")}
           subtitle={t(
@@ -94,14 +74,9 @@ export default function CmsHomeSection({
             config.imageUrl || image("home.hero.background", "/images/hero.jpg")
           }
           carouselImages={heroCarouselImages}
-          logoUrl={logoUrl}
           titleKey="home.hero.title"
           subtitleKey="home.hero.subtitle"
           ctaKey="home.hero.cta_primary"
-          sectionStyle={sectionStyle}
-          titleStyle={titleStyle}
-          subtitleStyle={subtitleStyle}
-          buttonStyle={buttonStyle("hero.primary")}
         />
       </>
     );
@@ -110,13 +85,15 @@ export default function CmsHomeSection({
   if (section.key === "home.products" || type === "products_grid") {
     return products.length > 0 ? (
       <>
-        {designCss && <style dangerouslySetInnerHTML={{ __html: designCss }} />}
         <Catalog
           products={products}
           previewToken={preview ? previewToken : undefined}
           efectivoPct={payCfg.efectivoDiscountPercent}
           transferenciaPct={payCfg.transferenciaDiscountPercent}
           eyebrow={t("catalogo.eyebrow", "Congelados Caseros")}
+          headerPhotoUrl={image("home.products.photo", "/images/nuestros-productos.jpg")}
+          headerLabel1Url={image("home.products.label1", "/images/nuestros-productos-1.png")}
+          headerLabel2Url={image("home.products.label2", "/images/nuestros-productos-2.png")}
           title={t("catalogo.title", "Nuestros productos")}
           subtitle={t(
             "catalogo.subtitle",
@@ -146,9 +123,6 @@ export default function CmsHomeSection({
             "catalog.product.view_detail_label",
             "Ver detalle y fotos →"
           )}
-          cartShowLabel={t("catalog.cart.show_label", "Ver carrito")}
-          cartHideLabel={t("catalog.cart.hide_label", "Ocultar carrito")}
-          cartContinueLabel={t("catalog.cart.continue_label", "Continuar")}
           lowStockLabel={t(
             "catalog.product.low_stock_label",
             "Solo quedan {count} disponibles"
@@ -174,18 +148,6 @@ export default function CmsHomeSection({
             chooseBreadcrumbLabel: "catalog.product.choose_breadcrumb",
             newLabel: "catalog.badge.new",
           }}
-          sectionStyle={sectionStyle}
-          titleStyle={titleStyle}
-          subtitleStyle={subtitleStyle}
-          addButtonStyle={buttonStyle("catalog.add")}
-          detailButtonStyle={buttonStyle("catalog.detail")}
-          cartContinueButtonStyle={buttonStyle("cart.continue")}
-          cardContainerStyle={cardContainerDesignToStyle(config.cards)}
-          cardImageStyle={cardImageDesignToStyle(config.cards)}
-          cardTitleStyle={cardTitleDesignToStyle(config.cards)}
-          cardTextStyle={cardTextDesignToStyle(config.cards)}
-          chipStyle={chipDesignToStyle(config.filters, false)}
-          chipActiveStyle={chipDesignToStyle(config.filters, true)}
         />
       </>
     ) : (
@@ -206,7 +168,7 @@ export default function CmsHomeSection({
       <section className="bg-ink text-white">
         {blockStyleCss && <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />}
         <Reveal className="reveal-quiet">
-          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 md:grid-cols-2 md:items-center sm:py-24">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 md:grid-cols-2 sm:py-24">
             <div className="photo-reveal overflow-hidden rounded-lg border border-white/10 bg-ink">
               {aboutImage ? (
                 <Image
@@ -226,7 +188,9 @@ export default function CmsHomeSection({
                 </div>
               )}
             </div>
-            <div className="text-left">
+            {/* Columna estirada a la altura de la foto: título arriba y el
+                texto empujado al fondo (termina al ras del borde inferior). */}
+            <div className="flex flex-col text-left">
               {(() => {
                 // Eyebrow opcional (solo si hay contenido en el CMS/config).
                 const aboutEyebrow =
@@ -251,8 +215,11 @@ export default function CmsHomeSection({
               </h2>
               {/* Mobile: texto plegado a 4 líneas + "Leer más" (la pared de
                   texto mataba la sección). Desktop: completo, como siempre. */}
-              <div className="rise-in mt-6" style={{ animationDelay: "450ms" }}>
-                <ExpandableText>
+              <div className="rise-in mt-6 md:mt-auto" style={{ animationDelay: "450ms" }}>
+                <ExpandableText
+                  moreLabel={t("about.read_more", "Leer más")}
+                  lessLabel={t("about.read_less", "Leer menos")}
+                >
                   <RichText
                     text={
                       config.body ||
@@ -281,7 +248,6 @@ export default function CmsHomeSection({
         {blockStyleCss && (
           <style dangerouslySetInnerHTML={{ __html: blockStyleCss }} />
         )}
-        {designCss && <style dangerouslySetInnerHTML={{ __html: designCss }} />}
         <Ingredients
           eyebrow={t("home.ingredients.eyebrow", "Lo que hay adentro")}
           title={t(
@@ -298,10 +264,6 @@ export default function CmsHomeSection({
           )}
           item3={t("home.ingredients.item3", "Peceto de pastura")}
           previewToken={preview ? previewToken : undefined}
-          sectionStyle={sectionStyle}
-          titleStyle={titleStyle}
-          subtitleStyle={subtitleStyle}
-          benefitsButtonStyle={buttonStyle("ingredients.benefits")}
         />
       </>
     );
@@ -503,8 +465,8 @@ export default function CmsHomeSection({
   if (type === "footer") {
     return (
       <>
-        {designCss && <style dangerouslySetInnerHTML={{ __html: designCss }} />}
         <Footer
+          badgeUrl={image("footer.badge", "/images/footer.png")}
           slogan={t("footer.slogan", "¡La vida es rica!")}
           instagram={t("footer.instagram", "@berna.and.co")}
           instagramUrl={t("footer.instagramUrl", "https://instagram.com/berna.and.co")}
@@ -514,31 +476,13 @@ export default function CmsHomeSection({
             "footer.copyright",
             "© Berna&co. Todos los derechos reservados."
           )}
-          logoUrl={logoUrl}
-          newsletterTitle={t("home.newsletter.title", "Sumate al newsletter")}
-          newsletterSubtitle={t(
-            "home.newsletter.subtitle",
-            "Novedades, recetas y promos. Sin spam."
-          )}
-          newsletterPlaceholder={t("home.newsletter.placeholder", "tu@email.com")}
-          newsletterButton={t("home.newsletter.button", "Sumarme")}
-          newsletterSuccess={t(
-            "home.newsletter.success",
-            "¡Gracias! Te vas a enterar de las novedades."
-          )}
           textKeys={{
             slogan: "footer.slogan",
             instagram: "footer.instagram",
             email: "footer.email",
             whatsapp: "footer.whatsapp",
             copyright: "footer.copyright",
-            newsletterTitle: "home.newsletter.title",
-            newsletterSubtitle: "home.newsletter.subtitle",
-            newsletterPlaceholder: "home.newsletter.placeholder",
-            newsletterButton: "home.newsletter.button",
           }}
-          sectionStyle={sectionStyle}
-          titleStyle={titleStyle}
         />
       </>
     );
@@ -635,42 +579,6 @@ function blockTextStylesCss(sectionKey: string, config: CmsBlockConfig): string 
     .join("");
 }
 
-function sectionDesignCss(sectionKey: string, config: CmsBlockConfig): string {
-  const selectorSectionKey = sectionKey === "home.footer" ? "global.footer" : sectionKey;
-  const titleTextKey =
-    sectionKey === "home.products"
-      ? "catalogo.title"
-      : sectionKey === "home.hero"
-      ? "home.hero.title"
-      : sectionKey === "home.ingredients"
-      ? "home.ingredients.title"
-      : sectionKey === "home.footer"
-      ? "footer.slogan"
-      : undefined;
-  const subtitleTextKey =
-    sectionKey === "home.products"
-      ? "catalogo.subtitle"
-      : sectionKey === "home.hero"
-      ? "home.hero.subtitle"
-      : sectionKey === "home.ingredients"
-      ? "home.ingredients.eyebrow"
-      : undefined;
-  return [
-    sectionMobileCssRules({
-      sectionKey: selectorSectionKey,
-      titleTextKey,
-      subtitleTextKey,
-      design: config.design,
-    }),
-    ...Object.entries(config.buttons ?? {}).map(([key, design]) =>
-      buttonMobileCssRule(key, design)
-    ),
-    // Fase 3: reglas mobile de tarjetas y filtros del catálogo (solo home.products).
-    catalogMobileCss({ cards: config.cards, filters: config.filters }),
-  ]
-    .filter(Boolean)
-    .join("");
-}
 
 function BlockImage({
   config,

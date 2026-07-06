@@ -127,116 +127,6 @@ const STYLE_GROUPS: StyleGroup[] = [
   },
 ];
 
-// Non-color controls (Tanda 2) per group. Each maps to a StyleSettings key.
-const RADIUS_OPTIONS = [
-  { value: "", label: "Actual" },
-  { value: "0px", label: "0 (recto)" },
-  { value: "8px", label: "8 px" },
-  { value: "12px", label: "12 px" },
-  { value: "16px", label: "16 px" },
-  { value: "20px", label: "20 px" },
-  { value: "9999px", label: "Redondo" },
-];
-const WEIGHT_OPTIONS = [
-  { value: "", label: "Actual" },
-  { value: "400", label: "Normal" },
-  { value: "500", label: "Medio" },
-  { value: "600", label: "Semibold" },
-  { value: "700", label: "Bold" },
-  { value: "800", label: "Extra" },
-  { value: "900", label: "Black" },
-];
-const SHADOW_OPTIONS = [
-  { value: "", label: "Actual" },
-  { value: "none", label: "Ninguna" },
-  { value: "soft", label: "Suave" },
-  { value: "medium", label: "Media" },
-];
-const BORDER_OPTIONS = [
-  { value: "", label: "Actual" },
-  { value: "0px", label: "Sin borde" },
-  { value: "1px", label: "1 px" },
-  { value: "2px", label: "2 px" },
-  { value: "3px", label: "3 px" },
-];
-const FONT_FIELD_OPTIONS = [
-  { value: "", label: "Actual" },
-  ...FONTS.map((f) => ({ value: f, label: f })),
-];
-
-type StyleControl =
-  | { kind: "select"; key: string; label: string; options: { value: string; label: string }[] }
-  | { kind: "size"; key: string; label: string; placeholder: string }
-  | { kind: "toggle"; key: string; label: string }; // "on"/"off"/""
-
-// Which non-color controls each group shows (by group title).
-const GROUP_CONTROLS: Record<string, StyleControl[]> = {
-  "Botones principales": [
-    { kind: "select", key: "buttonRadius", label: "Bordes", options: RADIUS_OPTIONS },
-    { kind: "select", key: "buttonFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
-    { kind: "select", key: "buttonWeight", label: "Peso", options: WEIGHT_OPTIONS },
-    { kind: "size", key: "buttonSize", label: "Tamaño", placeholder: "Ej: 14px" },
-    { kind: "toggle", key: "buttonUppercase", label: "Mayúsculas" },
-  ],
-  "Botones secundarios": [
-    { kind: "select", key: "buttonSecondaryFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
-    { kind: "select", key: "buttonSecondaryWeight", label: "Peso", options: WEIGHT_OPTIONS },
-    { kind: "size", key: "buttonSecondarySize", label: "Tamaño", placeholder: "Ej: 11px" },
-    { kind: "toggle", key: "buttonSecondaryUppercase", label: "Mayúsculas" },
-    { kind: "toggle", key: "buttonSecondaryUnderline", label: "Subrayado" },
-  ],
-  "Tarjetas de producto": [
-    { kind: "select", key: "cardRadius", label: "Bordes redondeados", options: RADIUS_OPTIONS },
-    { kind: "select", key: "cardShadow", label: "Sombra", options: SHADOW_OPTIONS },
-    { kind: "select", key: "cardBorderWidth", label: "Grosor de borde", options: BORDER_OPTIONS },
-  ],
-  "Nombre de producto": [
-    { kind: "select", key: "nameFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
-    { kind: "select", key: "nameWeight", label: "Peso", options: WEIGHT_OPTIONS },
-    { kind: "size", key: "nameSizeMobile", label: "Tamaño mobile", placeholder: "Ej: 16px" },
-    { kind: "size", key: "nameSizeDesktop", label: "Tamaño desktop", placeholder: "Ej: 20px" },
-    { kind: "toggle", key: "nameUppercase", label: "Mayúsculas" },
-  ],
-  Precios: [
-    { kind: "select", key: "priceFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
-    { kind: "select", key: "priceWeight", label: "Peso", options: WEIGHT_OPTIONS },
-    { kind: "size", key: "priceSizeMobile", label: "Tamaño mobile", placeholder: "Ej: 20px" },
-    { kind: "size", key: "priceSizeDesktop", label: "Tamaño desktop", placeholder: "Ej: 24px" },
-  ],
-  "Etiquetas de formas de pago": [
-    { kind: "select", key: "chipRadius", label: "Bordes", options: RADIUS_OPTIONS },
-    { kind: "select", key: "chipWeight", label: "Peso", options: WEIGHT_OPTIONS },
-    { kind: "size", key: "chipSize", label: "Tamaño", placeholder: "Ej: 11px" },
-    { kind: "toggle", key: "chipUppercase", label: "Mayúsculas" },
-  ],
-  "Filtros de categoría": [
-    { kind: "select", key: "filterRadius", label: "Bordes", options: RADIUS_OPTIONS },
-    { kind: "select", key: "filterWeight", label: "Peso", options: WEIGHT_OPTIONS },
-    { kind: "size", key: "filterSize", label: "Tamaño", placeholder: "Ej: 12px" },
-    { kind: "toggle", key: "filterUppercase", label: "Mayúsculas" },
-  ],
-  "Etiquetas (badges)": [
-    { kind: "select", key: "badgeRadius", label: "Bordes", options: RADIUS_OPTIONS },
-    { kind: "select", key: "badgeWeight", label: "Peso", options: WEIGHT_OPTIONS },
-    { kind: "size", key: "badgeSize", label: "Tamaño", placeholder: "Ej: 11px" },
-    { kind: "toggle", key: "badgeUppercase", label: "Mayúsculas" },
-  ],
-  "Botón de portada (Ver productos)": [
-    { kind: "select", key: "heroBtnRadius", label: "Bordes", options: RADIUS_OPTIONS },
-    { kind: "select", key: "heroBtnFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
-    { kind: "select", key: "heroBtnWeight", label: "Peso", options: WEIGHT_OPTIONS },
-    { kind: "toggle", key: "heroBtnUppercase", label: "Mayúsculas" },
-  ],
-  "Selector de empanado": [
-    { kind: "select", key: "empanadoRadius", label: "Bordes", options: RADIUS_OPTIONS },
-    { kind: "select", key: "empanadoFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
-    { kind: "select", key: "empanadoWeight", label: "Peso", options: WEIGHT_OPTIONS },
-    { kind: "toggle", key: "empanadoUppercase", label: "Mayúsculas" },
-  ],
-  "Descripciones de producto": [
-    { kind: "select", key: "descriptionFont", label: "Fuente", options: FONT_FIELD_OPTIONS },
-  ],
-};
 
 function notifyDraftChanged() {
   window.dispatchEvent(new Event("cms:draft-changed"));
@@ -348,14 +238,6 @@ export default function IdentityEditor({
           return;
         }
         setSavedColors(colors);
-      }
-      if (JSON.stringify(styles) !== JSON.stringify(savedStyles)) {
-        const r = await postCmsDraft("/api/admin/cms/style-settings", { styles });
-        if (!r.ok) {
-          setError(r.error);
-          return;
-        }
-        setSavedStyles(styles);
       }
       notifyDraftChanged();
       flashSaved();
@@ -609,9 +491,6 @@ function StyleGroupSection({
   styles: Record<string, string>;
   setStyles: (s: Record<string, string>) => void;
 }) {
-  const controls = GROUP_CONTROLS[group.title] ?? [];
-  const set = (key: string, value: string) =>
-    setStyles({ ...styles, [key]: value });
   return (
     <div className="rounded-xl border border-line bg-cream/25 p-4">
       <h3 className="font-black uppercase tracking-tight text-sm text-ink">
@@ -654,60 +533,6 @@ function StyleGroupSection({
           </label>
         ))}
       </div>
-
-      {controls.length > 0 && (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {controls.map((c) => {
-            const value = styles[c.key] ?? "";
-            if (c.kind === "select") {
-              return (
-                <label key={c.key} className="block">
-                  <span className="mb-1 block font-bold uppercase tracking-wide text-[10px] text-muted">
-                    {c.label}
-                  </span>
-                  <select
-                    value={value}
-                    onChange={(e) => set(c.key, e.target.value)}
-                    className="w-full rounded border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                  >
-                    {c.options.map((o) => (
-                      <option key={o.value || "default"} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              );
-            }
-            if (c.kind === "size") {
-              return (
-                <SizeInput
-                  key={c.key}
-                  label={c.label}
-                  value={value}
-                  placeholder={c.placeholder}
-                  onCommit={(v) => set(c.key, v)}
-                />
-              );
-            }
-            // toggle
-            return (
-              <label
-                key={c.key}
-                className="flex items-center gap-2 self-end rounded border border-line bg-white px-2 py-2 text-sm font-bold text-ink"
-              >
-                <input
-                  type="checkbox"
-                  checked={value === "on"}
-                  onChange={(e) => set(c.key, e.target.checked ? "on" : "off")}
-                  className="h-4 w-4 accent-black"
-                />
-                {c.label}
-              </label>
-            );
-          })}
-        </div>
-      )}
 
       <div className="mt-3">
         <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-muted">

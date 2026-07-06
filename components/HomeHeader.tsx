@@ -22,8 +22,15 @@ const FILTER_OPTIONS: { code: string; label: string }[] = [
 // reveal-on-scroll-up después.
 export default function HomeHeader({
   variant = "home",
+  productsLabel = "Productos",
+  cartLabel = "Carrito",
+  filterLabels,
 }: {
   variant?: "home" | "page";
+  productsLabel?: string;
+  cartLabel?: string;
+  /** Labels de los cortes del header (por código de categoría). */
+  filterLabels?: Record<string, string>;
 }) {
   const { totalItems } = useCart();
   const [visible, setVisible] = useState(variant === "page");
@@ -132,7 +139,7 @@ export default function HomeHeader({
                     : "text-ink hover:bg-ink/10"
                 }`}
               >
-                {opt.label}
+                {filterLabels?.[opt.code] ?? opt.label}
               </button>
             ))}
           </div>
@@ -143,7 +150,7 @@ export default function HomeHeader({
             href="/#productos"
             className="inline-flex min-h-11 items-center rounded-full bg-ink px-6 py-2.5 font-bold uppercase tracking-widest text-xs text-white shadow-[0_10px_30px_rgba(10,10,10,0.25)] transition-transform duration-200 hover:scale-105 active:scale-95"
           >
-            Productos
+            {productsLabel}
           </a>
           {/* Abre el panel flotante del carrito (CartOverlay escucha este
               evento), no navega al checkout. */}
@@ -152,7 +159,7 @@ export default function HomeHeader({
             onClick={() => window.dispatchEvent(new Event("berna:cart-open"))}
             className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-white/85 px-6 py-2.5 font-bold uppercase tracking-widest text-xs text-ink shadow-[0_10px_30px_rgba(10,10,10,0.15)] backdrop-blur-xl transition-transform duration-200 hover:scale-105 active:scale-95"
           >
-            Carrito
+            {cartLabel}
             <span
               key={totalItems}
               className="animate-counter-pop inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-ink px-1.5 text-[11px] text-white shadow-sm"

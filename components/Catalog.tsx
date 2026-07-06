@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import ProductCard from "@/components/ProductCard";
@@ -31,25 +30,13 @@ export default function Catalog({
   paymentTransferLabel = "transferencia",
   paymentTransferShortLabel = "transf.",
   viewDetailLabel = "Ver detalle y fotos →",
-  cartShowLabel = "Ver carrito",
-  cartHideLabel = "Ocultar carrito",
-  cartContinueLabel = "Continuar",
   lowStockLabel = "Solo quedan {count} disponibles",
   addedLabel = "Agregado ✓",
   noMoreStockLabel = "Sin más stock disponible",
+  headerPhotoUrl = "/images/nuestros-productos.jpg",
+  headerLabel1Url = "/images/nuestros-productos-1.png",
+  headerLabel2Url = "/images/nuestros-productos-2.png",
   textKeys = {},
-  sectionStyle,
-  titleStyle,
-  subtitleStyle,
-  addButtonStyle,
-  detailButtonStyle,
-  cartContinueButtonStyle,
-  cardContainerStyle,
-  cardImageStyle,
-  cardTitleStyle,
-  cardTextStyle,
-  chipStyle,
-  chipActiveStyle,
   previewToken,
 }: {
   products: ProductForUI[];
@@ -68,12 +55,13 @@ export default function Catalog({
   paymentTransferLabel?: string;
   paymentTransferShortLabel?: string;
   viewDetailLabel?: string;
-  cartShowLabel?: string;
-  cartHideLabel?: string;
-  cartContinueLabel?: string;
   lowStockLabel?: string;
   addedLabel?: string;
   noMoreStockLabel?: string;
+  // Imágenes del bloque "nuestros productos" (editables desde el CMS).
+  headerPhotoUrl?: string;
+  headerLabel1Url?: string;
+  headerLabel2Url?: string;
   textKeys?: Partial<Record<
     | "eyebrow"
     | "title"
@@ -85,20 +73,6 @@ export default function Catalog({
     | "newLabel",
     string
   >>;
-  sectionStyle?: CSSProperties;
-  titleStyle?: CSSProperties;
-  subtitleStyle?: CSSProperties;
-  addButtonStyle?: CSSProperties;
-  detailButtonStyle?: CSSProperties;
-  cartContinueButtonStyle?: CSSProperties;
-  // Diseño de tarjetas (fase 3): se pasan a cada ProductCard.
-  cardContainerStyle?: CSSProperties;
-  cardImageStyle?: CSSProperties;
-  cardTitleStyle?: CSSProperties;
-  cardTextStyle?: CSSProperties;
-  // Diseño de chips de filtro (inactivo / activo).
-  chipStyle?: CSSProperties;
-  chipActiveStyle?: CSSProperties;
   // Token de preview del CMS: se pasa a cada card para arrastrarlo al link del
   // detalle del producto y mantener la vista previa activa.
   previewToken?: string;
@@ -145,7 +119,6 @@ export default function Catalog({
     <section
       id="productos"
       data-cms-section="home.products"
-      style={sectionStyle}
       className="bg-cream"
     >
       {/* Ancho completo tipo CRAV: las cards aprovechan toda la página (con un
@@ -172,7 +145,6 @@ export default function Catalog({
               </p>
               <h2
                 className="title-curtain mt-6 font-black uppercase tracking-tight text-5xl leading-[0.95] text-ink sm:w-max sm:max-w-none sm:text-7xl lg:text-8xl"
-                style={titleStyle}
                 data-cms-text={textKeys.title}
               >
                 <span className="title-slide">
@@ -188,7 +160,6 @@ export default function Catalog({
               </div>
               <p
                 className="sub-fade mx-auto mt-6 max-w-md font-serif italic text-lg text-muted sm:mx-0 sm:text-2xl"
-                style={subtitleStyle}
                 data-cms-text={textKeys.subtitle}
               >
                 {subtitle}
@@ -203,7 +174,7 @@ export default function Catalog({
                   style={{ animationDelay: "950ms" }}
                 >
                   <Image
-                    src="/images/nuestros-productos-1.png"
+                    src={headerLabel1Url}
                     alt="Huevos de gallinas libres"
                     fill
                     sizes="320px"
@@ -216,7 +187,7 @@ export default function Catalog({
                   style={{ animationDelay: "1080ms" }}
                 >
                   <Image
-                    src="/images/nuestros-productos-2.png"
+                    src={headerLabel2Url}
                     alt="Empanado simple"
                     fill
                     sizes="320px"
@@ -235,7 +206,7 @@ export default function Catalog({
                 colapsa a 0px de ancho. */}
             <div className="photo-reveal relative order-first -mx-4 aspect-[2/3] w-[calc(100%+2rem)] max-w-none overflow-hidden sm:order-none sm:mx-0 sm:w-full sm:max-w-sm sm:justify-self-end sm:rounded-3xl sm:border sm:border-line">
               <Image
-                src="/images/nuestros-productos.jpg"
+                src={headerPhotoUrl}
                 alt="Milanesas Berna&Co"
                 fill
                 sizes="(max-width: 640px) 90vw, 440px"
@@ -308,12 +279,6 @@ export default function Catalog({
                 lowStockLabel={lowStockLabel}
                 addedLabel={addedLabel}
                 noMoreStockLabel={noMoreStockLabel}
-                addButtonStyle={addButtonStyle}
-                detailButtonStyle={detailButtonStyle}
-                cardContainerStyle={cardContainerStyle}
-                cardImageStyle={cardImageStyle}
-                cardTitleStyle={cardTitleStyle}
-                cardTextStyle={cardTextStyle}
                 previewToken={previewToken}
               />
             </Reveal>

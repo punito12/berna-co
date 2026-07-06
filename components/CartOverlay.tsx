@@ -4,12 +4,32 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCart } from "@/components/CartProvider";
 import { BREADCRUMB_LABELS, formatPrice } from "@/lib/products";
+import { renderCmsTemplate } from "@/lib/catalog-cms-labels";
+import type { CartLabels } from "@/lib/cms-cart-labels";
+
+const DEFAULT_LABELS: CartLabels = {
+  title: "Tu carrito",
+  tagline: "Listas para tu freezer.",
+  empty: "Tu carrito está vacío",
+  emptySub: "Llenalo de milanesas.",
+  viewProducts: "Ver productos",
+  cta: "Finalizar pedido",
+  discountAchieved: "¡Felicitaciones! Tenés {pct}% OFF",
+  discountApply: "Se aplica al total en el checkout.",
+  discountNext: "Sumá {count} más y pasás al {pct}% OFF.",
+  discountMissing: "Te faltan {count} para el {pct}% OFF",
+};
 
 // Carrito flotante (desktop Y mobile). Patrón CRAV: un FAB en la esquina con
 // el contador; al abrirlo se blurrea toda la página y aparece el panel del
-// carrito en la esquina, con las líneas y el CTA al checkout. Labels
-// hardcodeados (el CMS del carrito se va a rehacer).
-export default function CartOverlay() {
+// carrito en la esquina, con las líneas y el CTA al checkout. Labels editables
+// vía CMS (cart.*): cada página los resuelve en server y los pasa por props.
+export default function CartOverlay({
+  labels,
+}: {
+  labels?: Partial<CartLabels>;
+}) {
+  const L: CartLabels = { ...DEFAULT_LABELS, ...labels };
   const { lines, totalItems, totalPrice, changeQuantity } = useCart();
   const [open, setOpen] = useState(false);
 
@@ -79,24 +99,24 @@ export default function CartOverlay() {
             /* Estado vacío: puede abrirse desde el header sin items. */
             <div className="px-5 py-6 text-center">
               <p className="font-black uppercase tracking-[0.18em] text-xs">
-                Tu carrito está vacío
+                {L.empty}
               </p>
               <p className="mt-2 font-serif italic text-base text-cream/70">
-                Llenalo de milanesas.
+                {L.emptySub}
               </p>
               <a
                 href="#productos"
                 onClick={() => setOpen(false)}
                 className="mt-4 block w-full rounded-xl bg-cream px-5 py-3 text-center font-black uppercase tracking-[0.16em] text-xs text-ink transition-all duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0"
               >
-                Ver productos
+                {L.viewProducts}
               </a>
             </div>
           ) : (
             <>
           <div className="flex items-baseline justify-between px-4 pt-4">
             <p className="font-black uppercase tracking-[0.18em] text-xs">
-              Tu carrito{" "}
+              {L.title}{" "}
               <span className="text-cream/60">{totalItems}</span>
             </p>
             <p className="font-black uppercase tracking-[0.12em] text-xs">
@@ -105,7 +125,7 @@ export default function CartOverlay() {
             </p>
           </div>
           <p className="px-4 pt-0.5 font-serif italic text-sm text-cream/70">
-            Listas para tu freezer.
+            {L.tagline}
           </p>
 
           {/* Descuento por cantidad: celebra el % ganado o empuja al próximo
@@ -113,19 +133,24 @@ export default function CartOverlay() {
           {achievedPct > 0 ? (
             <div className="mx-4 mt-3 rounded-xl bg-cream px-3.5 py-2.5 text-ink">
               <p className="font-black uppercase tracking-wide text-xs">
-                ¡Felicitaciones! Tenés {achievedPct}% OFF
+                {renderCmsTemplate(L.discountAchieved, { pct: achievedPct })}
               </p>
               <p className="mt-0.5 text-xs text-ink/70">
                 {nextTier
-                  ? `Sumá ${missingUnits} más y pasás al ${nextTier.discountPercent}% OFF.`
-                  : "Se aplica al total en el checkout."}
+                  ? renderCmsTemplate(L.discountNext, {
+                      count: missingUnits,
+                      pct: nextTier.discountPercent,
+                    })
+                  : L.discountApply}
               </p>
             </div>
           ) : nextTier ? (
             <div className="mx-4 mt-3 rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5">
               <p className="font-black uppercase tracking-wide text-xs">
-                Te {missingUnits === 1 ? "falta" : "faltan"} {missingUnits}{" "}
-                para el {nextTier.discountPercent}% OFF
+                {renderCmsTemplate(L.discountMissing, {
+                  count: missingUnits,
+                  pct: nextTier.discountPercent,
+                })}
               </p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15">
                 <div
@@ -207,7 +232,7 @@ export default function CartOverlay() {
               href="/checkout"
               className="block w-full rounded-xl bg-cream px-5 py-3 text-center font-black uppercase tracking-[0.16em] text-xs text-ink transition-all duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0"
             >
-              Finalizar pedido
+              {L.cta}
             </Link>
           </div>
             </>

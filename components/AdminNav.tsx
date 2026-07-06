@@ -64,8 +64,7 @@ const SECTIONS: { title: string; links: { href: string; label: string }[] }[] = 
   {
     title: "Sitio web",
     links: [
-      { href: "/admin/editor/visual", label: "Editor visual" },
-      { href: "/admin/editor/home", label: "Editor avanzado" },
+      { href: "/admin/editor/contenido", label: "Editor del sitio" },
     ],
   },
   {

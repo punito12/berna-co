@@ -12,10 +12,6 @@ import {
   themeToCssVars,
   textStylesToCss,
 } from "@/lib/cms";
-import {
-  getStyleSettings,
-  styleSettingsToCssVars,
-} from "@/lib/cms-style-settings";
 import { cmsUsedGoogleFontsUrl } from "@/lib/cms-fonts";
 import { getGlobalSeo } from "@/lib/cms-seo";
 import {
@@ -136,9 +132,7 @@ export default async function RootLayout({
   let cmsFontsUrl = "";
   try {
     const bundle = await loadCmsBundle();
-    const themeVars = themeToCssVars(getThemeColors(bundle));
-    const styleVars = styleSettingsToCssVars(getStyleSettings(bundle));
-    cssVars = [themeVars, styleVars].filter(Boolean).join(";");
+    cssVars = themeToCssVars(getThemeColors(bundle));
     textStyleCss = textStylesToCss(bundle);
     cmsFontsUrl = cmsUsedGoogleFontsUrl([
       bundle.content?.typography,

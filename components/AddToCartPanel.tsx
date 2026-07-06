@@ -36,6 +36,8 @@ export default function AddToCartPanel({
     lowStock?: string;
     added?: string;
     addedDetail?: string;
+    lastUnit?: string;
+    cashShort?: string;
   };
 }) {
   const { addToCart, lines } = useCart();
@@ -143,12 +145,6 @@ export default function AddToCartPanel({
                 </span>
               )}
               <p
-                style={{
-                  fontFamily: "var(--price-font, inherit)",
-                  fontWeight:
-                    "var(--price-weight, 900)" as React.CSSProperties["fontWeight"],
-                  letterSpacing: "var(--price-spacing, normal)",
-                }}
                 className="font-black text-2xl leading-none tabular-nums sm:text-3xl"
               >
                 {formatPrice(displayPrice)}
@@ -156,7 +152,7 @@ export default function AddToCartPanel({
             </div>
             {showCashPrice && (
               <p className="mt-1.5 text-[11px] font-bold uppercase tracking-widest text-cream/60">
-                Efectivo o transf.{" "}
+                {labels.cashShort ?? "Efectivo o transferencia"}{" "}
                 <span className="text-base font-black tabular-nums text-white">
                   {formatPrice(cashPrice)}
                 </span>
@@ -174,7 +170,7 @@ export default function AddToCartPanel({
                 data-cms-section="product.stock"
                 className="rounded-full bg-cream px-3.5 py-1.5 text-[11px] font-black uppercase tracking-widest text-ink"
               >
-                ¡Queda la última!
+                {labels.lastUnit ?? "¡Queda la última!"}
               </span>
             )}
             {promoPercent > 0 && (
@@ -195,7 +191,6 @@ export default function AddToCartPanel({
           type="button"
           onClick={handleAdd}
           disabled={outOfStock}
-          data-cms-style="button"
           data-cms-button="product.add"
           className="mt-4 w-full rounded-full bg-cream px-4 py-3 font-black uppercase tracking-widest text-xs text-ink sm:mt-5 sm:py-4 sm:text-sm transition-all duration-200 hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/50"
         >

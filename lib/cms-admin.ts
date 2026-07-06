@@ -58,16 +58,6 @@ export async function setTypographyDraft(typo: Record<string, string>) {
 
 // Saves the non-color global style settings under typography.styles, preserving
 // the existing typography (headingFont/bodyFont/headingWeight).
-export async function setStyleSettingsDraft(
-  styles: Record<string, unknown>
-) {
-  const existing = await readTypographyDraftObject();
-  const next = { ...existing, styles };
-  await prisma.siteContent.update({
-    where: { id: "singleton" },
-    data: { typographyDraft: JSON.stringify(next) },
-  });
-}
 
 export async function setLogoDraft(url: string) {
   await getSiteContentAdmin();

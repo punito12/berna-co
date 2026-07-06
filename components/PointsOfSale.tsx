@@ -25,28 +25,29 @@ export default function PointsOfSale({
   return (
     <section id="puntos-de-venta" className="bg-cream">
       <div className="mx-auto max-w-6xl px-4 py-14 sm:py-24">
-        <Reveal className="mb-8 text-center sm:mb-10">
+        <Reveal className="reveal-quiet mb-8 text-center sm:mb-10">
           <p
-            className="font-bold uppercase tracking-[0.3em] text-xs text-muted"
+            className="stamp-pop inline-block rounded-full bg-ink px-5 py-2 font-bold uppercase tracking-[0.25em] text-xs text-white shadow-[0_10px_30px_rgba(10,10,10,0.2)]"
             data-cms-text={eyebrowKey}
           >
             {eyebrow}
           </p>
           <h2
-            className="mt-3 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-5xl"
+            className="title-curtain mt-5 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-5xl"
             data-cms-text={titleKey}
           >
-            {title}
+            <span className="title-slide">{title}</span>
           </h2>
           <p
-            className="mx-auto mt-4 max-w-md font-serif italic text-lg text-muted"
+            className="sub-fade mx-auto mt-4 max-w-md font-serif italic text-lg text-muted"
             data-cms-text={subtitleKey}
           >
             {subtitle}
           </p>
         </Reveal>
 
-        <Reveal className="overflow-hidden rounded-lg border border-line bg-white shadow-[0_18px_45px_rgba(10,10,10,0.08)]">
+        <Reveal className="reveal-quiet">
+          <div className="photo-reveal overflow-hidden rounded-lg border border-line bg-white shadow-[0_18px_45px_rgba(10,10,10,0.08)]">
           {/* aspect-box keeps the map responsive (4:3 on desktop, taller on mobile) */}
           <div className="relative aspect-[4/3] w-full sm:aspect-[16/9]">
             <iframe
@@ -56,6 +57,7 @@ export default function PointsOfSale({
               className="absolute inset-0 h-full w-full border-0"
               allowFullScreen
             />
+          </div>
           </div>
         </Reveal>
       </div>

@@ -10,6 +10,11 @@ export type CmsEditorNavItem = {
 
 export const CMS_EDITOR_NAV: CmsEditorNavItem[] = [
   {
+    href: "/admin/editor/contenido",
+    label: "Contenido",
+    description: "Todos los textos e imágenes del sitio (nuevo)",
+  },
+  {
     href: "/admin/editor/home",
     label: "Inicio",
     description: "Portada, banner superior y secciones del inicio",

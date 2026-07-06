@@ -2,16 +2,6 @@ import {
   sanitizeTextStyle,
   type CmsTextStyle,
 } from "@/lib/cms-text-styles";
-import {
-  sanitizeButtonDesignMap,
-  sanitizeSectionDesign,
-  sanitizeCardDesign,
-  sanitizeFilterDesign,
-  type CmsButtonDesignMap,
-  type CmsSectionDesign,
-  type CmsCardDesign,
-  type CmsFilterDesign,
-} from "@/lib/cms-design";
 
 export const CMS_BLOCK_TYPES = [
   "hero",
@@ -42,12 +32,6 @@ export type CmsBlockConfig = {
   faqs?: { question: string; answer: string }[];
   imageSide?: "left" | "right";
   textStyles?: Record<string, CmsTextStyle>;
-  design?: CmsSectionDesign;
-  buttons?: CmsButtonDesignMap;
-  // Fase 3: diseño de tarjetas de producto y de chips de filtro del catálogo.
-  // Se guardan en el config de la sección home.products (host del catálogo).
-  cards?: CmsCardDesign;
-  filters?: CmsFilterDesign;
   carouselImages?: CmsHeroCarouselImage[];
 };
 
@@ -199,14 +183,6 @@ export function sanitizeBlockConfig(input: Record<string, unknown>): CmsBlockCon
     }
     if (Object.keys(styles).length > 0) out.textStyles = styles;
   }
-  const design = sanitizeSectionDesign(input.design);
-  if (Object.keys(design).length > 0) out.design = design;
-  const buttons = sanitizeButtonDesignMap(input.buttons);
-  if (Object.keys(buttons).length > 0) out.buttons = buttons;
-  const cards = sanitizeCardDesign(input.cards);
-  if (Object.keys(cards).length > 0) out.cards = cards;
-  const filters = sanitizeFilterDesign(input.filters);
-  if (Object.keys(filters).length > 0) out.filters = filters;
   return out;
 }
 

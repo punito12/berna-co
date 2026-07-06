@@ -7,19 +7,17 @@ import { getPaymentConfig } from "@/lib/payment-config";
 import {
   loadCmsBundle,
   getSections,
+  getSiteText,
   getThemeColors,
   themeToCssVars,
   textStylesToCss,
   isPreview,
 } from "@/lib/cms";
-import {
-  getStyleSettings,
-  styleSettingsToCssVars,
-} from "@/lib/cms-style-settings";
 import { getGlobalSeo, getPageSeo } from "@/lib/cms-seo";
 import type { Metadata } from "next";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 import { loadHomeData } from "@/lib/home-data";
+import { getCartLabels } from "@/lib/cms-cart-labels";
 
 // La home depende de CMS, productos y configuración vivos. El loader publicado
 // ya tiene su propia cache; evitar que Next abra conexiones a Neon al prerender.
@@ -62,14 +60,23 @@ export default async function HomePage({
 
   const sections = getSections(cms, "home", preview);
   const previewCssVars = preview
-    ? [
-        themeToCssVars(getThemeColors(cms, true)),
-        styleSettingsToCssVars(getStyleSettings(cms, true)),
-      ]
-        .filter(Boolean)
-        .join(";")
+    ? themeToCssVars(getThemeColors(cms, true))
     : "";
   const previewTextCss = preview ? textStylesToCss(cms, true) : "";
+
+  // Labels de header y carrito (client components: bajan por props).
+  const headerLabels = {
+    productsLabel: getSiteText(cms, "header.products", "Productos", preview),
+    cartLabel: getSiteText(cms, "header.cart", "Carrito", preview),
+    filterLabels: {
+      ALL: getSiteText(cms, "catalog.filter.all", "Todos", preview),
+      CARNE: getSiteText(cms, "catalog.filter.carne", "Carne", preview),
+      POLLO: getSiteText(cms, "catalog.filter.pollo", "Pollo", preview),
+      CERDO: getSiteText(cms, "catalog.filter.cerdo", "Cerdo", preview),
+      VEGANO: getSiteText(cms, "catalog.filter.vegano", "Veggie", preview),
+    },
+  };
+  const cartLabels = getCartLabels(cms, preview);
 
   return (
     <main data-cms-page="home">
@@ -87,7 +94,7 @@ export default async function HomePage({
         </div>
       )}
       {/* Header liquid glass: aparece deslizándose al scrollear pasado el hero. */}
-      <HomeHeader />
+      <HomeHeader {...headerLabels} />
 
       {/* El banner de descuento por cantidad se movió fuera de la home; va a
           reaparecer en carrito y checkout (pendiente). */}
@@ -126,7 +133,7 @@ export default async function HomePage({
       })()}
       <WhatsappFloat />
       {/* Carrito flotante CRAV-style (desktop): FAB + blur + panel esquina. */}
-      <CartOverlay />
+      <CartOverlay labels={cartLabels} />
     </main>
   );
 }

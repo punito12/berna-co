@@ -6,8 +6,12 @@ import { useState } from "react";
 // En desktop (sm+) el texto se muestra siempre completo y el botón no existe.
 export default function ExpandableText({
   children,
+  moreLabel = "Leer más",
+  lessLabel = "Leer menos",
 }: {
   children: React.ReactNode;
+  moreLabel?: string;
+  lessLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -21,7 +25,7 @@ export default function ExpandableText({
         aria-expanded={open}
         className="mt-4 inline-flex min-h-10 items-center rounded-full border border-white/30 px-5 py-2 font-bold uppercase tracking-widest text-[11px] text-white transition-all duration-200 active:scale-95 sm:hidden"
       >
-        {open ? "Leer menos" : "Leer más"}
+        {open ? lessLabel : moreLabel}
       </button>
     </div>
   );

@@ -1,7 +1,6 @@
 import Reveal from "@/components/Reveal";
 import { INGREDIENT_PAGES } from "@/lib/ingredients";
 import Link from "next/link";
-import type { CSSProperties } from "react";
 
 // "Nuestros ingredientes" — three pillars, each with a hand-drawn line icon in
 // the brand's black/line style. Title only (no body copy).
@@ -104,10 +103,6 @@ export default function Ingredients({
   item2 = "Pollo pastoril",
   item3 = "Peceto de pastura",
   previewToken,
-  sectionStyle,
-  titleStyle,
-  subtitleStyle,
-  benefitsButtonStyle,
 }: {
   eyebrow?: string;
   title?: string;
@@ -115,10 +110,6 @@ export default function Ingredients({
   item2?: string;
   item3?: string;
   previewToken?: string;
-  sectionStyle?: CSSProperties;
-  titleStyle?: CSSProperties;
-  subtitleStyle?: CSSProperties;
-  benefitsButtonStyle?: CSSProperties;
 }) {
   const ITEMS = [item1, item2, item3].map((t, i) => ({
     title: t,
@@ -131,7 +122,6 @@ export default function Ingredients({
     <section
       id="ingredientes"
       data-cms-section="home.ingredients"
-      style={sectionStyle}
       className="bg-cream"
     >
       <div className="mx-auto max-w-5xl px-4 py-14 sm:py-24">
@@ -140,14 +130,12 @@ export default function Ingredients({
           <p
             data-cms-text="home.ingredients.eyebrow"
             className="stamp-pop inline-block rounded-full bg-ink px-5 py-2 font-bold uppercase tracking-[0.25em] text-xs text-white shadow-[0_10px_30px_rgba(10,10,10,0.2)]"
-            style={subtitleStyle}
           >
             {eyebrow}
           </p>
           <h2
             data-cms-text="home.ingredients.title"
             className="title-curtain mt-5 font-black uppercase tracking-tight text-4xl leading-none text-ink sm:text-6xl"
-            style={titleStyle}
           >
             <span className="title-slide">{title}</span>
           </h2>
@@ -177,7 +165,6 @@ export default function Ingredients({
                 <span
                   data-cms-button="ingredients.benefits"
                   className="inline-flex items-center rounded-full border border-ink px-5 py-2 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 group-hover:border-cream group-hover:bg-cream group-hover:!text-ink group-focus-within:border-cream group-focus-within:bg-cream group-focus-within:!text-ink sm:text-xs"
-                  style={benefitsButtonStyle}
                 >
                   Ver beneficios
                 </span>

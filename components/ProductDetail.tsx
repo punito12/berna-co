@@ -62,9 +62,6 @@ export default function ProductDetail({
   }
 
   const images = product.imagesByBreadcrumb[selected] ?? [];
-  const descriptionStyle: React.CSSProperties = {
-    fontFamily: "var(--description-font, var(--font-fraunces), serif)",
-  };
   const categoryLabel = CATEGORY_LABELS[product.category] ?? product.category;
 
   return (
@@ -106,9 +103,11 @@ export default function ProductDetail({
         <div className="animate-fade-up" style={{ animationDelay: "180ms" }}>
           <RichText
             text={product.longDescription?.trim() || product.description}
-            style={descriptionStyle}
+            // Misma fuente que el cuerpo de "sobre nosotros" (Manrope, ya
+            // cargada globalmente por los estilos de texto del CMS).
+            style={{ fontFamily: '"Manrope", sans-serif' }}
             dataCmsSection="product.description"
-            className="mt-5 border-y border-line py-5 font-serif italic text-base leading-relaxed text-ink/80 sm:mt-6 sm:py-6 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
+            className="mt-5 border-y border-line py-5 text-base leading-relaxed text-ink/80 sm:mt-6 sm:py-6 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
           />
         </div>
 
@@ -121,8 +120,7 @@ export default function ProductDetail({
             </p>
             <RichText
               text={product.empanadoDescriptionByBreadcrumb[selected]}
-              style={descriptionStyle}
-              className="text-base leading-relaxed text-ink/80 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
+              className="font-serif italic text-base leading-relaxed text-ink/80 sm:text-lg [&_p]:mt-2 first:[&_p]:mt-0"
             />
           </div>
         )}

@@ -16,11 +16,8 @@ import {
   textStylesToCss,
   themeToCssVars,
 } from "@/lib/cms";
-import {
-  getStyleSettings,
-  styleSettingsToCssVars,
-} from "@/lib/cms-style-settings";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
+import { getCartLabels } from "@/lib/cms-cart-labels";
 import {
   DEFAULT_OG_IMAGE,
   SITE_NAME,
@@ -96,12 +93,7 @@ export default async function ProductPage({
   // --description-font) para que el cambio se vea en la vista previa del editor
   // ANTES de publicar. Fuera de preview esto queda vacío y no cambia nada.
   const previewCssVars = preview
-    ? [
-        themeToCssVars(getThemeColors(cms, true)),
-        styleSettingsToCssVars(getStyleSettings(cms, true)),
-      ]
-        .filter(Boolean)
-        .join(";")
+    ? themeToCssVars(getThemeColors(cms, true))
     : "";
   const previewTextCss = preview ? textStylesToCss(cms, true) : "";
   const productLabels = {
@@ -136,7 +128,24 @@ export default async function ProductPage({
       "Agregado al carrito ✓",
       preview
     ),
+    lastUnit: getSiteText(
+      cms,
+      "catalog.product.last_unit",
+      "¡Queda la última!",
+      preview
+    ),
+    cashShort: getSiteText(
+      cms,
+      "catalog.product.cash_short",
+      "Efectivo o transferencia",
+      preview
+    ),
   };
+  const headerLabels = {
+    productsLabel: getSiteText(cms, "header.products", "Productos", preview),
+    cartLabel: getSiteText(cms, "header.cart", "Carrito", preview),
+  };
+  const cartLabels = getCartLabels(cms, preview);
   const cartLabel = cms.texts.has("checkout.cart_label")
     ? getSiteText(cms, "checkout.cart_label", "Carrito", preview)
     : "Carrito";
@@ -152,7 +161,7 @@ export default async function ProductPage({
         <style dangerouslySetInnerHTML={{ __html: previewTextCss }} />
       )}
       {/* Mismo header que el home (variante visible al tope de la página) */}
-      <HomeHeader variant="page" />
+      <HomeHeader variant="page" {...headerLabels} />
 
       {/* pt alto: el header flotante es fixed y no empuja el contenido. */}
       <div className="mx-auto max-w-6xl px-4 pb-8 pt-24 sm:pb-12 sm:pt-28">
@@ -170,7 +179,7 @@ export default async function ProductPage({
       <CmsFooter preview={preview} />
       <WhatsappFloat />
       {/* Carrito flotante CRAV-style (desktop): FAB + blur + panel esquina. */}
-      <CartOverlay />
+      <CartOverlay labels={cartLabels} />
     </main>
   );
 }

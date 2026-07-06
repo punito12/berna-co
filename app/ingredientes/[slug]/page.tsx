@@ -7,11 +7,13 @@ import RichText from "@/components/RichText";
 import HomeHeader from "@/components/HomeHeader";
 import WhatsappFloat from "@/components/WhatsappFloat";
 import {
+  getSiteImage,
   getSiteText,
   isPreview,
   loadCmsBundle,
   textStylesToCss,
 } from "@/lib/cms";
+import { getCartLabels } from "@/lib/cms-cart-labels";
 import {
   getIngredientPage,
   INGREDIENT_PAGES,
@@ -75,6 +77,21 @@ export default async function IngredientDetailPage({
     ingredient.fallbackTitle,
     preview
   );
+  const stampLabel = getSiteText(cms, "ingredient.stamp", "Nuestros ingredientes", preview);
+  const preparationsLabel = getSiteText(cms, "ingredient.preparations", "En nuestras preparaciones", preview);
+  const backLabel = getSiteText(cms, "ingredient.back", "Volver", preview);
+  const ctaLabel = getSiteText(cms, "ingredient.cta", "Ver productos", preview);
+  const photoUrl = getSiteImage(
+    cms,
+    `ingredient.${ingredient.slug}.photo`,
+    `/images/ingredientes/${ingredient.slug}.png`,
+    preview
+  );
+  const headerLabels = {
+    productsLabel: getSiteText(cms, "header.products", "Productos", preview),
+    cartLabel: getSiteText(cms, "header.cart", "Carrito", preview),
+  };
+  const cartLabels = getCartLabels(cms, preview);
   const body = getSiteText(
     cms,
     ingredient.bodyKey,
@@ -99,7 +116,7 @@ export default async function IngredientDetailPage({
         <style dangerouslySetInnerHTML={{ __html: previewTextCss }} />
       )}
       {/* Mismo header que el home (variante visible al tope de la página) */}
-      <HomeHeader variant="page" />
+      <HomeHeader variant="page" {...headerLabels} />
 
       <section
         className="mx-auto max-w-6xl px-4 pb-10 pt-24 sm:pb-16 sm:pt-28"
@@ -113,7 +130,7 @@ export default async function IngredientDetailPage({
           }
           className="animate-fade-up mb-6 inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-white/85 px-5 py-2 font-bold uppercase tracking-widest text-xs text-ink shadow-[0_8px_25px_rgba(10,10,10,0.08)] backdrop-blur-xl transition-transform duration-200 hover:scale-105 active:scale-95 sm:mb-8"
         >
-          ‹ Volver<span className="hidden sm:inline">&nbsp;a ingredientes</span>
+          ‹ {backLabel}
         </Link>
 
         {/* Hero del ingrediente: texto izq + FOTO der (como "nuestros
@@ -121,7 +138,7 @@ export default async function IngredientDetailPage({
         <div className="grid items-center gap-8 sm:grid-cols-2 sm:gap-12">
           <div>
             <p className="animate-fade-up inline-block rounded-full bg-ink px-5 py-2 font-bold uppercase tracking-[0.25em] text-xs text-white shadow-[0_10px_30px_rgba(10,10,10,0.2)]">
-              Nuestros ingredientes
+              {stampLabel}
             </p>
             <div className="animate-fade-up" style={{ animationDelay: "90ms" }}>
               <RichText
@@ -138,7 +155,7 @@ export default async function IngredientDetailPage({
             style={{ animationDelay: "150ms" }}
           >
             <Image
-              src={`/images/ingredientes/${ingredient.slug}.png`}
+              src={photoUrl}
               alt={ingredient.fallbackTitle}
               fill
               sizes="(max-width: 640px) 90vw, 560px"
@@ -154,7 +171,7 @@ export default async function IngredientDetailPage({
           style={{ animationDelay: "260ms" }}
         >
           <p className="inline-block rounded-full bg-cream px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-ink">
-            En nuestras preparaciones
+            {preparationsLabel}
           </p>
           <RichText
             text={body}
@@ -197,13 +214,13 @@ export default async function IngredientDetailPage({
             }
             className="inline-flex min-h-11 items-center rounded-full bg-ink px-7 py-3 font-bold uppercase tracking-widest text-xs text-white shadow-[0_10px_30px_rgba(10,10,10,0.25)] transition-transform duration-200 hover:scale-105 active:scale-95"
           >
-            Ver productos
+            {ctaLabel}
           </Link>
         </div>
       </section>
 
       <WhatsappFloat />
-      <CartOverlay />
+      <CartOverlay labels={cartLabels} />
       <CmsFooter preview={preview} />
     </main>
   );
