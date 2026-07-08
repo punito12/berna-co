@@ -12,7 +12,6 @@ import {
   themeToCssVars,
   textStylesToCss,
 } from "@/lib/cms";
-import { cmsUsedGoogleFontsUrl } from "@/lib/cms-fonts";
 import { getGlobalSeo } from "@/lib/cms-seo";
 import {
   DEFAULT_OG_IMAGE,
@@ -126,19 +125,10 @@ export default async function RootLayout({
   // the admin edits a color.
   let cssVars = "";
   let textStyleCss = "";
-  // Solo las fuentes de Google realmente usadas en la config publicada del CMS.
-  // Por defecto (sin fuentes extra) queda "" y no se emite ningún <link>
-  // bloqueante a Google Fonts (Archivo/Fraunces ya van self-hosted).
-  let cmsFontsUrl = "";
   try {
     const bundle = await loadCmsBundle();
     cssVars = themeToCssVars(getThemeColors(bundle));
     textStyleCss = textStylesToCss(bundle);
-    cmsFontsUrl = cmsUsedGoogleFontsUrl([
-      bundle.content?.typography,
-      ...Array.from(bundle.texts.values()).map((t) => t.style),
-      ...bundle.sections.map((s) => s.config),
-    ]);
   } catch {
     // DB unavailable at render — fall back to the hex defaults in tailwind.
   }
@@ -146,37 +136,12 @@ export default async function RootLayout({
   return (
     <html lang="es-AR" className={`${archivo.variable} ${fraunces.variable}`}>
       <head>
-        {cmsFontsUrl && (
-          <>
-            <link rel="preconnect" href="https://fonts.googleapis.com" />
-            <link
-              rel="preconnect"
-              href="https://fonts.gstatic.com"
-              crossOrigin=""
-            />
-            {/* Google Fonts NO bloqueante: se carga con media="print" (no entra
-                al camino crítico de render) y un script chico la pasa a "all"
-                apenas baja. Las fuentes ya traen display=swap y el texto se ve
-                con la familia self-hosted (Archivo/Fraunces) mientras tanto.
-                <noscript> mantiene el fallback sin JS. */}
-            <link
-              href={cmsFontsUrl}
-              rel="stylesheet"
-              media="print"
-              data-cms-fonts=""
-            />
-            <script
-              dangerouslySetInnerHTML={{
-                __html:
-                  "(function(){var l=document.querySelector('link[data-cms-fonts]');if(l){l.media='all';}})();",
-              }}
-            />
-            <noscript>
-              {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-              <link href={cmsFontsUrl} rel="stylesheet" />
-            </noscript>
-          </>
-        )}
+        {/* Fotos de productos servidas desde el blob de Vercel: el preconnect
+            adelanta DNS+TLS antes de que el browser descubra las imágenes. */}
+        <link
+          rel="preconnect"
+          href="https://1prdjzeomtnocuao.public.blob.vercel-storage.com"
+        />
         {cssVars && (
           <style
             // CMS theme → CSS variables on :root. Tailwind tokens consume them.
