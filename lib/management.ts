@@ -9,7 +9,8 @@ import {
   orderPaymentListLabel,
   type PaymentBadgeTone,
 } from "@/lib/mp-order-status";
-import { adjustStockForLines } from "@/lib/stock";
+import {
+  applyStockDelta, adjustStockForLines } from "@/lib/stock";
 import { findCustomerByNormalizedName, normalizeClientName } from "@/lib/clients";
 
 // ---- Customers ----
@@ -314,12 +315,12 @@ export async function createManualSale(input: SaleInput) {
   const customerName =
     customer?.name ?? input.customerName?.trim() ?? null;
 
-  // Cuenta corriente / pendiente: la venta queda PENDING si el admin la marca
-  // pendiente O si el cliente es mayorista. Si no, queda PAID. Admin V2 no usa
-  // Caja, por lo que no se generan movimientos contables invisibles.
-  const onCredit = Boolean(input.paymentPending) || customer?.type === "MAYORISTA";
+  // Cuenta corriente / pendiente: la venta queda PENDING únicamente si el
+  // admin la marca pendiente de forma explícita. (Antes cualquier MAYORISTA
+  // quedaba PENDING automático → pagos pendientes fantasma en los reportes.)
+  const onCredit = Boolean(input.paymentPending);
   const dueDate =
-    customer?.type === "MAYORISTA"
+    onCredit && customer?.type === "MAYORISTA"
       ? new Date(soldAt.getTime() + DEFAULT_DUE_DAYS * 86400000)
       : null;
 
@@ -328,8 +329,9 @@ export async function createManualSale(input: SaleInput) {
   // (una venta que no descontó stock tampoco lo reintegra al cancelar).
   const discountStock = input.discountStock !== false;
 
-  const sale = await prisma.manualSale.create({
-    data: {
+  const sale = await prisma.$transaction(async (tx) => {
+    const created = await tx.manualSale.create({
+      data: {
       soldAt,
       channel: input.channel,
       customerId: customer?.id ?? null,
@@ -354,24 +356,24 @@ export async function createManualSale(input: SaleInput) {
         })),
       },
     },
-    select: { id: true, net: true, soldAt: true },
-  });
+      select: { id: true, net: true, soldAt: true },
+    });
 
-  // Discount stock for the lines that track a product + empanado (free-text
-  // lines are skipped). Cancelling the sale later restocks the same amount.
-  // Solo si la venta descuenta stock; si no, no se toca inventario ni el cache
-  // del home (que depende del stock).
-  if (discountStock) {
-    try {
-      await adjustStockForLines(lines, -1, {
-        type: "SALE",
-        referenceType: "MANUAL_SALE",
-        referenceId: sale.id,
-      });
-    } catch (e) {
-      console.error("adjustStockForLines (sale create) failed:", e);
+    // Stock EN LA MISMA transacción: si el descuento de stock falla, la venta
+    // no queda creada (antes el error se tragaba y la venta quedaba sin
+    // descontar inventario). Solo líneas con producto + empanado trackeados.
+    if (discountStock) {
+      for (const l of lines) {
+        if (!l.productId || !l.breadcrumbType || l.quantity <= 0) continue;
+        await applyStockDelta(tx, l.productId, l.breadcrumbType, -l.quantity, {
+          type: "SALE",
+          referenceType: "MANUAL_SALE",
+          referenceId: created.id,
+        });
+      }
     }
-  }
+    return created;
+  });
 
   // El caller (ruta API) revalida el cache del home si cambió stock. La
   // revalidación vive en la ruta (server-only) para no arrastrar next/headers

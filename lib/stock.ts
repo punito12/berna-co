@@ -76,7 +76,12 @@ export async function applyStockDelta(
   });
   if (!product) return;
   const stocks = parseMap(product.stocks);
-  const next = Math.max(0, (stocks[breadcrumb] ?? 0) + delta);
+  const current = stocks[breadcrumb] ?? 0;
+  const next = Math.max(0, current + delta);
+  // Delta realmente aplicado (el clamp a 0 puede achicarlo). El movimiento
+  // registra ESTO — antes registraba el pedido y el ledger divergía del stock.
+  const applied = next - current;
+  if (applied === 0) return;
   stocks[breadcrumb] = next;
   const total = Object.values(stocks).reduce((a, b) => a + b, 0);
   await tx.product.update({
@@ -88,7 +93,7 @@ export async function applyStockDelta(
       date: ctx.date ?? new Date(),
       productId,
       breadcrumbType: breadcrumb,
-      quantity: delta,
+      quantity: applied,
       type: ctx.type,
       referenceType: ctx.referenceType ?? null,
       referenceId: ctx.referenceId ?? null,

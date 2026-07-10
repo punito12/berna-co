@@ -12,7 +12,9 @@
     "db:seed:cms": "tsx prisma/seed-cms.ts",
     "db:whoami": "tsx scripts/db-whoami.ts",
     "migrate:sqlite-to-postgres": "tsx scripts/migrate-sqlite-to-postgres.ts",
-    "db:reset": "prisma migrate reset --force && npm run db:seed && npm run db:seed:cms"
+    "db:reset": "prisma migrate reset --force && npm run db:seed && npm run db:seed:cms",
+    "test": "vitest run",
+    "smoke": "tsx scripts/smoke-orders.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -44,6 +46,7 @@
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.15",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.10"
   }
 }

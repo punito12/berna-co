@@ -124,6 +124,15 @@ export async function deleteSaleOrOrder(
   id: string
 ): Promise<void> {
   if (kind === "MANUAL") {
+    // Guarda: una venta con pagos REGISTRADOS no se borra (el borrado
+    // eliminaría en cascada el historial de esos cobros). Cancelala, o
+    // eliminá primero los pagos si fue un error de carga.
+    const paymentCount = await prisma.payment.count({ where: { saleId: id } });
+    if (paymentCount > 0) {
+      throw new Error(
+        "Esta venta tiene pagos registrados y no se puede borrar. Cancelala, o eliminá los pagos primero si fue un error de carga."
+      );
+    }
     // deleteManualSale already restocks when needed.
     await deleteManualSale(id);
     return;
@@ -134,6 +143,21 @@ export async function deleteSaleOrOrder(
     include: { items: true },
   });
   if (!order) throw new Error("Pedido no encontrado.");
+
+  // Guarda: un pedido con plata de por medio (pagado/parcial, pago MP
+  // aprobado, o pagos registrados) NO se borra: se pierde el rastro del
+  // cobro. Cancelalo; el reembolso, si corresponde, se gestiona en MP.
+  const orderPayments = await prisma.payment.count({ where: { orderId: id } });
+  if (
+    order.paymentStatus === "PAID" ||
+    order.paymentStatus === "PARTIAL" ||
+    order.mpPaymentId ||
+    orderPayments > 0
+  ) {
+    throw new Error(
+      "Este pedido tiene pagos asociados y no se puede borrar definitivamente. Cancelalo — si hay que devolver plata, el reembolso se gestiona en Mercado Pago."
+    );
+  }
   const wasCancelled = order.status === "CANCELLED";
 
   await prisma.$transaction(async (tx) => {
@@ -250,6 +274,15 @@ export async function editSale(
     const productsTotal = newLines.reduce((a, l) => a + l.lineSubtotal, 0);
     const newTotal = productsTotal + (order.shippingCost ?? 0) - order.discountAmount;
 
+    // Guarda: si el pedido ya está COBRADO, editarlo cambiando el total deja
+    // el cobro y el pedido diciendo números distintos. Ajustes post-cobro se
+    // resuelven con un pago/ajuste registrado, no reescribiendo el total.
+    if (order.paymentStatus === "PAID" && Math.max(0, newTotal) !== order.total) {
+      throw new Error(
+        "Este pedido ya está cobrado: no se puede editar cambiando el total. Registrá un ajuste/reembolso en Pagos, o cancelá y cargá uno nuevo."
+      );
+    }
+
     await prisma.$transaction(async (tx) => {
       await applyStockDiff(tx, oldUnits, newUnits, "ORDER", id, shortId);
       await tx.orderItem.deleteMany({ where: { orderId: id } });
@@ -290,6 +323,16 @@ export async function editSale(
     const gross = newLines.reduce((a, l) => a + l.lineSubtotal, 0);
     const discountAmount = Math.round((gross * sale.discountPct) / 100);
     const net = gross - discountAmount;
+
+    // Guarda: si la venta tiene pagos REGISTRADOS y ya está saldada, cambiarle
+    // el total desincroniza venta y cobros. (El PAID "de mostrador" sin pagos
+    // registrados sigue siendo editable — es solo un marcador.)
+    const salePayments = await prisma.payment.count({ where: { saleId: id } });
+    if (salePayments > 0 && sale.paymentStatus === "PAID" && net !== sale.net) {
+      throw new Error(
+        "Esta venta ya está cobrada con pagos registrados: no se puede editar cambiando el total. Registrá un ajuste en Pagos, o cancelá y cargá una nueva."
+      );
+    }
 
     await prisma.$transaction(async (tx) => {
       // Solo reconciliar stock si la venta había descontado stock al cargarse.

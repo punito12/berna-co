@@ -118,7 +118,9 @@ export default function SaleDetailActions(props: ActionsData) {
             onClick={() =>
               setStatus(
                 "CANCELLED",
-                "¿Cancelar este pedido? Se repone el stock. No se puede reactivar."
+                props.balance <= 0
+                  ? "OJO: este pedido ya está COBRADO. Cancelar repone el stock pero NO devuelve la plata — el reembolso (si corresponde) se gestiona aparte, en Mercado Pago o a mano. ¿Cancelar igual?"
+                  : "¿Cancelar este pedido? Se repone el stock. No se puede reactivar."
               )
             }
             disabled={busy}
