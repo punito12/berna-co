@@ -3,11 +3,7 @@ import { prisma } from "@/lib/db";
 import BernaLogo from "@/components/BernaLogo";
 import CmsFooter from "@/components/CmsFooter";
 import RetryPaymentButton from "@/components/RetryPaymentButton";
-import {
-  cancelUnpaidMercadoPagoOrder,
-  syncPaymentToOrder,
-  isMpConfigured,
-} from "@/lib/mercadopago";
+import { syncPaymentToOrder, isMpConfigured } from "@/lib/mercadopago";
 import { getSiteText, isPreview, loadCmsBundle } from "@/lib/cms";
 import { isCmsPreviewRequest } from "@/lib/cms-preview";
 import { BUSINESS_WHATSAPP } from "@/lib/whatsapp";
@@ -24,18 +20,17 @@ export default async function ErrorPage({
     preview?: string;
   };
 }) {
+  // Solo RECONCILIAMOS contra el estado real de MP (idempotente y seguro).
+  // Nunca cancelamos por GET: esta URL puede ser visitada por bots de preview
+  // de links (WhatsApp/Telegram) si el cliente la comparte, y cancelar acá
+  // le repondría stock y mataría un pedido que todavía puede reintentar pagar.
+  // Los rechazos definitivos los resuelve el webhook de MP.
   const mpPaymentId = searchParams.payment_id || searchParams.collection_id;
   if (mpPaymentId && isMpConfigured()) {
     try {
       await syncPaymentToOrder(mpPaymentId);
     } catch (e) {
       console.error("sync on error failed:", e);
-    }
-  } else if (searchParams.id) {
-    try {
-      await cancelUnpaidMercadoPagoOrder(searchParams.id);
-    } catch (e) {
-      console.error("cancel unpaid MP order on error failed:", e);
     }
   }
 

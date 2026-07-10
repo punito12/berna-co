@@ -45,8 +45,12 @@ export async function POST(request: Request) {
     });
 
     if (!signature.configured) {
-      console.warn(
-        "[mp/webhook] MERCADOPAGO_WEBHOOK_SECRET no está configurado; se acepta la notificación sin validar firma."
+      // ERROR (no warn): sin secret, cualquiera puede forjar notificaciones.
+      // Se acepta para no romper la sincronización de pagos, pero tiene que
+      // gritar en los logs hasta que MERCADOPAGO_WEBHOOK_SECRET esté en Vercel
+      // Y el secret coincida con el configurado en el panel de Mercado Pago.
+      console.error(
+        "[mp/webhook] MERCADOPAGO_WEBHOOK_SECRET NO configurado: notificación aceptada SIN validar firma. Configurarlo YA."
       );
     } else if (!signature.valid) {
       console.warn("[mp/webhook] firma inválida:", signature.reason);

@@ -182,6 +182,9 @@ export type PublicDeliveryConfig = {
     name: string;
     schedule: LocalityScheduleDay[];
     scheduleOptions: DeliveryOptions;
+    // Costo de envío plano de la localidad (el server sigue siendo la
+    // autoridad al crear el pedido; esto es solo para MOSTRARLO antes).
+    shippingCost: number;
   }[];
 };
 
@@ -198,6 +201,7 @@ export async function getPublicDeliveryConfig(): Promise<PublicDeliveryConfig> {
         name: l.name,
         schedule: l.schedule,
         scheduleOptions: localityScheduleOptions(l, globalOptions),
+        shippingCost: Math.max(0, Math.round(l.shippingCost || 0)),
       })),
   };
 }

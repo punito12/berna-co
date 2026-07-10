@@ -5,7 +5,11 @@ import {
   type CreateOrderInput,
 } from "@/lib/orders";
 import { linkOrderToCustomer } from "@/lib/management";
-import { createPreferenceForOrder, isMpConfigured } from "@/lib/mercadopago";
+import {
+  cancelUnpaidMercadoPagoOrder,
+  createPreferenceForOrder,
+  isMpConfigured,
+} from "@/lib/mercadopago";
 import { prisma } from "@/lib/db";
 import { recordEvent } from "@/lib/analytics";
 
@@ -85,18 +89,38 @@ export async function POST(request: Request) {
     await trackOrderCreated(result.id, body.analytics);
 
     // Mercado Pago: create the preference and return its checkout URL.
+    // Si la preferencia falla (o MP no está configurado), COMPENSAMOS: el
+    // pedido recién creado se cancela (repone stock) para no dejar un pedido
+    // huérfano sin link de pago con stock reservado.
     if (body.paymentMethod === "MERCADOPAGO") {
       if (!isMpConfigured()) {
+        await cancelUnpaidMercadoPagoOrder(result.id).catch((e) =>
+          console.error("compensación (MP no configurado) falló:", e)
+        );
         return NextResponse.json(
           { error: "El pago con Mercado Pago no está disponible por ahora." },
           { status: 503 }
         );
       }
-      const pref = await createPreferenceForOrder(result.id);
-      return NextResponse.json(
-        { id: result.id, paymentUrl: pref.url },
-        { status: 201 }
-      );
+      try {
+        const pref = await createPreferenceForOrder(result.id);
+        return NextResponse.json(
+          { id: result.id, paymentUrl: pref.url },
+          { status: 201 }
+        );
+      } catch (e) {
+        console.error("createPreferenceForOrder falló, compensando:", e);
+        await cancelUnpaidMercadoPagoOrder(result.id).catch((err) =>
+          console.error("compensación (preferencia falló) también falló:", err)
+        );
+        return NextResponse.json(
+          {
+            error:
+              "No pudimos iniciar el pago con Mercado Pago. Probá de nuevo o elegí otro medio de pago.",
+          },
+          { status: 502 }
+        );
+      }
     }
 
     return NextResponse.json(result, { status: 201 });

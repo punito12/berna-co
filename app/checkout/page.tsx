@@ -22,6 +22,7 @@ type PublicManualLocality = {
   name: string;
   schedule: LocalityScheduleDay[];
   scheduleOptions: DeliveryOptions;
+  shippingCost: number;
 };
 
 function slotLabel(slot: { from: string; to: string }) {
@@ -143,6 +144,7 @@ export default function CheckoutPage() {
             ? d.localities
                 .map((l: Partial<PublicManualLocality>) => ({
                   name: typeof l.name === "string" ? l.name : "",
+                  shippingCost: Math.max(0, Math.round(Number(l.shippingCost) || 0)),
                   schedule: Array.isArray(l.schedule) ? l.schedule : [],
                   scheduleOptions: {
                     enabledWeekdays: Array.isArray(
@@ -314,12 +316,23 @@ export default function CheckoutPage() {
       : 0;
   const afterDiscounts = Math.max(0, afterCode - methodDiscount);
 
-  // Delivery fee: free when the zone has a threshold and the (discounted) total
-  // reaches it.
+  // Delivery fee. Modo manual: costo plano de la localidad elegida (igual que
+  // el server — SIN umbral de envío gratis). Modo mapa: costo de la zona con
+  // su umbral. El server recalcula todo al confirmar; esto es solo display.
+  const manualLocalityShipping =
+    deliveryType === "DELIVERY" && deliveryMode === "manual"
+      ? manualLocalities.find(
+          (l) => normalizeLocalityName(l.name) === normalizeLocalityName(locality)
+        )?.shippingCost ?? 0
+      : 0;
   const shipping =
-    freeShippingFrom > 0 && afterDiscounts >= freeShippingFrom
+    deliveryType !== "DELIVERY"
       ? 0
-      : shippingCost;
+      : deliveryMode === "manual"
+        ? manualLocalityShipping
+        : freeShippingFrom > 0 && afterDiscounts >= freeShippingFrom
+          ? 0
+          : shippingCost;
   const grandTotal = afterDiscounts + shipping;
 
   async function applyCode() {
@@ -1334,7 +1347,11 @@ export default function CheckoutPage() {
               locality.trim() && (
                 <div className="flex items-center justify-between text-muted">
                   <span>{ct("checkout.summary.shipping", "Envío")}</span>
-                  <span>Se calcula al confirmar</span>
+                  <span>
+                    {shipping === 0
+                      ? ct("checkout.summary.free", "Gratis")
+                      : formatPrice(shipping)}
+                  </span>
                 </div>
               )}
           </div>
