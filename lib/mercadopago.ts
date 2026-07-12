@@ -114,6 +114,7 @@ export async function syncPaymentToOrder(paymentId: string): Promise<void> {
       status: true,
       paymentMethod: true,
       mpPaymentId: true,
+      notes: true,
     },
   });
   if (!order) return;
@@ -121,6 +122,28 @@ export async function syncPaymentToOrder(paymentId: string): Promise<void> {
   const paymentStatus = String(payment.status ?? "");
 
   if (paymentStatus === "approved") {
+    // Aprobación tardía sobre un pedido YA CANCELADO: el stock ya se repuso y
+    // pudo venderse de nuevo, así que reactivarlo automáticamente arriesga una
+    // doble venta. Registramos el cobro pero el pedido queda cancelado, con
+    // una nota visible para el operador (resolver a mano: reembolsar en MP o
+    // recrear el pedido).
+    if (order.status === "CANCELLED") {
+      const aviso =
+        "PAGO MP APROBADO DESPUÉS DE LA CANCELACIÓN: el cliente pagó un pedido que ya estaba cancelado (stock ya repuesto). Resolver a mano: reembolsar en Mercado Pago o recrear el pedido.";
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          mpPaymentId: String(payment.id),
+          paymentStatus: "PAID",
+          notes: order.notes ? `${order.notes}\n\n${aviso}` : aviso,
+        },
+      });
+      console.error(
+        `[mp] pago aprobado tardío sobre pedido CANCELADO ${order.id} (payment ${payment.id}) — requiere revisión manual`
+      );
+      return;
+    }
+
     await prisma.order.update({
       where: { id: order.id },
       data: {

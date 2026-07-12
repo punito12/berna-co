@@ -689,6 +689,15 @@ export async function listProductsForSale() {
     } catch {
       cashPriceMap = {};
     }
+    // Stock por empanado: el form lo usa para AVISAR (no bloquear) cuando la
+    // cantidad vendida supera lo registrado — la venta de mostrador sale igual.
+    let stockMap: Record<string, number> = {};
+    try {
+      const st = JSON.parse(p.stocks ?? "{}");
+      if (st && typeof st === "object") stockMap = st;
+    } catch {
+      stockMap = {};
+    }
     return {
       id: p.id,
       name: p.name,
@@ -697,6 +706,7 @@ export async function listProductsForSale() {
       breadcrumbs,
       prices: priceMap,
       cashPrices: cashPriceMap,
+      stocks: stockMap,
     };
   });
 }

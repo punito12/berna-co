@@ -3,8 +3,9 @@ import { syncPaymentToOrder } from "@/lib/mercadopago";
 import { validateMercadoPagoWebhookSignature } from "@/lib/mp-webhook-signature";
 
 // Mercado Pago payment notifications (server-to-server). MP sends the payment
-// id; we fetch the payment and update the linked order's status. We always
-// answer 200 quickly so MP doesn't keep retrying — errors are logged.
+// id; we fetch the payment and update the linked order's status. On internal
+// failure we answer 5xx so MP retries (the sync is idempotent, so retries are
+// safe); bad signatures get 401 and everything else 200.
 //
 // MP may notify via query params (?type=payment&data.id=...) or JSON body
 // ({ type, data: { id } }); we handle both.
@@ -64,9 +65,15 @@ export async function POST(request: Request) {
       await syncPaymentToOrder(paymentId);
     }
   } catch (error) {
-    console.error("mp/webhook error:", error);
+    // Fallo interno (DB ocupada, timeout del SDK de MP): responder 5xx para
+    // que Mercado Pago REINTENTE la notificación. Antes se respondía 200 y un
+    // pago aprobado podía quedar como pendiente para siempre.
+    console.error("mp/webhook error (se pide reintento a MP):", error);
+    return NextResponse.json(
+      { error: "Error interno, reintentar." },
+      { status: 500 }
+    );
   }
-  // Always 200: MP retries on non-2xx, and our processing is idempotent.
   return NextResponse.json({ received: true });
 }
 

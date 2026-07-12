@@ -323,6 +323,7 @@ export async function duplicatePresupuesto(id: string): Promise<{ id: string }> 
       status: "BORRADOR",
       discountPercent: src.discountPercent,
       notesInternal: src.notesInternal,
+      total: src.total,
       items: {
         create: src.items.map((it) => ({
           productId: it.productId,
@@ -331,6 +332,9 @@ export async function duplicatePresupuesto(id: string): Promise<{ id: string }> 
           variantName: it.variantName,
           listPrice: it.listPrice,
           wholesalePrice: it.wholesalePrice,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          subtotal: it.subtotal,
           sortOrder: it.sortOrder,
         })),
       },

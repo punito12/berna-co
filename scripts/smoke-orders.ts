@@ -73,7 +73,10 @@ async function main() {
     d.setDate(d.getDate() + 1);
     if (enabled.includes(d.getDay())) break;
   }
-  const dateIso = d.toISOString().slice(0, 10);
+  // Igual que el checkout real: mandar mediodía local ("T12:00:00"), no la
+  // fecha pelada — el server parsea con new Date() y una medianoche UTC leída
+  // en hora argentina cae en el día ANTERIOR (rechazaba días válidos).
+  const dateIso = `${d.toLocaleDateString("en-CA")}T12:00:00`;
 
   const tiersResp = await fetch(`${BASE}/api/quantity-discounts`).then((r) => r.json());
   const tiers: { minKg: number; discountPercent: number }[] = tiersResp.tiers ?? [];

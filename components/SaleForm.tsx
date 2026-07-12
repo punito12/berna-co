@@ -13,6 +13,7 @@ type ProductOption = {
   breadcrumbs: string[];
   prices: Record<string, number>; // precio web por empanado
   cashPrices?: Record<string, number>; // precio efectivo por empanado
+  stocks?: Record<string, number>; // stock registrado por empanado (para avisar)
 };
 // A customer search result (from /api/admin/customers/search).
 type SearchResult = {
@@ -570,6 +571,23 @@ export default function SaleForm({
                 >
                   ✕
                 </button>
+                {/* Aviso NO bloqueante: la venta de mostrador sale igual aunque
+                    el sistema registre menos stock (el stock clampa en 0). */}
+                {(() => {
+                  if (!discountStock || !line.productId || !line.breadcrumbType)
+                    return null;
+                  const p = products.find((x) => x.id === line.productId);
+                  const avail = p?.stocks?.[line.breadcrumbType];
+                  const qty = Number(line.quantity) || 0;
+                  if (typeof avail !== "number" || qty <= avail) return null;
+                  return (
+                    <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 sm:col-span-5">
+                      Ojo: estás vendiendo {qty} y el sistema registra{" "}
+                      {Math.max(0, avail)} en stock. La venta sale igual y el
+                      stock queda en 0.
+                    </p>
+                  );
+                })()}
               </div>
             );
           })}

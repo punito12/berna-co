@@ -96,11 +96,16 @@ async function cancelSale(kind: SaleKind, id: string): Promise<void> {
     if (!sale) throw new Error("Venta no encontrada.");
     if (sale.deliveryStatus === "CANCELLED") return;
 
-    const items: CancelItem[] = sale.items.map((it) => ({
-      productId: it.productId,
-      breadcrumbType: it.breadcrumbType,
-      quantity: it.quantity,
-    }));
+    // Una venta cargada con "no descontar stock" nunca saco unidades del
+    // inventario, asi que cancelarla tampoco debe reponerlas (antes inflaba
+    // stock fantasma). Con items vacios, runCancellation solo cambia estado.
+    const items: CancelItem[] = sale.stockDiscounted
+      ? sale.items.map((it) => ({
+          productId: it.productId,
+          breadcrumbType: it.breadcrumbType,
+          quantity: it.quantity,
+        }))
+      : [];
     await runCancellation({
       refId: id,
       shortId: id.slice(-6).toUpperCase(),
