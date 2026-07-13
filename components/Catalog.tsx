@@ -178,7 +178,6 @@ export default function Catalog({
                     alt="Huevos de gallinas libres"
                     fill
                     sizes="320px"
-                    loading="eager"
                     className="object-contain object-left-bottom"
                   />
                 </div>
@@ -191,7 +190,6 @@ export default function Catalog({
                     alt="Empanado simple"
                     fill
                     sizes="320px"
-                    loading="eager"
                     className="object-contain object-right-bottom"
                   />
                 </div>
@@ -210,9 +208,10 @@ export default function Catalog({
                 alt="Milanesas Berna&Co"
                 fill
                 sizes="(max-width: 640px) 90vw, 440px"
-                // eager: decodificada ANTES de llegar scrolleando (el decode
-                // lazy en pleno scroll trababa la animación de la sección)
-                loading="eager"
+                // Lazy: está bajo el fold y su descarga competía con el hero
+                // en el arranque. El margen nativo de lazy la pide bastante
+                // antes de entrar al viewport; con la fuente comprimida el
+                // decode ya no traba la animación (motivo del eager original).
                 className="object-cover"
               />
             </div>

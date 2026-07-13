@@ -67,14 +67,15 @@ export default function BernaLogo({
   }
 
   // PNG/JPG: next/image lo redimensiona (AVIF/WebP) y agrega dimensiones.
-  // El logo del hero (lg) está arriba de todo → priority; el chico puede ser lazy.
+  // El logo del hero (lg) carga eager (está arriba de todo) pero SIN preload:
+  // el único <link rel=preload> de la página es el hero, la verdadera LCP.
   return (
     <Image
       src={imageSrc}
       alt="Berna&co"
       width={LOGO_W}
       height={LOGO_H}
-      priority={size === "lg"}
+      loading={size === "lg" ? "eager" : "lazy"}
       sizes="(max-width: 640px) 160px, 210px"
       className={cls}
       onError={() => setFailed(true)}
