@@ -246,6 +246,7 @@ model Customer {
   orders       Order[]
   remitos      Remito[]
   presupuestos Presupuesto[]
+  prospectStores ProspectStore[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -817,4 +818,276 @@ model PresupuestoItem {
   createdAt DateTime @default(now())
 
   @@index([presupuestoId])
+}
+
+// ---- Puntos potenciales de venta (descubrimiento comercial) ----
+
+// Área comercial editable. Es independiente de Zone (reparto): una misma
+// localidad puede tener polígonos comerciales y logísticos diferentes.
+model ProspectZone {
+  id      String @id @default(cuid())
+  name    String
+  kind    String @default("CUSTOM") // NEIGHBORHOOD | LOCALITY | GATED_COMMUNITY | COMMERCIAL_CENTER | CUSTOM
+  tier    String @default("C") // A | B | C | EXCLUDED
+  polygon String // GeoJSON Polygon, JSON stringificado
+
+  active            Boolean @default(true)
+  scanEnabled       Boolean @default(true)
+  gridSpacingMeters Int     @default(700)
+  searchRadiusMeters Int    @default(500)
+  defaultRequestLimit Int   @default(250)
+  notes             String  @default("")
+
+  queries   ProspectZoneQuery[]
+  scans     ProspectScan[]
+  prospects ProspectStore[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tier])
+  @@index([active, scanEnabled])
+}
+
+// Catálogo editable de búsquedas. TYPE usa Nearby Search; TEXT usa Text Search.
+model ProspectSearchQuery {
+  id             String  @id @default(cuid())
+  label          String
+  provider       String  @default("GOOGLE") // GOOGLE | GREEN_LIFE
+  mode           String  @default("TEXT") // TYPE | TEXT | DIRECTORY
+  value          String
+  placeTypes     String  @default("[]") // JSON array de Google Place types
+  categoryFamily String  @default("GENERAL")
+  active         Boolean @default(true)
+  sortOrder      Int     @default(0)
+
+  zones ProspectZoneQuery[]
+  cells ProspectScanCell[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([provider, active])
+  @@index([sortOrder])
+}
+
+model ProspectZoneQuery {
+  zoneId  String
+  zone    ProspectZone        @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  queryId String
+  query   ProspectSearchQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+
+  @@id([zoneId, queryId])
+  @@index([queryId])
+}
+
+// Configuración determinística editable (tiers, categorías, palabras y
+// exclusiones). Singleton: id = "singleton"; config siempre se parsea con fallback.
+model ProspectScoringConfig {
+  id     String @id @default("singleton")
+  config String @default("{}")
+
+  updatedAt DateTime @updatedAt
+}
+
+// Un scan se crea rápido desde el admin y luego lo consume el worker/cron.
+model ProspectScan {
+  id     String       @id @default(cuid())
+  zoneId String
+  zone   ProspectZone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+
+  status String @default("PENDING") // PENDING | RUNNING | PAUSED | COMPLETED | PARTIAL_FAILED | LIMIT_REACHED | CANCELLED
+  querySnapshot String @default("[]") // JSON de las consultas seleccionadas
+  includeActivityData Boolean @default(false) // Legacy: discovery nunca solicita rating/reseñas.
+  requestLimit Int
+  resultLimitPerRequest Int @default(20)
+  estimatedRequests Int @default(0)
+  estimatedDetailRequests Int @default(0)
+  estimatedCostUsdCents Int @default(0)
+  estimatedMaxCostUsdCents Int @default(0)
+
+  requestCount       Int @default(0)
+  detailRequestCount Int @default(0)
+  successfulRequests Int @default(0)
+  failedRequests     Int @default(0)
+  newProspects       Int @default(0)
+  updatedProspects   Int @default(0)
+  duplicatesDetected Int @default(0)
+  errorLog           String @default("[]") // JSON array de errores estructurados
+
+  lockToken     String?
+  lockExpiresAt DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  cells             ProspectScanCell[]
+  discoveredStores  ProspectStore[]
+  sources            ProspectSource[]
+
+  @@index([status, createdAt])
+  @@index([zoneId, createdAt])
+  @@index([lockExpiresAt])
+}
+
+// Unidad idempotente: un punto de grilla + una consulta. La clave se deriva de
+// scan/punto/query, por lo que reintentar nunca duplica una celda.
+model ProspectScanCell {
+  id       String       @id @default(cuid())
+  scanId   String
+  scan     ProspectScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  queryId  String?
+  query    ProspectSearchQuery? @relation(fields: [queryId], references: [id], onDelete: SetNull)
+
+  key           String
+  pointIndex    Int
+  latitude      Float
+  longitude     Float
+  radiusMeters  Int
+  querySnapshot String
+  status        String @default("PENDING") // PENDING | RUNNING | COMPLETED | FAILED | SKIPPED
+  attempts      Int    @default(0)
+  requestCount  Int    @default(0)
+  detailRequestCount Int @default(0)
+  resultCount   Int    @default(0)
+  error         String?
+  nextAttemptAt DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+
+  sources ProspectSource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([scanId, key])
+  @@index([scanId, status, pointIndex])
+  @@index([nextAttemptAt])
+}
+
+// Prospecto descubierto. No contiene contactos ni datos personales y no se
+// convierte en Customer hasta una acción explícita del operador.
+model ProspectStore {
+  id                String @id @default(cuid())
+  name              String
+  normalizedName    String
+  address           String
+  normalizedAddress String
+  neighborhood      String?
+  locality          String?
+  province          String?
+  country           String @default("Argentina")
+  latitude          Float
+  longitude         Float
+
+  zoneId String?
+  zone   ProspectZone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  discoveryScanId String?
+  discoveryScan   ProspectScan? @relation(fields: [discoveryScanId], references: [id], onDelete: SetNull)
+
+  googlePlaceId  String? @unique
+  googleMapsUrl  String?
+  categoryKey    String
+  rawCategories  String @default("[]")
+  detectedKeywords String @default("[]")
+  operatingStatus String?
+  permanentlyClosed Boolean @default(false)
+  rating          Float?
+  reviewCount     Int?
+
+  score            Int    @default(0)
+  scoreBreakdown   String @default("[]")
+  scoreExplanation String @default("")
+  isExcluded       Boolean @default(false)
+  ambiguousClassification Boolean @default(false)
+  classificationSource String @default("RULES") // RULES | MANUAL | AI
+  classificationConfidence Float @default(1)
+
+  status String @default("NEW") // NEW | PENDING_REVIEW | INTERESTING | HIGH_PRIORITY | VISITED | EXISTING_CLIENT | DISCARDED | DUPLICATE | CLOSED
+  notes  String @default("")
+  manualCategory String?
+  manualScore Int?
+  manualScoreReason String?
+
+  existingClientCandidateId String?
+  linkedCustomerId String?
+  linkedCustomer Customer? @relation(fields: [linkedCustomerId], references: [id], onDelete: SetNull)
+
+  firstDiscoveredAt DateTime @default(now())
+  lastVerifiedAt    DateTime @default(now())
+  reviewedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  sources       ProspectSource[]
+  statusHistory ProspectStatusHistory[]
+  duplicateAsFirst  ProspectDuplicateCandidate[] @relation("ProspectDuplicateFirst")
+  duplicateAsSecond ProspectDuplicateCandidate[] @relation("ProspectDuplicateSecond")
+
+  @@index([score])
+  @@index([status])
+  @@index([categoryKey])
+  @@index([province, locality])
+  @@index([zoneId])
+  @@index([firstDiscoveredAt])
+  @@index([normalizedName, normalizedAddress])
+  @@index([latitude, longitude])
+  @@index([existingClientCandidateId])
+  @@index([linkedCustomerId])
+}
+
+// Una fila por referencia pública al mismo local. sourceFingerprint permite
+// upsert idempotente aun cuando distintos barridos vuelven a encontrarlo.
+model ProspectSource {
+  id                String @id @default(cuid())
+  prospectId        String
+  prospect          ProspectStore @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  provider          String // GOOGLE | GREEN_LIFE
+  sourceFingerprint String @unique
+  externalId        String?
+  listingUrl        String?
+  rawCategory       String?
+  rawData           String @default("{}")
+  scanId            String?
+  scan              ProspectScan? @relation(fields: [scanId], references: [id], onDelete: SetNull)
+  cellId            String?
+  cell              ProspectScanCell? @relation(fields: [cellId], references: [id], onDelete: SetNull)
+  firstSeenAt       DateTime @default(now())
+  lastSeenAt        DateTime @default(now())
+
+  @@index([prospectId])
+  @@index([provider, externalId])
+  @@index([scanId])
+  @@index([cellId])
+}
+
+model ProspectStatusHistory {
+  id         String @id @default(cuid())
+  prospectId String
+  prospect   ProspectStore @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  fromStatus String?
+  toStatus   String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([prospectId, createdAt])
+}
+
+// Solo se crea para similitudes no concluyentes. Nunca se fusiona automáticamente.
+model ProspectDuplicateCandidate {
+  id       String @id @default(cuid())
+  firstId  String
+  first    ProspectStore @relation("ProspectDuplicateFirst", fields: [firstId], references: [id], onDelete: Cascade)
+  secondId String
+  second   ProspectStore @relation("ProspectDuplicateSecond", fields: [secondId], references: [id], onDelete: Cascade)
+  status   String @default("PENDING") // PENDING | MERGED | DISMISSED
+  similarity Float
+  reasons    String @default("[]")
+  createdAt  DateTime @default(now())
+  reviewedAt DateTime?
+
+  @@unique([firstId, secondId])
+  @@index([status, similarity])
+  @@index([secondId])
 }

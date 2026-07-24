@@ -14,7 +14,8 @@
     "migrate:sqlite-to-postgres": "tsx scripts/migrate-sqlite-to-postgres.ts",
     "db:reset": "prisma migrate reset --force && npm run db:seed && npm run db:seed:cms",
     "test": "vitest run",
-    "smoke": "tsx scripts/smoke-orders.ts"
+    "smoke": "tsx scripts/smoke-orders.ts",
+    "prospects:worker": "tsx scripts/prospect-worker.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -41,7 +42,11 @@
     "@types/node": "^20.17.6",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35",
     "postcss": "^8.4.49",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.15",
