@@ -23,6 +23,7 @@ type PublicManualLocality = {
   schedule: LocalityScheduleDay[];
   scheduleOptions: DeliveryOptions;
   shippingCost: number;
+  minimumUnits: number;
 };
 
 function slotLabel(slot: { from: string; to: string }) {
@@ -145,6 +146,10 @@ export default function CheckoutPage() {
                 .map((l: Partial<PublicManualLocality>) => ({
                   name: typeof l.name === "string" ? l.name : "",
                   shippingCost: Math.max(0, Math.round(Number(l.shippingCost) || 0)),
+                  minimumUnits: Math.max(
+                    0,
+                    Math.floor(Number(l.minimumUnits) || 0)
+                  ),
                   schedule: Array.isArray(l.schedule) ? l.schedule : [],
                   scheduleOptions: {
                     enabledWeekdays: Array.isArray(
@@ -584,6 +589,16 @@ export default function CheckoutPage() {
         }
         if (!street.trim())
           return setError(ct("checkout.validation.street", "Ingresá la calle y número."));
+        if (
+          selectedManualLocality &&
+          selectedManualLocality.minimumUnits > 0 &&
+          totalUnits < selectedManualLocality.minimumUnits
+        ) {
+          const missing = selectedManualLocality.minimumUnits - totalUnits;
+          return setError(
+            `Para envíos a ${selectedManualLocality.name}, el pedido mínimo es de ${selectedManualLocality.minimumUnits} unidades. Agregá ${missing} ${missing === 1 ? "unidad más" : "unidades más"}.`
+          );
+        }
       } else {
         if (!street.trim()) return setError(ct("checkout.validation.street", "Ingresá la calle y número."));
         if (!locality.trim()) return setError(ct("checkout.validation.locality", "Ingresá la localidad."));
@@ -880,6 +895,17 @@ export default function CheckoutPage() {
                   ))}
                 </select>
               </Field>
+
+              {selectedManualLocality &&
+                selectedManualLocality.minimumUnits > 0 && (
+                  <p className="rounded-lg border border-line bg-cream/70 px-4 py-3 text-sm text-ink">
+                    Pedido mínimo para {selectedManualLocality.name}: {" "}
+                    <span className="font-bold">
+                      {selectedManualLocality.minimumUnits} unidades
+                    </span>
+                    .
+                  </p>
+                )}
 
               <Field label="Dirección (calle y número)" required>
                 <input

@@ -313,6 +313,19 @@ export async function createOrder(
     };
   });
 
+  // El mínimo por localidad se valida con las cantidades recalculadas en el
+  // server. Solo aplica a ENVÍO; pasar a retirar nunca tiene mínimo de zona.
+  if (
+    manualLocality &&
+    manualLocality.minimumUnits > 0 &&
+    totalUnits < manualLocality.minimumUnits
+  ) {
+    const missing = manualLocality.minimumUnits - totalUnits;
+    throw new OrderValidationError(
+      `Para envíos a ${manualLocality.name}, el pedido mínimo es de ${manualLocality.minimumUnits} unidades. Agregá ${missing} ${missing === 1 ? "unidad más" : "unidades más"}.`
+    );
+  }
+
   // Subtotal after quantity promos.
   let total = productsSubtotal - quantityPromo;
 

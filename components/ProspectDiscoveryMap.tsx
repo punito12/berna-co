@@ -100,9 +100,9 @@ export default function ProspectDiscoveryMap({
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const markers = markerByIdRef.current;
     const map = L.map(containerRef.current, {
       zoomControl: true,
-      preferCanvas: true,
     }).setView([-34.48, -58.55], 11);
     mapRef.current = map;
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -114,8 +114,14 @@ export default function ProspectDiscoveryMap({
     coverageLayerRef.current = L.layerGroup().addTo(map);
     setTimeout(() => map.invalidateSize(), 0);
     return () => {
-      map.remove();
       mapRef.current = null;
+      prospectsLayerRef.current = null;
+      zonesLayerRef.current = null;
+      coverageLayerRef.current = null;
+      markers.clear();
+      map.stop();
+      map.off();
+      map.remove();
     };
   }, []);
 
@@ -125,6 +131,12 @@ export default function ProspectDiscoveryMap({
     if (!map || !layer) return;
 
     const renderClusters = () => {
+      if (
+        mapRef.current !== map ||
+        !map.getContainer().isConnected
+      ) {
+        return;
+      }
       layer.clearLayers();
       markerByIdRef.current.clear();
       const buckets = new Map<string, MapProspect[]>();
@@ -283,9 +295,16 @@ export default function ProspectDiscoveryMap({
 
   useEffect(() => {
     if (!selectedId) return;
+    const map = mapRef.current;
     const marker = markerByIdRef.current.get(selectedId);
-    if (!marker || !mapRef.current) return;
-    mapRef.current.panTo(marker.getLatLng());
+    if (
+      !marker ||
+      !map ||
+      !map.getContainer().isConnected ||
+      !map.hasLayer(marker)
+    ) {
+      return;
+    }
     marker.openPopup();
   }, [selectedId]);
 

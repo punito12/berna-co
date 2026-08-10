@@ -29,6 +29,7 @@ export type LocalityConfig = {
   name: string;
   enabled: boolean;
   shippingCost: number; // pesos enteros; 0 = sin costo / gratis
+  minimumUnits: number; // unidades mínimas del carrito; 0 = sin mínimo
   // Horario propio de la localidad. Si está vacío, se usa el horario global de
   // DELIVERY como fallback (así las localidades viejas no se rompen).
   schedule: LocalityScheduleDay[];
@@ -114,10 +115,12 @@ function sanitizeLocalities(input: unknown): LocalityConfig[] {
     if (seen.has(lower)) continue; // sin duplicados (case-insensitive)
     seen.add(lower);
     const cost = Math.max(0, Math.round(Number(r.shippingCost) || 0));
+    const minimumUnits = Math.max(0, Math.floor(Number(r.minimumUnits) || 0));
     out.push({
       name,
       enabled: r.enabled !== false,
       shippingCost: cost,
+      minimumUnits,
       schedule: sanitizeSchedule(r.schedule),
     });
   }
@@ -185,6 +188,8 @@ export type PublicDeliveryConfig = {
     // Costo de envío plano de la localidad (el server sigue siendo la
     // autoridad al crear el pedido; esto es solo para MOSTRARLO antes).
     shippingCost: number;
+    // Cantidad mínima de unidades para enviar a esta localidad; 0 = sin mínimo.
+    minimumUnits: number;
   }[];
 };
 
@@ -202,6 +207,7 @@ export async function getPublicDeliveryConfig(): Promise<PublicDeliveryConfig> {
         schedule: l.schedule,
         scheduleOptions: localityScheduleOptions(l, globalOptions),
         shippingCost: Math.max(0, Math.round(l.shippingCost || 0)),
+        minimumUnits: Math.max(0, Math.floor(l.minimumUnits || 0)),
       })),
   };
 }

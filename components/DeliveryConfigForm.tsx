@@ -40,7 +40,13 @@ export default function DeliveryConfigForm({
   function addLocality() {
     setLocalities((prev) => [
       ...prev,
-      { name: "", enabled: true, shippingCost: 0, schedule: [] },
+      {
+        name: "",
+        enabled: true,
+        shippingCost: 0,
+        minimumUnits: 0,
+        schedule: [],
+      },
     ]);
   }
   function removeLocality(i: number) {
@@ -125,6 +131,7 @@ export default function DeliveryConfigForm({
               name: l.name.trim(),
               enabled: l.enabled,
               shippingCost: Number(l.shippingCost) || 0,
+              minimumUnits: Number(l.minimumUnits) || 0,
               schedule: l.schedule ?? [],
             }))
             .filter((l) => l.name),
@@ -206,7 +213,7 @@ export default function DeliveryConfigForm({
                 key={i}
                 className="grid grid-cols-12 items-end gap-2 rounded border border-line bg-cream/30 p-3"
               >
-                <label className="col-span-12 sm:col-span-6">
+                <label className="col-span-12 sm:col-span-4">
                   <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">
                     Localidad
                   </span>
@@ -231,7 +238,27 @@ export default function DeliveryConfigForm({
                     className={inputClass}
                   />
                 </label>
-                <label className="col-span-4 sm:col-span-2 flex items-center gap-2 pb-2 text-sm font-bold text-ink">
+                <label className="col-span-6 sm:col-span-3">
+                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">
+                    Mínimo de unidades
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={l.minimumUnits}
+                    onChange={(e) =>
+                      setLocality(i, {
+                        minimumUnits: Math.max(
+                          0,
+                          Math.floor(Number(e.target.value) || 0)
+                        ),
+                      })
+                    }
+                    className={inputClass}
+                  />
+                </label>
+                <label className="col-span-10 sm:col-span-1 flex items-center gap-2 pb-2 text-sm font-bold text-ink">
                   <input
                     type="checkbox"
                     checked={l.enabled}
@@ -249,6 +276,9 @@ export default function DeliveryConfigForm({
                     Quitar
                   </button>
                 </div>
+                <p className="col-span-12 text-[11px] leading-5 text-muted">
+                  0 unidades = sin mínimo para esta localidad.
+                </p>
                 <div className="col-span-12 rounded-lg border border-line bg-white p-3">
                   <div className="mb-3">
                     <span className="block text-[10px] font-bold uppercase tracking-wide text-muted">
